@@ -14,12 +14,11 @@ import {
 
 export default function InvitePoolModule({ ctx }) {
   const { storeId, userId } = ctx;
-  const { records, staffId, loading, error, reload } = useUnconnected(storeId, userId);
+  const { records, loading, error, reload } = useUnconnected(storeId, userId);
   const { products } = useProducts(storeId);
 
   const [filterProduct, setFilterProduct] = useState("all");
   const [filterStatus,  setFilterStatus]  = useState("pending");
-
   const [creatorHandle,    setCreatorHandle]    = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [adding,           setAdding]           = useState(false);
@@ -30,7 +29,6 @@ export default function InvitePoolModule({ ctx }) {
     const handle = creatorHandle.trim();
     if (!handle)                       return setFormError("请输入达人 username");
     if (selectedProducts.length === 0) return setFormError("请至少选择一个产品");
-    if (!staffId)                      return setFormError("当前账号未绑定员工档案，请联系管理员");
 
     setAdding(true);
     try {
@@ -48,7 +46,7 @@ export default function InvitePoolModule({ ctx }) {
           return;
         }
       }
-      await addToPool(storeId, handle, selectedProducts, staffId);
+      await addToPool(storeId, handle, selectedProducts, userId);
       setCreatorHandle("");
       setSelectedProducts([]);
       reload();
@@ -86,7 +84,6 @@ export default function InvitePoolModule({ ctx }) {
     <div style={s.wrap}>
       <h2 style={s.title}>未建连邀约库</h2>
 
-      {/* 录入区 */}
       <div style={s.card}>
         <div style={s.row}>
           <input
@@ -118,7 +115,6 @@ export default function InvitePoolModule({ ctx }) {
         {formError && <div style={s.err}>{formError}</div>}
       </div>
 
-      {/* 筛选栏 */}
       <div style={s.filters}>
         <select style={s.sel} value={filterProduct} onChange={(e) => setFilterProduct(e.target.value)}>
           <option value="all">全部产品</option>
@@ -132,23 +128,21 @@ export default function InvitePoolModule({ ctx }) {
         <button style={s.btnGhost} onClick={handleExport}>导出达人列表</button>
       </div>
 
-      {/* 列表 */}
       <table style={s.table}>
         <thead>
           <tr>
-            {["达人 username","产品","录入人","录入时间","归属人","归属时间","状态","操作"].map((h) => (
+            {["达人 username","产品","录入时间","归属人","归属时间","状态","操作"].map((h) => (
               <th key={h} style={s.th}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {displayRecords.length === 0 ? (
-            <tr><td colSpan={8} style={s.empty}>暂无记录</td></tr>
+            <tr><td colSpan={7} style={s.empty}>暂无记录</td></tr>
           ) : displayRecords.map((r) => (
             <tr key={r.id}>
               <td style={s.td}>{r.creator_id}</td>
               <td style={s.td}>{r.products?.internal_name ?? "-"}</td>
-              <td style={s.td}>{r.added_staff?.name ?? "-"}</td>
               <td style={s.td}>{r.added_at?.slice(0, 10)}</td>
               <td style={s.td}>{r.owner_staff?.name ?? "-"}</td>
               <td style={s.td}>{r.owned_at?.slice(0, 10) ?? "-"}</td>
