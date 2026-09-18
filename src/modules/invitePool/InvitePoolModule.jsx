@@ -14,7 +14,7 @@ import {
 
 export default function InvitePoolModule({ ctx }) {
   const { storeId, userId } = ctx;
-  const { records, loading, error, reload } = useUnconnected(storeId);
+  const { records, staffId, loading, error, reload } = useUnconnected(storeId, userId);
   const { products } = useProducts(storeId);
 
   const [filterProduct, setFilterProduct] = useState("all");
@@ -28,8 +28,9 @@ export default function InvitePoolModule({ ctx }) {
   async function handleAdd() {
     setFormError("");
     const handle = creatorHandle.trim();
-    if (!handle)                      return setFormError("请输入达人 username");
+    if (!handle)                       return setFormError("请输入达人 username");
     if (selectedProducts.length === 0) return setFormError("请至少选择一个产品");
+    if (!staffId)                      return setFormError("当前账号未绑定员工档案，请联系管理员");
 
     setAdding(true);
     try {
@@ -41,13 +42,13 @@ export default function InvitePoolModule({ ctx }) {
         }
         const crmDup = await checkDuplicateInCRM(storeId, handle, pid);
         if (crmDup) {
-          const pName = products.find((p) => p.id === pid)?.internal_name ?? pid;
+          const pName = (products ?? []).find((p) => p.id === pid)?.internal_name ?? pid;
           const sName = crmDup.staff?.name ?? "未知";
           setFormError(`此达人已合作 ${pName}，跟进人 ${sName}`);
           return;
         }
       }
-      await addToPool(storeId, handle, selectedProducts, userId);
+      await addToPool(storeId, handle, selectedProducts, staffId);
       setCreatorHandle("");
       setSelectedProducts([]);
       reload();
@@ -135,7 +136,7 @@ export default function InvitePoolModule({ ctx }) {
       <table style={s.table}>
         <thead>
           <tr>
-            {["达人 username", "产品", "录入人", "录入时间", "归属人", "归属时间", "状态", "操作"].map((h) => (
+            {["达人 username","产品","录入人","录入时间","归属人","归属时间","状态","操作"].map((h) => (
               <th key={h} style={s.th}>{h}</th>
             ))}
           </tr>
@@ -170,24 +171,24 @@ export default function InvitePoolModule({ ctx }) {
 }
 
 const s = {
-  wrap:      { padding: "24px" },
-  title:     { fontSize: "20px", fontWeight: 700, marginBottom: "16px" },
-  card:      { background: "#1a1a2e", borderRadius: "8px", padding: "16px", marginBottom: "16px" },
-  row:       { display: "flex", gap: "12px", alignItems: "flex-start", flexWrap: "wrap" },
-  input:     { padding: "8px 12px", borderRadius: "6px", border: "1px solid #333", background: "#0f0f23", color: "#fff", minWidth: "220px" },
-  checks:    { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" },
-  checkLabel:{ display: "flex", gap: "4px", alignItems: "center", color: "#ccc", fontSize: "13px", cursor: "pointer" },
-  btn:       { padding: "8px 16px", borderRadius: "6px", background: "#6c63ff", color: "#fff", border: "none", cursor: "pointer" },
-  btnGhost:  { padding: "6px 14px", borderRadius: "6px", background: "transparent", color: "#6c63ff", border: "1px solid #6c63ff", cursor: "pointer" },
-  btnDanger: { padding: "4px 10px", borderRadius: "4px", background: "transparent", color: "#ff6b6b", border: "1px solid #ff6b6b", cursor: "pointer", fontSize: "12px" },
-  err:       { color: "#ff6b6b", marginTop: "8px", fontSize: "13px" },
-  filters:   { display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" },
-  sel:       { padding: "6px 10px", borderRadius: "6px", border: "1px solid #333", background: "#0f0f23", color: "#fff" },
-  table:     { width: "100%", borderCollapse: "collapse" },
-  th:        { textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #333", color: "#888", fontSize: "13px" },
-  td:        { padding: "10px 12px", fontSize: "13px", color: "#ccc", borderBottom: "1px solid #111" },
-  empty:     { textAlign: "center", padding: "40px", color: "#555" },
-  tagPending:{ background: "#2a2a4a", color: "#aaa", padding: "2px 8px", borderRadius: "4px", fontSize: "12px" },
-  tagDone:   { background: "#1a3a2a", color: "#4caf50", padding: "2px 8px", borderRadius: "4px", fontSize: "12px" },
-  center:    { textAlign: "center", padding: "40px", color: "#888" },
+  wrap:       { padding: "24px" },
+  title:      { fontSize: "20px", fontWeight: 700, marginBottom: "16px" },
+  card:       { background: "#1a1a2e", borderRadius: "8px", padding: "16px", marginBottom: "16px" },
+  row:        { display: "flex", gap: "12px", alignItems: "flex-start", flexWrap: "wrap" },
+  input:      { padding: "8px 12px", borderRadius: "6px", border: "1px solid #333", background: "#0f0f23", color: "#fff", minWidth: "220px" },
+  checks:     { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" },
+  checkLabel: { display: "flex", gap: "4px", alignItems: "center", color: "#ccc", fontSize: "13px", cursor: "pointer" },
+  btn:        { padding: "8px 16px", borderRadius: "6px", background: "#6c63ff", color: "#fff", border: "none", cursor: "pointer" },
+  btnGhost:   { padding: "6px 14px", borderRadius: "6px", background: "transparent", color: "#6c63ff", border: "1px solid #6c63ff", cursor: "pointer" },
+  btnDanger:  { padding: "4px 10px", borderRadius: "4px", background: "transparent", color: "#ff6b6b", border: "1px solid #ff6b6b", cursor: "pointer", fontSize: "12px" },
+  err:        { color: "#ff6b6b", marginTop: "8px", fontSize: "13px" },
+  filters:    { display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" },
+  sel:        { padding: "6px 10px", borderRadius: "6px", border: "1px solid #333", background: "#0f0f23", color: "#fff" },
+  table:      { width: "100%", borderCollapse: "collapse" },
+  th:         { textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #333", color: "#888", fontSize: "13px" },
+  td:         { padding: "10px 12px", fontSize: "13px", color: "#ccc", borderBottom: "1px solid #111" },
+  empty:      { textAlign: "center", padding: "40px", color: "#555" },
+  tagPending: { background: "#2a2a4a", color: "#aaa", padding: "2px 8px", borderRadius: "4px", fontSize: "12px" },
+  tagDone:    { background: "#1a3a2a", color: "#4caf50", padding: "2px 8px", borderRadius: "4px", fontSize: "12px" },
+  center:     { textAlign: "center", padding: "40px", color: "#888" },
 };
