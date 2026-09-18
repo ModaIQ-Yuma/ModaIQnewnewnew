@@ -2,7 +2,7 @@
 // adminOnly: 仅 admin 可见。ready: false 的板块显示"建设中"占位。
 export const TABS = [
   { id: "products",    label: "产品库",     ready: true  },
-  { id: "crm",         label: "CRM",        ready: false },
+  { id: "crm",         label: "CRM",        ready: true  },
   { id: "invitePool",  label: "邀约库",     ready: false },
   { id: "daily",       label: "每日数据",   ready: false },
   { id: "videos",      label: "视频回收",   ready: false },

@@ -49,3 +49,31 @@ export function Badge({ label, color }) {
     </span>
   );
 }
+
+export function TagGroup({ options, selected, onToggle, color }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {options.map((v) => {
+        const on = selected?.includes(v);
+        return (
+          <button key={v} type="button" onClick={() => onToggle(v)} style={{
+            fontSize: 12, padding: "5px 11px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit",
+            border: `1px solid ${on ? color : "#C8D0DC"}`,
+            background: on ? `${color}22` : "rgba(255,255,255,0.4)",
+            color: on ? color : "#6B7A99", fontWeight: on ? 700 : 500,
+          }}>{v}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function Sel({ value, onChange, children, style = {} }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={{
+      background: "rgba(255,255,255,0.45)", border: "1.5px solid rgba(180,200,230,0.55)",
+      borderRadius: 12, color: "#0A1628", fontSize: 14, padding: "9px 13px",
+      fontFamily: "inherit", outline: "none", ...style,
+    }}>{children}</select>
+  );
+}
