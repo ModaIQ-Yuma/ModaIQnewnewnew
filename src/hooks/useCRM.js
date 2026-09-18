@@ -19,12 +19,25 @@ export function useCRM(storeId, products) {
     if (!storeId) return;
     setLoading(true); setError(null);
     try {
-      const [infs, st] = await Promise.all([fetchInfluencers(storeId), fetchStaff(storeId)]);
-      // product_id → internalName，并用 withComputedStatus 重算状态
-      const mapped = infs.map((inf) => withComputedStatus({
-        ...inf,
-        product: productById[inf.product] || inf.product,
-      }));
+      const [infs, st, videoSummaries] = await Promise.all([
+        fetchInfluencers(storeId), fetchStaff(storeId), fetchVideoSummaries(storeId),
+      ]);
+      // product_id → internalName，注入视频摘要后用 withComputedStatus 精确重算状态
+      const mapped = infs.map((inf) => {
+        const summary = videoSummaries[inf.id] || { videoCount: 0, totalOrders: 0 };
+        // 用摘要构造轻量 videoRecords 占位，让 computeStatus / cumOrders 精确计算
+        const videoPlaceholders = summary.videoCount > 0
+          ? Array.from({ length: summary.videoCount }, (_, i) =>
+              i === 0 ? { videoId: `_summary`, orders: summary.totalOrders, date: "" } : { videoId: `_summary_${i}`, orders: 0, date: "" }
+            )
+          : [];
+        return withComputedStatus({
+          ...inf,
+          product: productById[inf.product] || inf.product,
+          videoRecords: videoPlaceholders,
+          _videoSummary: summary,  // 保留原始摘要供任务中心用
+        });
+      });
       setInfluencers(mapped);
       setStaff(st);
     } catch (e) { setError(e.message); }
