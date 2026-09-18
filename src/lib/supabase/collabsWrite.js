@@ -1,5 +1,6 @@
 // ─── collaborations 写操作 ─────────────────────────────────────────────────────
 import { sb, unwrap } from "./client.js";
+import { markUnconnectedConverted } from "./unconnectedWrite.js";
 
 /** 新增或更新达人档案，返回 creator.id */
 async function upsertCreator(storeId, inf) {
@@ -21,7 +22,6 @@ async function upsertCreator(storeId, inf) {
     aliases:          inf.aliases         || null,
     note:             inf.note            || null,
   };
-  // 先查有没有
   const existing = unwrap(
     await sb.from("creators").select("id").eq("store_id", storeId).ilike("handle", fields.handle).maybeSingle(),
     "creators"
@@ -45,20 +45,28 @@ export async function createInfluencer(storeId, inf, productId) {
     "collaborations"
   );
   if (dup) throw new Error(`该达人已合作此产品（寄样日期：${dup.ship_date}）`);
+
   const collab = unwrap(
     await sb.from("collaborations").insert({
-      store_id:      storeId,
-      creator_id:    creatorId,
-      product_id:    productId,
-      staff_id:      inf.staffId || null,
-      ship_date:     inf.shipDate,
-      status_manual: inf.baseStatus || "已寄样",
-      product_color: inf.productColor || null,
-      ship_score:    inf.shipScore || null,
-      note:          inf.note || null,
+      store_id:       storeId,
+      creator_id:     creatorId,
+      product_id:     productId,
+      staff_id:       inf.staffId       || null,
+      ship_date:      inf.shipDate,
+      status_manual:  inf.baseStatus    || "已寄样",
+      product_color:  inf.productColor  || null,
+      ship_score:     inf.shipScore     || null,
+      note:           inf.note          || null,
+      creator_source: inf.creatorSource || null,
     }).select("id").single(),
     "collaborations"
   );
+
+  // 自动邀约转化：批量标记未建连库归属
+  if (inf.creatorSource === "auto_invite") {
+    await markUnconnectedConverted(storeId, inf.influencerId.trim(), inf.staffId || null);
+  }
+
   return collab.id;
 }
 
@@ -67,13 +75,14 @@ export async function updateInfluencer(storeId, inf, productId) {
   await upsertCreator(storeId, inf);
   unwrap(
     await sb.from("collaborations").update({
-      product_id:    productId,
-      staff_id:      inf.staffId || null,
-      ship_date:     inf.shipDate,
-      status_manual: inf.baseStatus || "已寄样",
-      product_color: inf.productColor || null,
-      ship_score:    inf.shipScore || null,
-      note:          inf.note || null,
+      product_id:     productId,
+      staff_id:       inf.staffId       || null,
+      ship_date:      inf.shipDate,
+      status_manual:  inf.baseStatus    || "已寄样",
+      product_color:  inf.productColor  || null,
+      ship_score:     inf.shipScore     || null,
+      note:           inf.note          || null,
+      creator_source: inf.creatorSource || null,
     }).eq("id", inf.id),
     "collaborations"
   );
