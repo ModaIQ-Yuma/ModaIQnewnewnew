@@ -27,10 +27,17 @@ export default function InvitePoolModule({ ctx }) {
     if (selectedProducts.length === 0) { setFormError("请至少选择一个产品"); return; }
     setAdding(true);
     try {
-      for (const pid of selectedProducts) {
-        const dup = await checkDuplicateInPool(storeId, handle, pid);
+      // 所有产品并行查重（层一+层二同时发）
+      const checks = await Promise.all(
+        selectedProducts.map((pid) =>
+          Promise.all([
+            checkDuplicateInPool(storeId, handle, pid),
+            checkDuplicateInCRM(storeId, handle, pid),
+          ]).then(([dup, crmDup]) => ({ pid, dup, crmDup }))
+        )
+      );
+      for (const { pid, dup, crmDup } of checks) {
         if (dup) { setFormError(`此达人已在邀约库中（${dup.products?.internal_name}）`); setAdding(false); return; }
-        const crmDup = await checkDuplicateInCRM(storeId, handle, pid);
         if (crmDup) {
           const pName = (products ?? []).find((p) => p.id === pid)?.internal_name ?? pid;
           setFormError(`此达人已合作 ${pName}，跟进人 ${crmDup.staff?.name ?? "未知"}`);
