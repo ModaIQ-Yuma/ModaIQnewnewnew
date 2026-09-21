@@ -38,3 +38,20 @@ export const glassStyle = (radius = 18, strong = false) => ({
 
 // ─── z-index ─────────────────────────────────────────────────────────────────
 export const Z = { dropdown: 300, sticky: 100, modal: 2000, modalTop: 2200, fixed: 4999, toast: 5000 };
+
+// ─── 字号 ────────────────────────────────────────────────────────────────────
+export const FONT = {
+  xs:   9.5,
+  sm:   10,
+  sm2:  10.5,
+  base: 11,
+  md:   11.5,
+  md2:  12,
+  lg:   12.5,
+  lg2:  13,
+  xl:   13.5,
+  xl2:  14,
+  xxl:  14.5,
+  x3l:  15,
+  x4l:  16,
+};
