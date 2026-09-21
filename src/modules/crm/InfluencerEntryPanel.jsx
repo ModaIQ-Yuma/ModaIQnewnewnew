@@ -9,14 +9,12 @@ import { Field, SectionBar, ProductSearch, StatusPicker, AttrSection } from "./E
 
 const OBJ_FIELDS = CREATOR_FIELDS.filter((f) => f.category === "obj");
 const SUB_FIELDS = CREATOR_FIELDS.filter((f) => f.category === "sub");
-
 const today = () => new Date().toISOString().slice(0, 10);
 const blank = () => ({
   influencerId: "", product: "", productColor: "", productTitle: "",
   shipDate: today(), staffId: "",
   crmStatus: "已寄样", baseStatus: "已寄样", note: "", style: [], videoRecords: [], aliases: "",
 });
-
 const inputStyle = {
   width: "100%", background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`,
   borderRadius: 10, color: T.text, fontSize: 14, padding: "9px 13px",
@@ -198,6 +196,5 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
         </div>
       </div>
       {showShipScore && <ShipScoreModal onClose={() => setShowShipScore(false)} />}
-    </div>
-  );
+    </div>);
 }

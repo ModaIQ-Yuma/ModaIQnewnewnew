@@ -5,7 +5,7 @@ export const TABS = [
   { id: "crm",         label: "CRM",      ready: true  },
   { id: "invitePool",  label: "邀约库",   ready: true  },
   { id: "daily",       label: "每日数据", ready: true  },
-  { id: "videos",      label: "视频回收", ready: false },
+  { id: "videos",      label: "视频回收", ready: true  },
   { id: "review",      label: "复盘",     ready: false },
   { id: "attribution", label: "归因分析", ready: false },
   { id: "tasks",       label: "任务",     ready: false },

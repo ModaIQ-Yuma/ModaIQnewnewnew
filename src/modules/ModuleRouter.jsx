@@ -5,6 +5,7 @@ import ProductsModule from "./products/ProductsModule.jsx";
 import CRMModule from "./crm/CRMModule.jsx";
 import InvitePoolModule from "./invitePool/InvitePoolModule.jsx";
 import DailyModule from "./daily/DailyModule.jsx";
+import VideosModule from "./videos/VideosModule.jsx";
 
 // ─── tab id → 模块组件。新板块在这里注册一行，App.jsx 不用改 ────────────────
 const MODULES = {
@@ -12,6 +13,7 @@ const MODULES = {
   crm:        CRMModule,
   invitePool: InvitePoolModule,
   daily:      DailyModule,
+  videos:     VideosModule,
 };
 
 export default function ModuleRouter({ tab, ctx }) {

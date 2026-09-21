@@ -13,19 +13,6 @@ export function matchProduct(a, b) {
   return na === nb || na.includes(nb) || nb.includes(na);
 }
 
-/** 解析 CSV 行（处理带引号字段） */
-export function parseCSVLine(line) {
-  const result = [];
-  let cur = "", inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') { inQ = !inQ; }
-    else if (ch === "," && !inQ) { result.push(cur.trim()); cur = ""; }
-    else { cur += ch; }
-  }
-  result.push(cur.trim());
-  return result;
-}
 
 /** 今天的东八区日期 YYYY-MM-DD */
 export function todayCST() {
