@@ -32,4 +32,13 @@ export const vs = {
   },
   summary:   { fontSize: 13, color: T.muted },
   num:       { fontWeight: 700, color: T.text },
+  dateInput: {
+    padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${T.border}`,
+    background: "rgba(255,255,255,0.6)", color: T.text, fontSize: 12, fontFamily: "inherit",
+  },
+  btnMerge: {
+    padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit",
+    background: "rgba(61,127,239,0.10)", color: T.accent,
+    border: `1px solid ${T.accent}`, fontSize: 12,
+  },
 };

@@ -18,7 +18,8 @@ export default function VideosModule({ ctx }) {
   const { videos, batches, loading, error, reload } = useVideos(storeId);
   const [tab,       setTab]       = useState("imported");
   const [importing, setImporting] = useState(false);
-  const [importMsg, setImportMsg] = useState(null); // { type: ok|err, text }
+  const [modal,     setModal]     = useState(null); // 导入结果弹窗
+  const [errMsg,    setErrMsg]    = useState(null);
   const fileRef = useRef(null);
 
   const crmVideos    = videos.filter((v) => v.collaboration_id);
@@ -28,27 +29,21 @@ export default function VideosModule({ ctx }) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
-    setImporting(true); setImportMsg(null);
+    setImporting(true); setErrMsg(null);
     try {
       const parsed = await parseVideoXlsx(file);
-      if (!parsed.length) { setImportMsg({ type: "err", text: "文件内没有有效数据" }); return; }
-      const { inserted, updated } = await importVideos(storeId, parsed, file.name, userId);
-      setImportMsg({ type: "ok", text: `导入完成：新增 ${inserted} 条，累加 ${updated} 条` });
+      if (!parsed.length) { setErrMsg("文件内没有有效数据"); return; }
+      const result = await importVideos(storeId, parsed, file.name, userId);
+      setModal({ ...result, total: result.inserted + result.updated, fileName: file.name });
       reload();
-    } catch (err) {
-      setImportMsg({ type: "err", text: err.message });
-    } finally { setImporting(false); }
+    } catch (err) { setErrMsg(err.message); }
+    finally { setImporting(false); }
   }
 
   async function handleRevert(batchId, fileName) {
-    if (!window.confirm(`确认撤销批次「${fileName}」？该批次的累加量将被反向减回。`)) return;
-    try {
-      await revertBatch(batchId);
-      setImportMsg({ type: "ok", text: "撤销成功" });
-      reload();
-    } catch (err) {
-      setImportMsg({ type: "err", text: err.message });
-    }
+    if (!window.confirm(`确认撤销批次「${fileName}」？`)) return;
+    try { await revertBatch(batchId); reload(); }
+    catch (err) { setErrMsg(err.message); }
   }
 
   if (loading) return <div style={vs.center}>加载中…</div>;
@@ -68,23 +63,15 @@ export default function VideosModule({ ctx }) {
 
       {tab === "imported" && (
         <>
-          {/* 导入工具栏 */}
           <div style={vs.toolbar}>
             <input ref={fileRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleFile} />
             <button style={vs.uploadBtn} disabled={importing} onClick={() => fileRef.current?.click()}>
               {importing ? "导入中…" : "📥 上传 xlsx"}
             </button>
-            {importMsg && (
-              <span style={{ fontSize: 13, color: importMsg.type === "ok" ? T.success : T.danger, fontWeight: 600 }}>
-                {importMsg.text}
-              </span>
-            )}
-            <span style={vs.summary}>
-              共 <span style={vs.num}>{crmVideos.length}</span> 条视频
-            </span>
+            {errMsg && <span style={{ fontSize: 13, color: T.danger, fontWeight: 600 }}>{errMsg}</span>}
+            <span style={vs.summary}>共 <span style={vs.num}>{crmVideos.length}</span> 条</span>
           </div>
 
-          {/* 批次列表 */}
           {batches.length > 0 && (
             <div style={{ ...glassStyle(12), padding: "14px 20px", marginBottom: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 10 }}>导入批次</div>
@@ -99,24 +86,63 @@ export default function VideosModule({ ctx }) {
             </div>
           )}
 
-          <div style={glassStyle(14)}>
-            <VideoTable videos={crmVideos} />
-          </div>
+          <div style={glassStyle(14)}><VideoTable videos={crmVideos} storeId={storeId} /></div>
         </>
       )}
 
       {tab === "noncrm" && (
         <>
           <div style={vs.toolbar}>
-            <span style={vs.summary}>
-              非CRM视频共 <span style={vs.num}>{nonCrmVideos.length}</span> 条
-            </span>
+            <span style={vs.summary}>非CRM视频共 <span style={vs.num}>{nonCrmVideos.length}</span> 条</span>
           </div>
           <div style={glassStyle(14)}>
-            <VideoTable videos={nonCrmVideos} />
+            <VideoTable videos={nonCrmVideos} storeId={storeId} showMerge onMerged={reload} />
           </div>
         </>
       )}
+
+      {/* 导入结果弹窗 */}
+      {modal && <ImportModal modal={modal} onClose={() => setModal(null)} />}
+    </div>
+  );
+}
+
+function ImportModal({ modal, onClose }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "rgba(10,22,40,0.55)", backdropFilter: "blur(4px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{ ...glassStyle(18, true), padding: "32px 36px", minWidth: 340, maxWidth: 440 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 6 }}>导入完成 ✅</div>
+        <div style={{ fontSize: 13, color: T.muted, marginBottom: 24 }}>{modal.fileName}</div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Row label="本次处理总条数" value={modal.total} color={T.accent} />
+          <Row label="新增视频" value={modal.inserted} color={T.success} />
+          <Row label="累加更新" value={modal.updated} color={T.warning} />
+          <div style={{ borderTop: `1px solid ${T.glassStroke}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
+            <Row label="CRM 达人视频" value={modal.crmCount} color={T.accent} />
+            <Row label="非 CRM 达人视频" value={modal.nonCrmCount} color={T.muted} />
+          </div>
+        </div>
+
+        <button onClick={onClose} style={{
+          marginTop: 28, width: "100%", padding: "11px 0", borderRadius: 12,
+          border: "none", background: T.grad, color: "#fff",
+          fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+        }}>确认</button>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value, color }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <span style={{ fontSize: 14, color: T.muted }}>{label}</span>
+      <span style={{ fontSize: 20, fontWeight: 700, color }}>{value}</span>
     </div>
   );
 }

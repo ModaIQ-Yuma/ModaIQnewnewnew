@@ -34,13 +34,16 @@ export async function importVideos(storeId, parsed, fileName, userId) {
   );
 
   const toInsert = [], toUpdate = [], lines = [];
-  let inserted = 0, updated = 0;
+  let inserted = 0, updated = 0, crmCount = 0, nonCrmCount = 0;
 
   for (const r of parsed) {
     const product = productMap[r.skuId] || null;
     const collabs = collabMap[r.creatorHandle] || [];
     const collab  = collabs.find((c) => c.productId === product?.id) || collabs[0] || null;
     const ex      = existingMap[r.videoId];
+    // 非CRM且无出单 → 跳过
+    if (!collab && r.orders === 0) continue;
+    if (collab) crmCount++; else nonCrmCount++;
 
     if (ex) {
       toUpdate.push({
@@ -86,5 +89,5 @@ export async function importVideos(storeId, parsed, fileName, userId) {
   if (lines.length) unwrap(await sb.from("video_import_lines").insert(lines), "video_import_lines");
   unwrap(await sb.from("import_batches").update({ row_count: inserted + updated }).eq("id", batch.id), "import_batches");
 
-  return { inserted, updated, batchId: batch.id };
+  return { inserted, updated, batchId: batch.id, crmCount, nonCrmCount };
 }
