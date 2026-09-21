@@ -19,6 +19,60 @@ export function todayCST() {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Shanghai" });
 }
 
+/** 今天的 GMT-8（美西）日期 YYYY-MM-DD */
+export function todayPST() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
+}
+
+/**
+ * 把 dateFrom/dateTo（YYYY-MM-DD）转成 GMT-8 闭区间的 timestamptz 字符串
+ * 用于 Supabase timestamptz 列的查询（published_at、added_at 等）
+ */
+export function pstRange(dateFrom, dateTo) {
+  return {
+    gte: `${dateFrom}T00:00:00-08:00`,
+    lte: `${dateTo}T23:59:59-08:00`,
+  };
+}
+
+/**
+ * 选「YYYY-MM」→ 寄样账期（上月15日 ～ 本月14日，含两端）
+ * 返回 { from: "YYYY-MM-DD", to: "YYYY-MM-DD" }
+ */
+export function shipRange(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  const py = m === 1 ? y - 1 : y;
+  const pm = m === 1 ? 12 : m - 1;
+  const pad = (n) => String(n).padStart(2, "0");
+  return { from: `${py}-${pad(pm)}-15`, to: `${y}-${pad(m)}-14` };
+}
+
+/**
+ * 选「YYYY-MM」→ 视频自然月（本月01日 ～ 本月最后一日，含两端）
+ * 返回 { from: "YYYY-MM-DD", to: "YYYY-MM-DD" }
+ */
+export function videoRange(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const pad = (n) => String(n).padStart(2, "0");
+  return { from: `${ym}-01`, to: `${ym}-${pad(lastDay)}` };
+}
+
+/** 生成连续月份列表 ["2026-01", "2026-02", ...] */
+export function monthsBetween(fromYm, toYm) {
+  const list = [];
+  let [y, m] = fromYm.split("-").map(Number);
+  const [ey, em] = toYm.split("-").map(Number);
+  while (y < ey || (y === ey && m <= em)) {
+    list.push(`${y}-${String(m).padStart(2, "0")}`);
+    m++; if (m > 13) { m = 1; y++; }
+  }
+  return list;
+}
+
+/** 安全除法：分母为 0 时返回 null */
+export const safeDiv = (a, b) => (b ? a / b : null);
+
 /** 把各种格式日期归一化为 YYYY-MM-DD，失败返回 null */
 export function parseDate(str) {
   if (!str) return null;

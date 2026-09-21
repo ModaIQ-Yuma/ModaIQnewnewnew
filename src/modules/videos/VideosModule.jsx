@@ -17,9 +17,10 @@ export default function VideosModule({ ctx }) {
   const { storeId, userId } = ctx;
   const { videos, batches, loading, error, reload } = useVideos(storeId);
   const [tab,       setTab]       = useState("imported");
-  const [importing, setImporting] = useState(false);
-  const [modal,     setModal]     = useState(null); // 导入结果弹窗
-  const [errMsg,    setErrMsg]    = useState(null);
+  const [importing,  setImporting]  = useState(false);
+  const [modal,      setModal]      = useState(null);
+  const [errMsg,     setErrMsg]     = useState(null);
+  const [batchOpen,  setBatchOpen]  = useState(false);
   const fileRef = useRef(null);
 
   const crmVideos    = videos.filter((v) => v.collaboration_id);
@@ -65,18 +66,31 @@ export default function VideosModule({ ctx }) {
         <>
           <div style={vs.toolbar}>
             <input ref={fileRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleFile} />
-            <button style={vs.uploadBtn} disabled={importing} onClick={() => fileRef.current?.click()}>
-              {importing ? "导入中…" : "📥 上传 xlsx"}
-            </button>
+            <div>
+              <button style={vs.uploadBtn} disabled={importing} onClick={() => fileRef.current?.click()}>
+                {importing ? "导入中…" : "📥 上传 xlsx"}
+              </button>
+              <div style={{ fontSize: 11, color: T.hint, marginTop: 6, lineHeight: 1.7 }}>
+                数据获取路径：联盟重心 → 数据分析 → 所有视频<br />
+                建议文件命名为右上角框选视频日期，示例：20260101到20260201所有视频
+              </div>
+            </div>
             {errMsg && <span style={{ fontSize: 13, color: T.danger, fontWeight: 600 }}>{errMsg}</span>}
             <span style={vs.summary}>共 <span style={vs.num}>{crmVideos.length}</span> 条</span>
           </div>
 
           {batches.length > 0 && (
             <div style={{ ...glassStyle(12), padding: "14px 20px", marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 10 }}>导入批次</div>
-              {batches.map((b) => (
-                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 13 }}>
+              <div
+                style={{ fontSize: 13, fontWeight: 600, color: T.text, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                onClick={() => setBatchOpen((v) => !v)}
+              >
+                <span>导入批次（{batches.length}）</span>
+                <span style={{ fontSize: 11, color: T.hint }}>{batchOpen ? "▲ 收起" : "▼ 展开"}</span>
+              </div>
+              {batchOpen && batches.map((b) => (
+                <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, fontSize: 13 }}>
                   <span style={{ color: T.muted, flex: 1 }}>{b.file_name}</span>
                   <span style={{ color: T.hint }}>{b.created_at?.slice(0, 10)}</span>
                   <span style={{ color: T.muted }}>{b.row_count} 条</span>

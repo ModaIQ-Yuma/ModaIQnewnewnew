@@ -1,0 +1,41 @@
+// modules/review/reviewStyles.js
+import { T } from "../../constants/tokens.js";
+
+export const rs = {
+  wrap:      { padding: 24 },
+  title:     { fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 16 },
+  tabs:      { display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" },
+  tab:       (a) => ({
+    padding: "7px 18px", borderRadius: 10, cursor: "pointer", fontSize: 13,
+    fontWeight: a ? 700 : 500, border: "none", fontFamily: "inherit",
+    background: a ? T.grad : "rgba(61,127,239,0.08)",
+    color: a ? "#fff" : T.accent,
+  }),
+  toolbar:   { display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" },
+  label:     { fontSize: 13, color: T.muted, fontWeight: 500 },
+  monthInp:  {
+    padding: "7px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`,
+    background: "rgba(255,255,255,0.6)", color: T.text, fontSize: 13, fontFamily: "inherit",
+  },
+  card:      { background: "rgba(255,255,255,0.55)", border: `1px solid ${T.border}`, borderRadius: 14, padding: "14px 18px" },
+  metricGrid:{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px,1fr))", gap: 12, marginBottom: 18 },
+  metricCard:{ background: "rgba(255,255,255,0.72)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 16px" },
+  metricLbl: { fontSize: 11, fontWeight: 600, color: T.muted, marginBottom: 6 },
+  metricVal: (accent) => ({ fontSize: 22, fontWeight: 800, color: accent ? T.accent : T.text }),
+  metricSub: { fontSize: 11, color: T.hint, marginTop: 4 },
+  table:     { width: "100%", borderCollapse: "collapse" },
+  th:        { textAlign: "left", padding: "10px 12px", borderBottom: `2px solid ${T.border}`, color: T.muted, fontSize: 12, fontWeight: 700 },
+  thR:       { textAlign: "right", padding: "10px 12px", borderBottom: `2px solid ${T.border}`, color: T.muted, fontSize: 12, fontWeight: 700 },
+  td:        { padding: "10px 12px", fontSize: 13, color: T.text, borderBottom: `1px solid ${T.glassStroke}` },
+  tdR:       { padding: "10px 12px", fontSize: 13, color: T.text, borderBottom: `1px solid ${T.glassStroke}`, textAlign: "right" },
+  center:    { textAlign: "center", padding: 48, color: T.hint },
+  empty:     { textAlign: "center", padding: 32, color: T.hint, fontSize: 14 },
+  groupTitle:{ fontSize: 15, fontWeight: 700, color: T.text, margin: "20px 0 10px" },
+  btn:       { padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", background: T.grad, color: "#fff", fontWeight: 700, fontSize: 13, fontFamily: "inherit" },
+  btnGhost:  { padding: "7px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", background: "transparent", color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 13 },
+  btnDanger: { padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", background: "transparent", color: T.danger, border: `1px solid ${T.danger}`, fontSize: 12 },
+  reminder:  { background: `${T.warning}15`, border: `1.5px solid ${T.warning}55`, borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" },
+  pct:       (v) => v == null ? "—" : (v * 100).toFixed(1) + "%",
+  num:       (v) => v == null ? "—" : Number(v).toLocaleString(),
+  dec:       (v) => v == null ? "—" : Number(v).toFixed(2),
+};
