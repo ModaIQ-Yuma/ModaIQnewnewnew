@@ -9,10 +9,27 @@ export default function VideoTable({ videos }) {
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={vs.table}>
+        <colgroup>
+          <col style={{ width: "18%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "14%" }} />
+        </colgroup>
         <thead>
           <tr>
-            {["达人名称", "商品", "视频链接", "发布日期", "播放量", "点击量", "出单件数"].map((h) => (
-              <th key={h} style={vs.th}>{h}</th>
+            {[
+              { label: "达人名称",  align: "left"  },
+              { label: "商品",      align: "left"  },
+              { label: "视频链接",  align: "left"  },
+              { label: "发布日期",  align: "left"  },
+              { label: "播放量",    align: "right" },
+              { label: "点击量",    align: "right" },
+              { label: "出单件数",  align: "right" },
+            ].map(({ label, align }) => (
+              <th key={label} style={{ ...vs.th, textAlign: align }}>{label}</th>
             ))}
           </tr>
         </thead>
