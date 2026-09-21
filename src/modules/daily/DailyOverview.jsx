@@ -5,7 +5,8 @@ import { glassStyle, T } from "../../constants/tokens.js";
 import { COLORS, ds } from "./dailyStyles.js";
 import InviteRankBar from "./InviteRankBar.jsx";
 
-const today = () => new Date().toISOString().slice(0, 10);
+import { todayPST } from "../../lib/utils.js";
+const today = todayPST;
 
 export default function DailyOverview({ storeId, products }) {
   const [date, setDate] = useState(today());

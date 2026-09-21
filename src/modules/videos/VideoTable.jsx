@@ -5,8 +5,8 @@ import { vs } from "./videosStyles.js";
 import MergeModal from "./MergeModal.jsx";
 
 const fmt = (n) => Number(n || 0).toLocaleString();
-const defaultFrom = () => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toISOString().slice(0, 10); };
-const defaultTo   = () => new Date().toISOString().slice(0, 10);
+const defaultFrom = () => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }); };
+const defaultTo = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
 
 export default function VideoTable({ videos, storeId, showMerge = false, onMerged }) {
   const [dateFrom, setDateFrom] = useState(defaultFrom());
