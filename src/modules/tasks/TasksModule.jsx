@@ -1,6 +1,6 @@
 // modules/tasks/TasksModule.jsx
 import { useState } from 'react';
-import { T, FONT } from '../../constants/tokens.js';
+import { T, FONT, tabStyle } from '../../constants/tokens.js';
 import { useTasks } from '../../hooks/useTasks.js';
 import { createTask, clearAutoTasks } from '../../lib/supabase/tasks.js';
 import { todayLocal } from './utils.js';
@@ -68,7 +68,7 @@ export default function TasksModule({ ctx }) {
       <h2 style={{ fontSize:FONT.x4l, fontWeight:700, color:T.text, marginBottom:14 }}>任务中心</h2>
       <div style={{ display:'flex', gap:6, marginBottom:24, flexWrap:'wrap', alignItems:'center' }}>
         {SUBTABS.map(t => (
-          <button key={t.id} onClick={() => setSub(t.id)} style={{ fontSize:FONT.lg2, padding:'7px 18px', borderRadius:18, border:`1.5px solid ${sub===t.id ? T.accent : T.border}`, background:sub===t.id ? T.accent : 'transparent', color:sub===t.id ? '#fff' : T.muted, cursor:'pointer', fontFamily:'inherit', fontWeight:sub===t.id ? 700 : 600 }}>{t.label}</button>
+          <button key={t.id} onClick={() => setSub(t.id)} style={tabStyle(sub===t.id)}>{t.label}</button>
         ))}
         {isAdmin && (
           <>

@@ -10,7 +10,7 @@ export const TABS = [
   { id: "attribution", label: "归因分析", ready: true  },
   { id: "tasks",       label: "任务",     ready: true  },
   { id: "bdtools",     label: "BD 工具",  ready: true  },
-  { id: "performance", label: "绩效",     ready: false, adminOnly: true },
+  { id: "performance", label: "绩效",     ready: true,  adminOnly: true },
   { id: "staff",       label: "人员管理", ready: true,  adminOnly: true },
 ];
 

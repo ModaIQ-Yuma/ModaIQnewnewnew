@@ -11,9 +11,10 @@ import DailyModule       from "./daily/DailyModule.jsx";
 import VideosModule      from "./videos/VideosModule.jsx";
 import ReviewModule      from "./review/ReviewModule.jsx";
 import AttributionModule from "./attribution/AttributionModule.jsx";
-import TasksModule       from "./tasks/TasksModule.jsx";
-import BDToolsModule     from "./bdtools/BDToolsModule.jsx";
-import StaffModule       from "./staff/StaffModule.jsx";
+import TasksModule        from "./tasks/TasksModule.jsx";
+import BDToolsModule      from "./bdtools/BDToolsModule.jsx";
+import StaffModule        from "./staff/StaffModule.jsx";
+import PerformanceModule  from "./tasks/PerformanceModule.jsx";
 
 const MODULES = {
   products:    ProductsModule,
@@ -23,9 +24,10 @@ const MODULES = {
   videos:      VideosModule,
   review:      ReviewModule,
   attribution: AttributionModule,
-  tasks:       TasksModule,
-  bdtools:     BDToolsModule,
-  staff:       StaffModule,
+  tasks:        TasksModule,
+  bdtools:      BDToolsModule,
+  performance:  PerformanceModule,
+  staff:        StaffModule,
 };
 
 export default function ModuleRouter({ tab, ctx }) {

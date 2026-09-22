@@ -3,11 +3,23 @@ import { useState, useMemo } from 'react';
 import { T, glassStyle, FONT } from '../../constants/tokens.js';
 import { currentCycleStart, cycleEnd, prevCycleStart, nextCycleStart } from './utils.js';
 import { calcPerfMetrics } from '../../lib/perf/perfCalc.js';
+import { useTasks } from '../../hooks/useTasks.js';
 import PerfTable from './PerfTable.jsx';
 
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRadius:12, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.4)', color:T.muted, cursor:'pointer', fontFamily:'inherit' };
 
-export default function PerformanceModule({ storeId, collabs=[], videos=[], creators=[], shippingGoals=[], products=[], staff=[], isAdmin, userId }) {
+export default function PerformanceModule({ ctx, storeId: _storeId, collabs: _collabs, videos: _videos, creators: _creators, shippingGoals: _goals, products: _products, staff: _staff, isAdmin: _isAdmin, userId: _userId }) {
+  // 支持两种调用方式：独立 tab（ctx）和 TasksModule 子页（单独 props）
+  const storeId      = ctx?.storeId      ?? _storeId      ?? "";
+  const collabs      = ctx?.collabs      ?? _collabs      ?? [];
+  const videos       = ctx?.videos       ?? _videos       ?? [];
+  const creators     = ctx?.creators     ?? _creators     ?? [];
+  const { goals: ctxGoals } = useTasks(ctx ? storeId : null);
+  const shippingGoals = ctx ? (ctxGoals ?? []) : (_goals ?? []);
+  const products     = ctx?.products     ?? _products     ?? [];
+  const staff        = ctx ? [] : (_staff ?? []);
+  const isAdmin      = ctx?.isAdmin      ?? _isAdmin      ?? false;
+  const userId       = ctx?.userId       ?? _userId       ?? null;
   const now = new Date();
   const [cycleStart,      setCycleStart]      = useState(() => currentCycleStart(now));
   const [selectedStaffId, setSelectedStaffId] = useState(null);

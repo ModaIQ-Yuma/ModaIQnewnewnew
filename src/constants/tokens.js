@@ -55,3 +55,12 @@ export const FONT = {
   x3l:  15,
   x4l:  16,
 };
+
+// ─── 全局通用 tab 按钮样式 ────────────────────────────────────────────────────
+export const tabStyle = (active) => ({
+  padding: "5px 14px", borderRadius: 18, cursor: "pointer",
+  fontSize: 13, fontWeight: active ? 700 : 600, fontFamily: "inherit",
+  border: `1.5px solid ${active ? "#3D7FEF" : "rgba(180,195,220,0.5)"}`,
+  background: active ? "#3D7FEF" : "transparent",
+  color: active ? "#fff" : "#8899BB",
+});

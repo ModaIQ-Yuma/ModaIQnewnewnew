@@ -8,7 +8,7 @@ import { T, glassStyle } from "../../constants/tokens.js";
 import { s } from "./invitePoolStyles.js";
 
 export default function InvitePoolModule({ ctx }) {
-  const { storeId, userId } = ctx;
+  const { storeId, userId, products } = ctx;
   const { records, loading, error, reload } = useUnconnected(storeId, userId);
 
   const [filterProduct, setFilterProduct] = useState("all");

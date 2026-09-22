@@ -1,6 +1,6 @@
 // modules/staff/StaffModule.jsx
 import { useState, useEffect } from "react";
-import { T, FONT, glassStyle } from "../../constants/tokens.js";
+import { T, FONT, glassStyle, tabStyle } from "../../constants/tokens.js";
 import { sb } from "../../lib/supabase/client.js";
 import StaffRoster from "./StaffRoster.jsx";
 
@@ -79,7 +79,7 @@ export default function StaffModule({ ctx }) {
       <h2 style={{ fontSize:FONT.x4l, fontWeight:700, color:T.text, marginBottom:14 }}>员工管理</h2>
       <div style={{ display:"flex", gap:6, marginBottom:20 }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ fontSize:FONT.lg2, padding:"6px 16px", borderRadius:18, border:`1.5px solid ${tab===t.id ? T.accent : T.border}`, background:tab===t.id ? T.accent : "transparent", color:tab===t.id ? "#fff" : T.muted, cursor:"pointer", fontFamily:"inherit", fontWeight:tab===t.id ? 700 : 600 }}>{t.label}</button>
+          <button key={t.id} onClick={() => setTab(t.id)} style={tabStyle(tab===t.id)}>{t.label}</button>
         ))}
       </div>
 
