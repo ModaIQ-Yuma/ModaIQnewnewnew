@@ -1,6 +1,7 @@
 // ─── CRM 数据 hook：拉取 + 拼接成旧版 influencer 格式 ───────────────────────
 import { useCallback, useEffect, useState } from "react";
 import { fetchInfluencers, fetchCollabVideos } from "../lib/supabase/collabs.js";
+import { fetchVideoSummaries } from "../lib/supabase/videoRecords.js";
 import { createInfluencer, updateInfluencer, deleteInfluencer, setInfluencerStatus } from "../lib/supabase/collabsWrite.js";
 import { fetchStaff, createStaff } from "../lib/supabase/staff.js";
 import { withComputedStatus } from "../lib/crm/crmFlow.js";
