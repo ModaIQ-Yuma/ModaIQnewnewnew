@@ -38,20 +38,25 @@ export async function fetchInfluencers(storeId) {
       crmStatus:    c.status_manual || "已寄样",  // useCRM 里会用 withComputedStatus 重算
       shipScore:    c.ship_score,
       note:         c.note || "",
-      // 达人属性
+      // 达人属性（key 与 CREATOR_FIELDS 的 field.key 一致）
+      official_grade:   cr.official_grade || "",
+      hist_sales:       cr.hist_sales || "",
+      conv_vertical:    cr.conv_vertical || "",
+      avg_views:        cr.avg_views || "",
+      female_ratio:     cr.female_ratio || "",
+      language:         cr.language || "",
+      body_type:        cr.body_type || "",
+      age_range:        cr.age_range || "",
+      content_vertical: cr.content_vertical || "",
+      style:            Array.isArray(cr.style) ? cr.style : (cr.style ? [cr.style] : []),
+      video_quality:    cr.video_quality || "",
+      voiceover:        cr.voiceover || "",
+      aliases:          cr.aliases || "",
+      // 旧版兼容别名（写操作和 UI 部分仍用旧名）
       officialGrade:   cr.official_grade || "",
       histSales:       cr.hist_sales || "",
-      convVertical:    cr.conv_vertical || "",
-      avgViews:        cr.avg_views || "",
-      femaleRatio:     cr.female_ratio || "",
-      language:        cr.language || "",
       bodyType:        cr.body_type || "",
       ageStage:        cr.age_range || "",
-      contentVertical: cr.content_vertical || "",
-      style:           Array.isArray(cr.style) ? cr.style : (cr.style ? [cr.style] : []),
-      quality:         cr.video_quality || "",
-      voiceover:       cr.voiceover || "",
-      aliases:         cr.aliases || "",
       videoRecords:    [],   // 懒加载，展开行时按需拉
     };
   });
