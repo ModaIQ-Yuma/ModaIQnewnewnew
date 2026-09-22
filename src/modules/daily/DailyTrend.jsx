@@ -15,8 +15,8 @@ export default function DailyTrend({ storeId, products }) {
   const { shipments, videos, invites, loading, error } = useDaily(storeId, dateFrom, dateTo);
 
   const dates = useMemo(() => {
-    const list = [], cur = new Date(dateFrom), end = new Date(dateTo);
-    while (cur <= end) { list.push(cur.toISOString().slice(0, 10)); cur.setDate(cur.getDate() + 1); }
+    const list = [], cur = new Date(dateFrom + "T12:00:00"), end = new Date(dateTo + "T12:00:00");
+    while (cur <= end) { list.push(cur.toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" })); cur.setDate(cur.getDate() + 1); }
     return list;
   }, [dateFrom, dateTo]);
 

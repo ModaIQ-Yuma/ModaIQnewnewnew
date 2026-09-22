@@ -6,10 +6,11 @@ import { withComputedStatus, computeStatus } from "../../lib/crm/crmFlow.js";
 import ShipScoreModal from "./ShipScoreModal.jsx";
 import { findInfluencerMatches } from "../../lib/crm/influencerLookup.js";
 import { Field, SectionBar, ProductSearch, StatusPicker, AttrSection } from "./EntryPanelParts.jsx";
+import { todayPST } from "../../lib/utils.js";
 
 const OBJ_FIELDS = CREATOR_FIELDS.filter((f) => f.category === "obj");
 const SUB_FIELDS = CREATOR_FIELDS.filter((f) => f.category === "sub");
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayPST();
 const blank = () => ({
   influencerId: "", product: "", productColor: "", productTitle: "",
   shipDate: today(), staffId: "",
@@ -22,14 +23,12 @@ const inputStyle = {
 };
 
 function currentCycleStart() {
-  const now = new Date();
-  const d = now.getDate();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  if (d >= 15) return new Date(y, m, 15).toISOString().slice(0, 10);
-  const pm = m === 0 ? 11 : m - 1;
-  const py = m === 0 ? y - 1 : y;
-  return new Date(py, pm, 15).toISOString().slice(0, 10);
+  const pst = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
+  const [y, mo, d] = pst.split("-").map(Number);
+  const pad = (n) => String(n).padStart(2, "0");
+  if (d >= 15) return `${y}-${pad(mo)}-15`;
+  const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y;
+  return `${py}-${pad(pm)}-15`;
 }
 
 export default function InfluencerEntryPanel({ initial, products = [], staff = [], influencers = [], shippingGoals = [], onSubmit, onClose }) {

@@ -1,10 +1,9 @@
-// ─── CRM 主模块（原 CRMTableModule，数据层改为 useCRM hook）────────────────
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { T } from "../../constants/tokens.js";
 import { OFFICIAL_GRADES, CREATOR_FIELDS as INFLUENCER_FIELDS, labelOf } from "../../constants/creatorOptions.js";
 import { CRM_STATUSES, STATUS_COLORS } from "../../constants/crm.js";
 import { cumOrders } from "../../lib/crm/cumOrders.js";
-import { withComputedStatus, computeStatus } from "../../lib/crm/crmFlow.js";
+import { computeStatus } from "../../lib/crm/crmFlow.js";
 import { Inp, Sel, Btn, Badge } from "../../components/ui/index.jsx";
 import InfluencerEntryPanel from "./InfluencerEntryPanel.jsx";
 import InfluencerDetailRow  from "./InfluencerDetailRow.jsx";
@@ -12,13 +11,14 @@ import CRMImportModal       from "./CRMImportModal.jsx";
 import { useCRM } from "../../hooks/useCRM.js";
 import { useProducts } from "../../hooks/useProducts.js";
 import * as XLSX from "xlsx";
+import { todayPST } from "../../lib/utils.js";
 
 const COLS = ["达人ID","合作产品","寄样时间","跟进人","官方等级","合作进度","累计出单","备注",""];
-const linkBtn = (color) => ({ border:"none", background:"transparent", color, cursor:"pointer", fontSize:13, padding:0 });
+const linkBtn = (c) => ({ border:"none", background:"transparent", color:c, cursor:"pointer", fontSize:13, padding:0 });
 const PAGE_SIZE = 50;
 
 export default function CRMModule({ ctx }) {
-  const storeId = ctx.storeId;
+  const { storeId } = ctx;
   const { products } = useProducts(storeId);
   const crm = useCRM(storeId, products);
   const { influencers, staff, loading, error, loadVideos, save, remove, updateStatus, bulkRemove, addStaff } = crm;
@@ -42,7 +42,7 @@ export default function CRMModule({ ctx }) {
   const rows = useMemo(() => influencers.filter((i) => {
     if (q        && !(i.influencerId || "").toLowerCase().includes(q.toLowerCase())) return false;
     if (fStatus  && computeStatus(i) !== fStatus)                                   return false;
-    if (fGrade   && i.officialGrade !== fGrade)                                     return false;
+    if (fGrade   && i.official_grade !== fGrade)                                     return false;
     if (fProduct && i.product !== fProduct)                                          return false;
     if (fStaff   && String(i.staffId) !== String(fStaff))                           return false;
     if (fDateFrom && (i.shipDate || "") < fDateFrom)                                return false;
@@ -51,7 +51,7 @@ export default function CRMModule({ ctx }) {
   }).sort((a, b) => (b.shipDate || "").localeCompare(a.shipDate || "")),
   [influencers, q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo]);
 
-  useMemo(() => { setPage(1); }, [q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo]);
+  useEffect(() => { setPage(1); }, [q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pageRows   = useMemo(() => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [rows, page]);
@@ -67,13 +67,8 @@ export default function CRMModule({ ctx }) {
     await bulkRemove(effectiveSelected); setSelected(new Set());
   };
 
-  const add    = async (inf) => { await save(inf); setEditing(null); };
-  const update = async (inf) => { await save(inf); setEditing(null); };
-  const updateInline = async (inf) => {
-    // 行内视频变动（手动加/删视频）→ 只更新本地状态，视频写入在视频回收板块完成
-    // 此处仅重算状态
-    await updateStatus(inf, inf.baseStatus);
-  };
+  const saveAndClose = async (inf) => { await save(inf); setEditing(null); };
+  const updateInline = async (inf) => { await updateStatus(inf, inf.baseStatus); };
   const del = (id) => { if (confirm("确认删除？关联视频将变为非CRM视频。")) remove(id); };
 
   function exportXLSX() {
@@ -92,7 +87,7 @@ export default function CRMModule({ ctx }) {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "CRM");
-    XLSX.writeFile(wb, `CRM_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `CRM_${todayPST()}.xlsx`);
   }
 
   const th = { fontSize:12, fontWeight:800, color:"#0A1628", textAlign:"left", padding:"10px 12px", whiteSpace:"nowrap", borderBottom:"2px solid #B8C4D8" };
@@ -146,7 +141,7 @@ export default function CRMModule({ ctx }) {
                       <td style={td}>{i.product || "—"}{i.productColor ? <span style={{ fontSize:11, color:T.hint, marginLeft:4 }}>({i.productColor})</span> : null}</td>
                       <td style={td}>{i.shipDate || "—"}</td>
                       <td style={td}>{staffName(i.staffId)}</td>
-                      <td style={td}>{i.officialGrade || "—"}</td>
+                      <td style={td}>{i.official_grade || "—"}</td>
                       <td style={td} onClick={(e) => e.stopPropagation()}>
                         {readonly ? <Badge label={status} color={STATUS_COLORS[status]||T.muted} /> :
                           <Sel value={status} onChange={(v) => updateStatus(i, v)} style={{ fontSize:12, padding:"5px 8px", color:STATUS_COLORS[status]||T.text }}>
@@ -193,12 +188,10 @@ export default function CRMModule({ ctx }) {
           initial={editing === "new" ? null : editing}
           products={products} staff={staff}
           influencers={influencers} shippingGoals={[]}
-          onSubmit={editing === "new" ? add : update}
+          onSubmit={saveAndClose}
           onClose={() => setEditing(null)}
         />
       )}
     </div>
   );
 }
-
-function Fragment({ children }) { return <>{children}</>; }

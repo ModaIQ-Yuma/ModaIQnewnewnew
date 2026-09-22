@@ -52,11 +52,6 @@ export async function fetchInfluencers(storeId) {
       video_quality:    cr.video_quality || "",
       voiceover:        cr.voiceover || "",
       aliases:          cr.aliases || "",
-      // 旧版兼容别名（写操作和 UI 部分仍用旧名）
-      officialGrade:   cr.official_grade || "",
-      histSales:       cr.hist_sales || "",
-      bodyType:        cr.body_type || "",
-      ageStage:        cr.age_range || "",
       videoRecords:    [],   // 懒加载，展开行时按需拉
     };
   });
