@@ -1,6 +1,5 @@
 // modules/daily/DailyModule.jsx
 import { useState } from "react";
-import { useProducts } from "../../hooks/useProducts.js";
 import { ds } from "./dailyStyles.js";
 import DailyOverview from "./DailyOverview.jsx";
 import DailyTrend from "./DailyTrend.jsx";
@@ -11,11 +10,10 @@ const TABS = [
 ];
 
 export default function DailyModule({ ctx }) {
-  const { storeId } = ctx;
-  const { products, loading: pLoading } = useProducts(storeId);
+  const { storeId, products } = ctx;
   const [tab, setTab] = useState("overview");
 
-  if (pLoading) return <div style={ds.center}>加载中…</div>;
+  
 
   return (
     <div style={ds.wrap}>

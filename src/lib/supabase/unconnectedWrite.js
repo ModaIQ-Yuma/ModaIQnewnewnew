@@ -20,7 +20,7 @@ export async function removeFromPool(id) {
 
 /**
  * CRM 新增寄样且 creator_source === 'auto_invite' 时调用。
- * 把未建连库中该 handle 的所有 pending 记录标记为已转化，写入归属人。
+ * 把未建联库中该 handle 的所有 pending 记录标记为已转化，写入归属人。
  */
 export async function markUnconnectedConverted(storeId, creatorHandle, ownerId) {
   unwrap(

@@ -28,3 +28,12 @@ export const PAGE_SIZE    = 500;   // Supabase 单次拉取上限
 export const LS = {
   activeStore: "modaiq2_active_store",
 };
+
+// ─── 任务中心 / 甘特图 ────────────────────────────────────────────────────────
+export const GANTT_MONTHS_PER_VIEW   = 3;
+export const GANTT_COL_PRODUCT_WIDTH = 160;
+export const PICKER_MAX_RESULTS      = 20;
+
+// ─── AI token 上限 ──────────────────────────────────────────────────────────
+export const AI_MAX_TOKENS_REVIEW = 1000;
+export const AI_MAX_TOKENS_VIRAL  = 2000;

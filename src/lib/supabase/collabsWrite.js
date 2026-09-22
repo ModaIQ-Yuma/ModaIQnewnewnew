@@ -62,7 +62,7 @@ export async function createInfluencer(storeId, inf, productId) {
     "collaborations"
   );
 
-  // 自动邀约转化：批量标记未建连库归属
+  // 自动邀约转化：批量标记未建联库归属
   if (inf.creatorSource === "auto_invite") {
     await markUnconnectedConverted(storeId, inf.influencerId.trim(), inf.staffId || null);
   }

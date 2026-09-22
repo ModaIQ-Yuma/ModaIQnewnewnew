@@ -2,7 +2,6 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useUnconnected } from "../../hooks/useUnconnected.js";
-import { useProducts } from "../../hooks/useProducts.js";
 import { checkDuplicateInPool, checkDuplicateInCRM } from "../../lib/supabase/unconnected.js";
 import { addToPool, removeFromPool } from "../../lib/supabase/unconnectedWrite.js";
 import { T, glassStyle } from "../../constants/tokens.js";
@@ -11,7 +10,6 @@ import { s } from "./invitePoolStyles.js";
 export default function InvitePoolModule({ ctx }) {
   const { storeId, userId } = ctx;
   const { records, loading, error, reload } = useUnconnected(storeId, userId);
-  const { products } = useProducts(storeId);
 
   const [filterProduct, setFilterProduct] = useState("all");
   const [filterStatus,  setFilterStatus]  = useState("pending");
@@ -73,7 +71,7 @@ export default function InvitePoolModule({ ctx }) {
 
   return (
     <div style={s.wrap}>
-      <h2 style={s.title}>未建连邀约库</h2>
+      <h2 style={s.title}>未建联邀约库</h2>
 
       <div style={{ ...glassStyle(14), padding: "16px 20px", marginBottom: 16 }}>
         <div style={s.row}>

@@ -1,7 +1,7 @@
 // lib/supabase/unconnected.js
 import { sb, unwrap } from "./client.js";
 
-/** 拉取当前店铺的未建连达人库 */
+/** 拉取当前店铺的未建联达人库 */
 export async function fetchUnconnected(storeId) {
   return unwrap(
     await sb
