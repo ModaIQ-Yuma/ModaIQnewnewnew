@@ -18,8 +18,9 @@ const linkBtn = (color) => ({ border:"none", background:"transparent", color, cu
 const PAGE_SIZE = 50;
 
 export default function CRMModule({ ctx }) {
-  const { products } = useProducts(ctx.storeId);
-  const crm = useCRM(ctx.storeId, products);
+  const storeId = ctx.storeId;
+  const { products } = useProducts(storeId);
+  const crm = useCRM(storeId, products);
   const { influencers, staff, loading, error, loadVideos, save, remove, updateStatus, bulkRemove, addStaff } = crm;
 
   const [q,          setQ]          = useState("");
