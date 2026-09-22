@@ -16,11 +16,13 @@ export async function importCRM(storeId, rows, onProgress) {
   const { data: products, error: pErr } = await sb.from("products").select("id, internal_name").eq("store_id", storeId);
   if (pErr) throw new Error("查询产品失败：" + pErr.message);
   const productMap = Object.fromEntries((products || []).map((p) => [p.internal_name, p.id]));
+  console.log("[CRM导入] 产品数:", products?.length, "productMap示例:", Object.entries(productMap).slice(0,3));
 
   onProgress(0, total, "查询跟进人数据…");
   const { data: staffRows, error: sErr } = await sb.from("staff").select("id, name").eq("store_id", storeId);
   if (sErr) throw new Error("查询跟进人失败：" + sErr.message);
   const staffMap = Object.fromEntries((staffRows || []).map((s) => [s.name, s.id]));
+  console.log("[CRM导入] 跟进人数:", staffRows?.length);
 
   const missingStaff = [...new Set(rows.filter((r) => !r.staffNull && r.staff && !staffMap[r.staff]).map((r) => r.staff))];
   for (const name of missingStaff) {
@@ -55,7 +57,7 @@ export async function importCRM(storeId, rows, onProgress) {
     (data || []).forEach((c) => { creatorMap[c.handle] = c.id; });
   }
 
-  const collabRows = rows.map((r) => ({
+  const collabRowsRaw = rows.map((r) => ({
     store_id: storeId,
     creator_id: creatorMap[r.handle],
     product_id: productMap[r.product],
@@ -64,8 +66,18 @@ export async function importCRM(storeId, rows, onProgress) {
     status: r.status,
     creator_source: "manual",
     note: r.note,
-  })).filter((r) => r.creator_id && r.product_id);
+    _handle: r.handle,
+    _product: r.product,
+  }));
+  const noCreator = collabRowsRaw.filter(r => !r.creator_id);
+  const noProduct = collabRowsRaw.filter(r => !r.product_id);
+  console.log("[CRM导入] 总行数:", rows.length, "无creator_id:", noCreator.length, "无product_id:", noProduct.length);
+  if (noCreator.length) console.log("[CRM导入] 无creator示例:", noCreator.slice(0,3).map(r=>r._handle));
+  if (noProduct.length) console.log("[CRM导入] 无product示例:", noProduct.slice(0,3).map(r=>r._product));
 
+  const collabRows = collabRowsRaw
+    .filter((r) => r.creator_id && r.product_id)
+    .map(({_handle, _product, ...r}) => r);
   const skipped = rows.length - collabRows.length;
   let inserted = 0;
   for (const batch of chunk(collabRows)) {

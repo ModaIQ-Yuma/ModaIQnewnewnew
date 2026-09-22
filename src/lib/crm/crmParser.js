@@ -4,6 +4,26 @@ function parseGrade(s) {
   return m ? m[0] : null;
 }
 
+function parseDate(v) {
+  if (!v && v !== 0) return "";
+  const s = String(v).trim();
+  if (!s) return "";
+  // 已经是 YYYY-MM-DD 或 YYYY/MM/DD
+  const iso = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;
+  // Excel 日期序列号（浮点数）
+  const num = parseFloat(s);
+  if (!isNaN(num) && num > 40000 && num < 60000) {
+    // Excel epoch: 1899-12-30
+    const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const da = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${mo}-${da}`;
+  }
+  return s;
+}
+
 const STAFF_NULL = new Set(["—", "其它渠道", "其他渠道", ""]);
 
 // 旧版导出固定列序（0-indexed）
@@ -35,7 +55,7 @@ export function parseRows(rawRows) {
     return {
       handle:       get(row, IDX.handle),
       product:      get(row, IDX.product),
-      shipDate:     get(row, IDX.shipDate),
+      shipDate:     parseDate(get(row, IDX.shipDate)),
       staff,
       staffNull:    STAFF_NULL.has(staff),
       status:       get(row, IDX.status) || "已寄样",
