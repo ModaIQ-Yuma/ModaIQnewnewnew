@@ -56,7 +56,7 @@ export default function InfluencerDetailRow({ inf, onChange, readonly }) {
       {/* 属性 */}
       <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: ".06em", marginBottom: 8 }}>达人属性</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px 18px", marginBottom: 16 }}>
-        {CREATOR_FIELDS.filter((f) => f.location === "panel").map((field) => (
+        {CREATOR_FIELDS.map((field) => (
           <div key={field.key} style={cell}>
             <span style={{ color: T.hint }}>{field.label}：</span>
             <span style={{ color: T.text, fontWeight: 600 }}>{displayValue(field, inf)}</span>
