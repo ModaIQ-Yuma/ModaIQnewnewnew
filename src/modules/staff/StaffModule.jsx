@@ -1,19 +1,22 @@
 // modules/staff/StaffModule.jsx
 import { useState, useEffect } from "react";
 import { T, FONT, glassStyle } from "../../constants/tokens.js";
-import { sb, unwrap } from "../../lib/supabase/client.js";
+import { sb } from "../../lib/supabase/client.js";
 import StaffRoster from "./StaffRoster.jsx";
 
+const TRIAL_DAYS = 3;
 const smallBtn = (color) => ({ border:`1.5px solid ${color}55`, background:"transparent", color, fontSize:FONT.sm2, fontWeight:700, borderRadius:9, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" });
-const shortId = (id) => id ? id.slice(0, 8) + "…" : "—";
+const shortId  = (id) => id ? id.slice(0, 8) + "…" : "—";
 
 export default function StaffModule({ ctx }) {
   const { storeId, userId } = ctx;
+  const [tab,      setTab]      = useState("roster");
   const [members,  setMembers]  = useState([]);
   const [codes,    setCodes]    = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [newCode,  setNewCode]  = useState("");
-  const [newRole,  setNewRole]  = useState("member");
+  const [newRole,  setNewRole]  = useState("staff");
+  const [isTrial,  setIsTrial]  = useState(false);
   const [msg,      setMsg]      = useState("");
   const [msgType,  setMsgType]  = useState("ok");
 
@@ -35,7 +38,12 @@ export default function StaffModule({ ctx }) {
 
   async function createCode() {
     if (!newCode.trim()) { toast("请输入邀请码内容", "err"); return; }
-    const { error } = await sb.from("invite_codes").insert({ code: newCode.trim(), store_id: storeId, role: newRole });
+    const row = { code: newCode.trim(), store_id: storeId, role: newRole };
+    if (isTrial) {
+      const exp = new Date(); exp.setDate(exp.getDate() + TRIAL_DAYS);
+      row.expires_at = exp.toISOString();
+    }
+    const { error } = await sb.from("invite_codes").insert(row);
     if (error) { toast("创建失败：" + error.message, "err"); return; }
     toast("邀请码创建成功！把它发给新成员，她用这个码登录后自动加入本店铺。");
     setNewCode(""); load();
@@ -49,7 +57,7 @@ export default function StaffModule({ ctx }) {
 
   async function changeRole(memberId, role) {
     if (memberId === userId) { toast("不能修改自己的角色", "err"); return; }
-    if (!window.confirm(`将该成员角色改为「${role}」？`)) return;
+    if (!window.confirm(`将该成员角色改为「${role === "admin" ? "管理员" : "成员"}」？`)) return;
     const { error } = await sb.from("user_store_roles").update({ role }).eq("user_id", memberId).eq("store_id", storeId);
     if (error) { toast("修改失败：" + error.message, "err"); return; }
     toast("角色已更新"); load();
@@ -63,92 +71,119 @@ export default function StaffModule({ ctx }) {
     toast("已移除"); load();
   }
 
-  const [tab, setTab] = useState("roster");
-  const inp = { padding:"9px 12px", borderRadius:10, border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.6)", color:T.text, fontSize:FONT.lg2, fontFamily:"inherit", flex:1 };
-
-  const TABS = [{ id:"roster", label:"📋 助理名册" }, { id:"members", label:"👥 成员管理" }];
+  const TABS = [{ id:"roster", label:"📋 助理名册" }, { id:"members", label:"👥 团队账号" }];
+  const inp = { padding:"9px 12px", borderRadius:10, border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.6)", color:T.text, fontSize:FONT.lg2, fontFamily:"inherit" };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2 style={{ fontSize: FONT.x4l, fontWeight: 700, color: T.text, marginBottom: 14 }}>员工管理</h2>
-      <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
-        {TABS.map((t) => (
+    <div style={{ padding:20 }}>
+      <h2 style={{ fontSize:FONT.x4l, fontWeight:700, color:T.text, marginBottom:14 }}>员工管理</h2>
+      <div style={{ display:"flex", gap:6, marginBottom:20 }}>
+        {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ fontSize:FONT.lg2, padding:"6px 16px", borderRadius:18, border:`1.5px solid ${tab===t.id ? T.accent : T.border}`, background:tab===t.id ? T.accent : "transparent", color:tab===t.id ? "#fff" : T.muted, cursor:"pointer", fontFamily:"inherit", fontWeight:tab===t.id ? 700 : 600 }}>{t.label}</button>
         ))}
       </div>
+
       {tab === "roster" && <StaffRoster storeId={storeId} />}
+
       {tab === "members" && (
+        <div>
+          {msg && (
+            <div style={{ padding:"10px 16px", borderRadius:12, marginBottom:16, fontSize:FONT.lg2, fontWeight:600, background:msgType==="ok" ? `${T.success}18` : `${T.danger}18`, color:msgType==="ok" ? T.success : T.danger, border:`1px solid ${msgType==="ok" ? T.success : T.danger}44` }}>
+              {msg}
+            </div>
+          )}
 
-      <div>
-      {msg && (
-        <div style={{ padding:"10px 16px", borderRadius:12, marginBottom:16, fontSize:FONT.lg2, fontWeight:600, background:msgType==="ok" ? `${T.success}18` : `${T.danger}18`, color:msgType==="ok" ? T.success : T.danger, border:`1px solid ${msgType==="ok" ? T.success : T.danger}44` }}>
-          {msg}
-        </div>
-      )}
-
-      {/* 当前成员 */}
-      <div style={{ ...glassStyle(16, true), padding:"18px 20px", marginBottom:18 }}>
-        <div style={{ fontSize:FONT.xl2, fontWeight:800, color:T.text, marginBottom:14 }}>当前成员</div>
-        {loading ? (
-          <div style={{ color:T.hint, fontSize:FONT.lg2 }}>加载中…</div>
-        ) : members.length === 0 ? (
-          <div style={{ color:T.hint, fontSize:FONT.lg2 }}>暂无成员</div>
-        ) : (
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {members.map(m => {
-              const isMe = m.user_id === userId;
-              return (
-                <div key={m.user_id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:isMe ? "rgba(61,127,239,0.06)" : "rgba(255,255,255,0.5)" }}>
-                  <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:T.gradSoft, border:`1.5px solid ${T.accent}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:FONT.lg2, fontWeight:800, color:T.accent }}>
-                    {m.role === "admin" ? "A" : "M"}
-                  </div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:FONT.md2, fontWeight:700, color:T.text }}>
-                      {shortId(m.user_id)}{isMe && <span style={{ fontSize:FONT.sm, color:T.accent, marginLeft:6 }}>（我）</span>}
+          {/* 当前成员 */}
+          <div style={{ ...glassStyle(16, true), padding:"18px 20px", marginBottom:18 }}>
+            <div style={{ fontSize:FONT.xl2, fontWeight:800, color:T.text, marginBottom:14 }}>当前成员</div>
+            {loading ? <div style={{ color:T.hint, fontSize:FONT.lg2 }}>加载中…</div>
+            : members.length === 0 ? <div style={{ color:T.hint, fontSize:FONT.lg2 }}>暂无成员</div>
+            : (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {members.map(m => {
+                  const isMe = m.user_id === userId;
+                  return (
+                    <div key={m.user_id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:isMe ? "rgba(61,127,239,0.06)" : "rgba(255,255,255,0.5)" }}>
+                      <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:T.gradSoft, border:`1.5px solid ${T.accent}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:FONT.lg2, fontWeight:800, color:T.accent }}>
+                        {m.role === "admin" ? "A" : "M"}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:FONT.md2, fontWeight:700, color:T.text }}>
+                          {shortId(m.user_id)}{isMe && <span style={{ fontSize:FONT.sm, color:T.accent, marginLeft:6 }}>（我）</span>}
+                        </div>
+                        <div style={{ fontSize:FONT.sm2, color:T.hint, marginTop:1 }}>{m.role === "admin" ? "管理员" : "成员"}</div>
+                      </div>
+                      {!isMe && (
+                        <div style={{ display:"flex", gap:8 }}>
+                          <button onClick={() => changeRole(m.user_id, m.role === "admin" ? "staff" : "admin")} style={smallBtn(T.accent)}>
+                            改为{m.role === "admin" ? "成员" : "管理员"}
+                          </button>
+                          <button onClick={() => removeMember(m.user_id)} style={smallBtn(T.danger)}>移除</button>
+                        </div>
+                      )}
                     </div>
-                    <div style={{ fontSize:FONT.sm2, color:T.hint, marginTop:1 }}>{m.role === "admin" ? "管理员" : "成员"}</div>
-                  </div>
-                  {!isMe && (
-                    <div style={{ display:"flex", gap:8 }}>
-                      <button onClick={() => changeRole(m.user_id, m.role === "admin" ? "member" : "admin")} style={smallBtn(T.accent)}>改为{m.role === "admin" ? "成员" : "管理员"}</button>
-                      <button onClick={() => removeMember(m.user_id)} style={smallBtn(T.danger)}>移除</button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div style={{ marginTop:12, fontSize:FONT.xs, color:T.hint }}>💡 成员 ID 显示为缩写。如需完整 ID，去 Supabase → Authentication → Users 对照邮箱查找。</div>
-      </div>
-
-      {/* 邀请码 */}
-      <div style={{ ...glassStyle(16, true), padding:"18px 20px" }}>
-        <div style={{ fontSize:FONT.xl2, fontWeight:800, color:T.text, marginBottom:14 }}>邀请码管理</div>
-        <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:16, flexWrap:"wrap" }}>
-          <input style={inp} placeholder="输入邀请码（如 fireswan2026）" value={newCode} onChange={e => setNewCode(e.target.value)} />
-          <select style={{ ...inp, flex:"none", width:120, cursor:"pointer" }} value={newRole} onChange={e => setNewRole(e.target.value)}>
-            <option value="member">成员</option>
-            <option value="admin">管理员</option>
-          </select>
-          <button onClick={createCode} style={{ padding:"9px 18px", borderRadius:10, border:"none", cursor:"pointer", background:T.grad, color:"#fff", fontWeight:700, fontSize:FONT.lg2, fontFamily:"inherit" }}>创建</button>
-        </div>
-        {codes.length === 0 ? (
-          <div style={{ color:T.hint, fontSize:FONT.lg2 }}>暂无邀请码</div>
-        ) : (
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {codes.map(c => (
-              <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:"rgba(255,255,255,0.5)", opacity:c.used_by ? 0.6 : 1 }}>
-                <code style={{ flex:1, fontSize:FONT.lg2, fontWeight:700, color:T.text, letterSpacing:"0.05em" }}>{c.code}</code>
-                <span style={{ fontSize:FONT.sm, color:c.used_by ? T.success : T.hint }}>{c.used_by ? "已使用" : "未使用"}</span>
-                <span style={{ fontSize:FONT.xs, color:T.hint }}>{c.created_at?.slice(0, 10)}</span>
-                <button onClick={() => deleteCode(c.id)} style={smallBtn(T.danger)}>删除</button>
+                  );
+                })}
               </div>
-            ))}
+            )}
+            <div style={{ marginTop:12, fontSize:FONT.xs, color:T.hint }}>💡 成员 ID 显示为缩写。完整 ID 去 Supabase → Authentication → Users 对照邮箱查找。</div>
           </div>
-        )}
-      </div>
-      </div>
+
+          {/* 邀请新成员 */}
+          <div style={{ ...glassStyle(16, true), padding:"18px 20px" }}>
+            <div style={{ fontSize:FONT.xl2, fontWeight:800, color:T.text, marginBottom:4 }}>邀请新成员</div>
+            <div style={{ fontSize:FONT.sm2, color:T.muted, marginBottom:16 }}>邀请码内容（自定义，发给新成员）</div>
+
+            <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:14, flexWrap:"wrap" }}>
+              <input style={{ ...inp, flex:1, minWidth:200 }} placeholder="如：TEAM2026" value={newCode} onChange={e => setNewCode(e.target.value)} onKeyDown={e => e.key === "Enter" && createCode()} />
+              <button onClick={createCode} style={{ padding:"9px 18px", borderRadius:10, border:"none", cursor:"pointer", background:T.grad, color:"#fff", fontWeight:700, fontSize:FONT.lg2, fontFamily:"inherit" }}>生成邀请码</button>
+            </div>
+
+            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16, flexWrap:"wrap" }}>
+              <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", fontSize:FONT.lg2, color:T.muted }}>
+                <input type="checkbox" checked={isTrial} onChange={e => setIsTrial(e.target.checked)} />
+                试用码（{TRIAL_DAYS} 天过期）
+              </label>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:FONT.lg2, color:T.muted }}>加入角色：</span>
+                <select style={{ ...inp, cursor:"pointer", padding:"6px 10px" }} value={newRole} onChange={e => setNewRole(e.target.value)}>
+                  <option value="staff">成员</option>
+                  <option value="admin">管理员</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 已建的邀请码 */}
+            {codes.length > 0 && (
+              <>
+                <div style={{ fontSize:FONT.md2, fontWeight:700, color:T.muted, marginBottom:10 }}>已创建的邀请码</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                  {codes.map(c => {
+                    const isUsed    = !!c.used_by;
+                    const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
+                    const label     = isUsed ? "已使用" : isExpired ? "已过期" : "永久有效";
+                    const labelColor = isUsed ? T.success : isExpired ? T.danger : T.accent;
+                    return (
+                      <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:"rgba(255,255,255,0.5)", opacity:isUsed || isExpired ? 0.6 : 1 }}>
+                        <code style={{ flex:1, fontSize:FONT.lg2, fontWeight:700, color:T.text, letterSpacing:"0.05em" }}>{c.code}</code>
+                        <span style={{ fontSize:FONT.xs, fontWeight:700, background:`${labelColor}15`, color:labelColor, border:`1px solid ${labelColor}33`, borderRadius:8, padding:"2px 8px" }}>{label}</span>
+                        {isUsed ? null : <button onClick={() => deleteCode(c.id)} style={smallBtn(T.danger)}>删除</button>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* 使用流程 */}
+            <div style={{ fontSize:FONT.sm2, color:T.muted, lineHeight:2, borderTop:`1px solid ${T.border}`, paddingTop:14 }}>
+              <div style={{ fontWeight:700, marginBottom:4 }}>使用流程：</div>
+              {["输入邀请码 → 点「生成邀请码」", "把邀请码发给新成员", "新成员登录后输入邀请码，自动加入本店铺", "新成员默认角色是「成员」，可在成员列表里升为「管理员」"].map((s, i) => (
+                <div key={i}>{i + 1}. {s}</div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

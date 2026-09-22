@@ -135,9 +135,11 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
         </div>
         <button onClick={() => setViewStart(currentYearMonth(now))} style={{ ...glassStyle(12), border:`1px solid ${T.glassStroke}`, padding:'8px 14px', fontSize:FONT.md2, fontWeight:600, color:T.muted, cursor:'pointer', fontFamily:'inherit' }}>回到本月</button>
         <div style={{ flex:1 }} />
-        <button onClick={() => { setBatchMode(v => !v); if (batchMode) setBatchSelected(new Set()); }} style={toolbarBtn(batchMode)}>
-          {batchMode ? `✓ 批量模式 (${batchSelected.size})` : '批量编辑'}
-        </button>
+        {isAdmin && (
+          <button onClick={() => { setBatchMode(v => !v); if (batchMode) setBatchSelected(new Set()); }} style={toolbarBtn(batchMode)}>
+            {batchMode ? `✓ 批量模式 (${batchSelected.size})` : '批量编辑'}
+          </button>
+        )}
         <button onClick={() => setOnlySet(v => !v)} style={toolbarBtn(onlySet)}>{onlySet ? '✓ 只看已设置' : '只看已设置'}</button>
         <button onClick={() => setShowLogs(true)} style={{ ...glassStyle(12), border:`1px solid ${T.glassStroke}`, padding:'8px 16px', fontSize:FONT.lg2, fontWeight:600, color:T.muted, cursor:'pointer', fontFamily:'inherit' }}>
           变更记录 {changeLogs.length > 0 && <span style={{ color:T.accent, fontWeight:800 }}>{changeLogs.length}</span>}
