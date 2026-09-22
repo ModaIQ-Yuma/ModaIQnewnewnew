@@ -122,6 +122,7 @@ export default function CRMImportModal({ storeId, onClose, onDone }) {
               <div style={{ height:"100%", width:`${pct}%`, background:T.grad, borderRadius:10, transition:"width .3s" }} />
             </div>
             <div style={{ fontSize:FONT.sm2, color:T.hint }}>{progress.done} / {progress.total} 条</div>
+            {err && <div style={{ fontSize:FONT.sm2, color:T.danger, marginTop:12 }}>{err}</div>}
           </div>
         )}
 

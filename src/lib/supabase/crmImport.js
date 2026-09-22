@@ -13,11 +13,13 @@ export async function importCRM(storeId, rows, onProgress) {
   const total = rows.length;
 
   onProgress(0, total, "查询产品数据…");
-  const { data: products } = await sb.from("products").select("id, internal_name").eq("store_id", storeId);
+  const { data: products, error: pErr } = await sb.from("products").select("id, internal_name").eq("store_id", storeId);
+  if (pErr) throw new Error("查询产品失败：" + pErr.message);
   const productMap = Object.fromEntries((products || []).map((p) => [p.internal_name, p.id]));
 
   onProgress(0, total, "查询跟进人数据…");
-  const { data: staffRows } = await sb.from("staff").select("id, name").eq("store_id", storeId);
+  const { data: staffRows, error: sErr } = await sb.from("staff").select("id, name").eq("store_id", storeId);
+  if (sErr) throw new Error("查询跟进人失败：" + sErr.message);
   const staffMap = Object.fromEntries((staffRows || []).map((s) => [s.name, s.id]));
 
   const missingStaff = [...new Set(rows.filter((r) => !r.staffNull && r.staff && !staffMap[r.staff]).map((r) => r.staff))];
@@ -29,7 +31,7 @@ export async function importCRM(storeId, rows, onProgress) {
   onProgress(0, total, "写入达人信息…");
   const uniqueCreators = Object.values(Object.fromEntries(rows.map((r) => [r.handle, r])));
   for (const batch of chunk(uniqueCreators)) {
-    await sb.from("creators").upsert(
+    const { error: crtErr } = await sb.from("creators").upsert(
       batch.map((r) => ({
         store_id: storeId, handle: r.handle,
         official_grade: r.grade, hist_sales: r.histSales,
@@ -42,6 +44,7 @@ export async function importCRM(storeId, rows, onProgress) {
       })),
       { onConflict: "store_id,handle" }
     );
+    if (crtErr) throw new Error("写入达人信息失败：" + crtErr.message);
   }
 
   onProgress(0, total, "查询达人 ID…");
@@ -66,7 +69,8 @@ export async function importCRM(storeId, rows, onProgress) {
   const skipped = rows.length - collabRows.length;
   let inserted = 0;
   for (const batch of chunk(collabRows)) {
-    await sb.from("collaborations").insert(batch);
+    const { error: cErr } = await sb.from("collaborations").insert(batch);
+    if (cErr) throw new Error("写入寄样记录失败：" + cErr.message);
     inserted += batch.length;
     onProgress(inserted, total, "写入寄样记录…");
   }
