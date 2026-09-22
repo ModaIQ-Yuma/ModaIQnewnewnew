@@ -16,6 +16,9 @@ import BDToolsModule      from "./bdtools/BDToolsModule.jsx";
 import StaffModule        from "./staff/StaffModule.jsx";
 import PerformanceModule  from "./tasks/PerformanceModule.jsx";
 
+// 需要复盘数据（useReview）的板块
+const REVIEW_TABS = new Set(["review", "attribution", "tasks", "performance"]);
+
 const MODULES = {
   products:    ProductsModule,
   crm:         CRMModule,
@@ -33,21 +36,22 @@ const MODULES = {
 export default function ModuleRouter({ tab, ctx }) {
   const { storeId } = ctx;
 
-  // 全局共享数据：只拉一次，所有板块通过 ctx 取用
+  // 产品库：所有板块都需要，始终拉
   const { products, reload: reloadProducts } = useProducts(storeId);
+
+  // 复盘数据：只在需要的板块才激活（懒加载）
+  const reviewEnabled = REVIEW_TABS.has(tab);
   const {
     collabs, videos, creators, invites,
     gradeSnapshots, storeSnapshots,
     loading: reviewLoading, error: reviewError,
     reload: reloadReview,
-  } = useReview(storeId);
+  } = useReview(reviewEnabled ? storeId : null);
 
   const sharedCtx = {
     ...ctx,
-    // 产品
     products:        products ?? [],
     reloadProducts,
-    // 复盘 / 归因 / 任务共用数据
     collabs:         collabs  ?? [],
     videos:          videos   ?? [],
     creators:        creators ?? [],

@@ -22,7 +22,7 @@ export const ACTIVATE_MIN_ORDERS = 30;
 export const INVITE_TRIAL_DAYS = 3;
 
 // 分页 / 批处理
-export const PAGE_SIZE    = 500;   // Supabase 单次拉取上限
+export const PAGE_SIZE    = 1000;     // Supabase 单次拉取上限
 
 // localStorage keys（统一前缀，避免与旧版冲突）
 export const LS = {

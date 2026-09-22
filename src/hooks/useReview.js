@@ -16,7 +16,7 @@ export function useReview(storeId) {
   const [invites,        setInvites]        = useState([]);
   const [gradeSnapshots, setGradeSnapshots] = useState([]);
   const [storeSnapshots, setStoreSnapshots] = useState([]);
-  const [loading,        setLoading]        = useState(true);
+  const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
 
   const load = useCallback(async () => {

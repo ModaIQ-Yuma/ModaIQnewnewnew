@@ -42,7 +42,7 @@ export function useCRM(storeId, products) {
       setInfluencers(mapped);
       setStaff(st);
     } catch (e) { setError(e.message); }
-    setLoading(false);
+    finally { setLoading(false); }
   }, [storeId, JSON.stringify(productById)]);
 
   useEffect(() => { reload(); }, [reload]);
