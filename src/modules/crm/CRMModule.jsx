@@ -7,7 +7,8 @@ import { cumOrders } from "../../lib/crm/cumOrders.js";
 import { withComputedStatus, computeStatus } from "../../lib/crm/crmFlow.js";
 import { Inp, Sel, Btn, Badge } from "../../components/ui/index.jsx";
 import InfluencerEntryPanel from "./InfluencerEntryPanel.jsx";
-import InfluencerDetailRow from "./InfluencerDetailRow.jsx";
+import InfluencerDetailRow  from "./InfluencerDetailRow.jsx";
+import CRMImportModal       from "./CRMImportModal.jsx";
 import { useCRM } from "../../hooks/useCRM.js";
 import { useProducts } from "../../hooks/useProducts.js";
 import * as XLSX from "xlsx";
@@ -30,6 +31,7 @@ export default function CRMModule({ ctx }) {
   const [fDateTo,    setFDateTo]    = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [editing,    setEditing]    = useState(null);
+  const [showImport, setShowImport] = useState(false);
   const [page,       setPage]       = useState(1);
   const [selected,   setSelected]   = useState(() => new Set());
   const readonly = ctx.role === "viewer";
@@ -116,6 +118,7 @@ export default function CRMModule({ ctx }) {
           {!readonly && effectiveSelected.size > 0 && <Btn small danger onClick={bulkDelete}>批量删除（{effectiveSelected.size}）</Btn>}
           <Btn small onClick={exportXLSX}>导出 xlsx</Btn>
           {!readonly && <Btn small accent onClick={() => setEditing("new")}>+ 新增达人</Btn>}
+          {!readonly && <Btn small onClick={() => setShowImport(true)}>📥 批量导入</Btn>}
         </div>
       </div>
 
@@ -177,6 +180,13 @@ export default function CRMModule({ ctx }) {
         </div>
       )}
 
+      {showImport && (
+        <CRMImportModal
+          storeId={storeId}
+          onClose={() => setShowImport(false)}
+          onDone={reload}
+        />
+      )}
       {editing && (
         <InfluencerEntryPanel
           initial={editing === "new" ? null : editing}
