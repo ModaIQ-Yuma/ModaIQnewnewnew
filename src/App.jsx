@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { sb } from "./lib/supabase/client.js";
 import { useSession } from "./hooks/useSession.js";
 import { useStoreContext } from "./hooks/useStoreContext.js";
 import { DEFAULT_TAB } from "./constants/nav.js";
@@ -14,6 +15,11 @@ import ModuleRouter from "./modules/ModuleRouter.jsx";
  */
 export default function App() {
   const { session, checked: authChecked } = useSession();
+
+  // 页面加载时立刻 ping 一次，唤醒 Supabase（免费版有冷启动）
+  useEffect(() => {
+    sb.from("stores").select("id").limit(1).then(() => {}).catch(() => {});
+  }, []);
   const userId = session?.user?.id || null;
   const store  = useStoreContext(userId);
   const [tab, setTab] = useState(DEFAULT_TAB);
