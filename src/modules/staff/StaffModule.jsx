@@ -159,15 +159,21 @@ export default function StaffModule({ ctx }) {
                 <div style={{ fontSize:FONT.md2, fontWeight:700, color:T.muted, marginBottom:10 }}>已创建的邀请码</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
                   {codes.map(c => {
-                    const isUsed    = !!c.used_by;
                     const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
-                    const label     = isUsed ? "已使用" : isExpired ? "已过期" : "永久有效";
-                    const labelColor = isUsed ? T.success : isExpired ? T.danger : T.accent;
+                    const daysLeft  = c.expires_at && !isExpired ? Math.ceil((new Date(c.expires_at) - new Date()) / 86400000) : null;
+                    const expiryLabel    = isExpired ? "已过期" : daysLeft ? `${daysLeft} 天后过期` : "永久有效";
+                    const expiryColor    = isExpired ? T.danger : daysLeft ? T.warning : T.success;
+                    const usedLabel      = c.used_at ? `已被使用 · ${new Date(c.used_at).toLocaleDateString("zh-CN")}` : "尚未使用";
                     return (
-                      <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:"rgba(255,255,255,0.5)", opacity:isUsed || isExpired ? 0.6 : 1 }}>
-                        <code style={{ flex:1, fontSize:FONT.lg2, fontWeight:700, color:T.text, letterSpacing:"0.05em" }}>{c.code}</code>
-                        <span style={{ fontSize:FONT.xs, fontWeight:700, background:`${labelColor}15`, color:labelColor, border:`1px solid ${labelColor}33`, borderRadius:8, padding:"2px 8px" }}>{label}</span>
-                        {isUsed ? null : <button onClick={() => deleteCode(c.id)} style={smallBtn(T.danger)}>删除</button>}
+                      <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:isExpired ? `${T.danger}05` : "rgba(255,255,255,0.5)", opacity:isExpired ? 0.7 : 1 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
+                            <span style={{ fontSize:FONT.xl2, fontWeight:800, color:T.text, letterSpacing:"0.05em" }}>{c.code}</span>
+                            <span style={{ fontSize:FONT.xs, fontWeight:700, background:`${expiryColor}18`, color:expiryColor, borderRadius:8, padding:"2px 8px" }}>{expiryLabel}</span>
+                          </div>
+                          <div style={{ fontSize:FONT.sm2, color:T.hint }}>{usedLabel}</div>
+                        </div>
+                        <button onClick={() => deleteCode(c.id)} style={smallBtn(T.danger)}>删除</button>
                       </div>
                     );
                   })}
@@ -176,11 +182,12 @@ export default function StaffModule({ ctx }) {
             )}
 
             {/* 使用流程 */}
-            <div style={{ fontSize:FONT.sm2, color:T.muted, lineHeight:2, borderTop:`1px solid ${T.border}`, paddingTop:14 }}>
-              <div style={{ fontWeight:700, marginBottom:4 }}>使用流程：</div>
-              {["输入邀请码 → 点「生成邀请码」", "把邀请码发给新成员", "新成员登录后输入邀请码，自动加入本店铺", "新成员默认角色是「成员」，可在成员列表里升为「管理员」"].map((s, i) => (
-                <div key={i}>{i + 1}. {s}</div>
-              ))}
+            <div style={{ marginTop:14, padding:"10px 14px", borderRadius:12, background:"rgba(61,127,239,0.06)", fontSize:FONT.sm2, color:T.muted, lineHeight:1.9 }}>
+              <strong style={{ color:T.text }}>使用流程：</strong><br />
+              1. 输入邀请码 → 点「生成邀请码」<br />
+              2. 把邀请码发给新成员<br />
+              3. 新成员登录后输入邀请码，自动加入本店铺<br />
+              4. 新成员默认角色是「成员」，可在成员列表里升为「管理员」
             </div>
           </div>
         </div>
