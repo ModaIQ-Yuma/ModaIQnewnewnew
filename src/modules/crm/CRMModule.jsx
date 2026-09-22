@@ -185,7 +185,7 @@ export default function CRMModule({ ctx }) {
         <CRMImportModal
           storeId={storeId}
           onClose={() => setShowImport(false)}
-          onDone={reload}
+          onDone={crm.reload}
         />
       )}
       {editing && (
