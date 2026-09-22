@@ -13,3 +13,6 @@ export const STATUS_COLORS = {
 };
 
 export const SHIP_SCORE_OPTIONS = [1,2,3,4,5];
+
+// 产品状态标准化（新版直接存标准值，透传即可）
+export const normalizeStatus = (s) => s || "";
