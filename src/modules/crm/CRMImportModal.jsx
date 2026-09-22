@@ -19,9 +19,9 @@ export default function CRMImportModal({ storeId, onClose, onDone }) {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const wb    = XLSX.read(ev.target.result, { type: "array" });
+        const wb    = XLSX.read(ev.target.result, { type: "array", codepage: 936 });
         const ws    = wb.Sheets[wb.SheetNames[0]];
-        const raw   = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        const raw   = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
         const parsed = parseRows(raw);
         if (!parsed.length) { setErr("未解析到有效数据，请确认文件格式正确"); return; }
         setRows(parsed);
