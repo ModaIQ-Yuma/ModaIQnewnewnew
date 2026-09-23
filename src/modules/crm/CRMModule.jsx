@@ -10,6 +10,7 @@ import { REPOST_THRESHOLD_ORDERS } from "../../constants/config.js";
 import InfluencerEntryPanel from "./InfluencerEntryPanel.jsx";
 import InfluencerDetailRow  from "./InfluencerDetailRow.jsx";
 import CRMImportModal       from "./CRMImportModal.jsx";
+import AddShipmentButton    from "./AddShipmentButton.jsx";
 import { useCRM } from "../../hooks/useCRM.js";
 import { exportCRM } from "../../lib/crm/crmExport.js";
 import { normName } from "../../lib/crm/identity.js";
@@ -79,10 +80,18 @@ export default function CRMModule({ ctx }) {
 
   return (
     <div>
-      <SectionIntro style={{ marginBottom: 14 }}>
-        每行 = 一次寄样（达人 × 产品），同一达人寄同一产品多次即复投，各占一行。等级、体型等属性记录的是<b>寄样当时</b>的情况；别名和达人备注跟着人走，所有寄样共用。
-        合作进度自动计算：有视频 → 已发布，累计出单 ≥ {REPOST_THRESHOLD_ORDERS} 单 → 待复投；「复投完成 / 不合作」需手动选择。点击行展开明细。
-      </SectionIntro>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+        <SectionIntro style={{ flex: "1 1 420px" }}>
+          每行 = 一次寄样（达人 × 产品），同一达人寄同一产品多次即复投，各占一行。等级、体型等属性记录的是<b>寄样当时</b>的情况；别名和达人备注跟着人走，所有寄样共用。
+          合作进度自动计算：有视频 → 已发布，累计出单 ≥ {REPOST_THRESHOLD_ORDERS} 单 → 待复投；「复投完成 / 不合作」需手动选择。点击行展开明细。
+        </SectionIntro>
+        {!readonly && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
+            <button onClick={() => setShowImport(true)} style={{ padding: "10px 18px", borderRadius: 999, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.7)", color: T.muted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📥 批量导入</button>
+            <AddShipmentButton onClick={() => setEditing("new")} />
+          </div>
+        )}
+      </div>
       {notice && <div style={{ fontSize: 13, color: T.success, background: `${T.success}12`, border: `1px solid ${T.success}40`, borderRadius: 10, padding: "8px 14px", marginBottom: 12 }}>{notice}</div>}
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
         <span style={{ fontSize: 13, fontWeight:700, color:T.muted, whiteSpace:"nowrap" }}>寄样时间</span>
@@ -100,8 +109,6 @@ export default function CRMModule({ ctx }) {
         <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
           {!readonly && effectiveSelected.size > 0 && <Btn small danger onClick={bulkDelete}>批量删除（{effectiveSelected.size}）</Btn>}
           <Btn small onClick={() => exportCRM(rows, staffName)}>导出 xlsx</Btn>
-          {!readonly && <Btn small accent onClick={() => setEditing("new")}>+ 新增寄样</Btn>}
-          {!readonly && <Btn small onClick={() => setShowImport(true)}>📥 批量导入</Btn>}
         </div>
       </div>
 

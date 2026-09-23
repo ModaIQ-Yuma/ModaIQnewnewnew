@@ -52,3 +52,12 @@ test("邀约库查重：别名也算同一人；复投多条不报错", () => {
   expect(checkPoolEntry({ ...base, handle: "BELLA" })).toMatch("2026-03-01");
   expect(checkPoolEntry({ ...base, handle: "newone" })).toBe(null);
 });
+
+import { searchCreators } from "../crm/identity.js";
+test("联想：现名/别名模糊匹配，排序 完全 > 开头 > 包含", () => {
+  const cs = [{ id: "1", handle: "sophiek.stuff" }, { id: "2", handle: "mysoph" }, { id: "3", handle: "sop" }];
+  const as = [{ creator_id: "1", alias: "sophiek.kelly2" }, { creator_id: "2", alias: "zz" }];
+  expect(searchCreators(cs, as, "s").length).toBe(0);
+  expect(searchCreators(cs, as, "SOP").map((r) => r.id)).toEqual(["3", "1", "2"]);
+  expect(searchCreators(cs, as, "kelly")).toEqual([{ id: "1", handle: "sophiek.stuff", alias: "sophiek.kelly2" }]);
+});

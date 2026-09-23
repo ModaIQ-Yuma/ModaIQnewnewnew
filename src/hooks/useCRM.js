@@ -1,7 +1,7 @@
 // ─── CRM hook：从核心数据派生 influencer 列表；身份检查 + 保存 + 合并 ────────
 import { useCallback, useMemo } from "react";
 import { buildInfluencers, latestByCreator } from "../lib/crm/buildInfluencers.js";
-import { buildNameIndex, checkIdentity, normName, resolveName } from "../lib/crm/identity.js";
+import { buildNameIndex, checkIdentity, normName, resolveName, searchCreators } from "../lib/crm/identity.js";
 import { buildShipmentPayload } from "../lib/crm/shipmentPayload.js";
 import { withComputedStatus } from "../lib/crm/crmFlow.js";
 import { saveShipment } from "../lib/supabase/crmSave.js";
@@ -23,6 +23,16 @@ export function useCRM(storeId, core, products) {
     [collabs, creators, aliases, videos, productById]
   );
   const latest = useMemo(() => latestByCreator(influencers), [influencers]);
+  const shipCount = useMemo(() => {
+    const m = new Map();
+    for (const c of collabs) m.set(c.creator_id, (m.get(c.creator_id) || 0) + 1);
+    return m;
+  }, [collabs]);
+
+  /** 录入联想：模糊搜现名/别名，附带合作次数和最近寄样日期 */
+  const search = useCallback((q) => searchCreators(creators, aliases, q)
+    .map((r) => ({ ...r, count: shipCount.get(r.id) || 0, latestDate: latest.get(r.id)?.shipDate || "" })),
+  [creators, aliases, shipCount, latest]);
 
   const aliasesOf = useCallback((id) => aliases.filter((a) => a.creator_id === id).map((a) => normName(a.alias)), [aliases]);
   const handleOf  = useCallback((id) => creatorById.get(id)?.handle || "?", [creatorById]);
@@ -74,5 +84,5 @@ export function useCRM(storeId, core, products) {
   }, [removeRows, refresh]);
   const remove = useCallback((id) => bulkRemove([id]), [bulkRemove]);
 
-  return { influencers, latest, staff, loading, error, reload: refresh, resolve, check, save, handleOf, updateStatus, remove, bulkRemove };
+  return { influencers, latest, staff, loading, error, reload: refresh, resolve, search, check, save, handleOf, updateStatus, remove, bulkRemove };
 }

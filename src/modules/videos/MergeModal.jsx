@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { Hint } from "../../components/layout/SubNav.jsx";
-import { buildNameIndex, resolveName, namesOf, normName } from "../../lib/crm/identity.js";
+import { buildNameIndex, resolveName, namesOf, normName, searchCreators } from "../../lib/crm/identity.js";
 import { assignByProduct } from "../../lib/video/assignVideos.js";
 import { mergeVideosIntoCreator } from "../../lib/supabase/videosMerge.js";
 
@@ -20,11 +20,9 @@ export default function MergeModal({ storeId, video, core, products, onClose, on
   const index = useMemo(() => buildNameIndex(core.creators, core.aliases), [core.creators, core.aliases]);
   const productName = (id) => products.find((p) => p.id === id)?.internal_name || "?";
 
-  const results = useMemo(() => {
-    const q = normName(query);
-    if (!q || creator) return [];
-    return core.creators.filter((c) => namesOf(c.id, core.creators, core.aliases).some((n) => n.includes(q))).slice(0, 10);
-  }, [query, creator, core.creators, core.aliases]);
+  // 与 CRM 录入联想同一套搜索（现名/别名模糊匹配）
+  const results = useMemo(() => (creator ? [] : searchCreators(core.creators, core.aliases, query, 10)),
+    [query, creator, core.creators, core.aliases]);
 
   // 预览：该达人全部名字 + 视频里的新名字下，所有未归属视频按商品能挂上几条
   const preview = useMemo(() => {
@@ -54,7 +52,7 @@ export default function MergeModal({ storeId, video, core, products, onClose, on
         {results.length > 0 && (
           <div style={{ ...glassStyle(10), marginTop: 4, overflow: "hidden" }}>
             {results.map((c) => (
-              <div key={c.id} onClick={() => { setCreator(c); setQuery(c.handle); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: FONT.body, color: T.text, borderBottom: `1px solid ${T.glassStroke}` }}>@{c.handle}</div>
+              <div key={c.id} onClick={() => { setCreator(c); setQuery(c.handle); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: FONT.body, color: T.text, borderBottom: `1px solid ${T.glassStroke}` }}>@{c.handle}{c.alias && <span style={{ fontSize: FONT.tiny, color: T.hint, marginLeft: 6 }}>别名 @{c.alias}</span>}</div>
             ))}
           </div>
         )}

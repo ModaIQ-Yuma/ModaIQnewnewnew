@@ -62,3 +62,28 @@ export function checkIdentity(p, idx, handleOf) {
   }
   return { creatorId, rename, handle, aliases, errors, mergeWith: [...mergeWith] };
 }
+
+/**
+ * 模糊搜索达人（录入联想、归入 CRM 共用）：现名、别名都参与；
+ * 排序：完全相同 > 开头相同 > 包含；同级时现名命中优先于别名命中。
+ * @returns [{ id, handle, alias }]（alias = 命中的别名，现名命中时为 null）
+ */
+export function searchCreators(creators, aliases, query, limit = 8) {
+  const q = normName(query);
+  if (q.length < 2) return [];
+  const rank = (name) => (name === q ? 0 : name.startsWith(q) ? 1 : name.includes(q) ? 2 : -1);
+  const best = new Map();                                   // creatorId → { score, alias }
+  const consider = (id, name, alias) => {
+    const r = rank(normName(name));
+    if (r < 0) return;
+    const score = r * 2 + (alias ? 1 : 0);
+    if (!best.has(id) || score < best.get(id).score) best.set(id, { score, alias });
+  };
+  for (const c of creators) consider(c.id, c.handle, null);
+  for (const a of aliases) consider(a.creator_id, a.alias, a.alias);
+  const handleOf = new Map(creators.map((c) => [c.id, c.handle]));
+  return [...best.entries()]
+    .sort((a, b) => a[1].score - b[1].score || handleOf.get(a[0]).localeCompare(handleOf.get(b[0])))
+    .slice(0, limit)
+    .map(([id, v]) => ({ id, handle: handleOf.get(id), alias: v.alias }));
+}

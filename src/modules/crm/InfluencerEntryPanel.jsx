@@ -20,7 +20,7 @@ const blank = () => ({
 const inputStyle = { width: "100%", background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: FONT.body, padding: "9px 13px", fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
 
 /**
- * @param crm     useCRM 的返回（resolve / check / save / handleOf / latest / influencers）
+ * @param crm     useCRM 的返回（resolve / search / check / save / handleOf / latest / influencers）
  * @param onSaved (res) => void   保存成功回调（res.pool 为邀约库联动结果）
  */
 export default function InfluencerEntryPanel({ initial, products = [], staff = [], crm, onSaved, onClose }) {
@@ -78,7 +78,8 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
       <div style={{ background: "#fff", borderRadius: 18, padding: "26px 28px", width: "100%", maxWidth: 580, boxShadow: "0 20px 60px rgba(40,90,180,0.2)", border: `1.5px solid ${T.border}` }}>
         <div style={{ fontSize: FONT.h2, fontWeight: 800, color: T.text, marginBottom: 18 }}>{initial ? "编辑寄样" : "新增寄样"}</div>
 
-        <EntryIdentity f={f} set={set} history={history} who={who} staffName={staffName} />
+        <EntryIdentity f={f} set={set} history={history} who={who} staffName={staffName}
+          suggest={initial ? null : (q) => crm.search(q).filter((s) => s.handle !== normName(q))} />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Field label="合作产品 *">

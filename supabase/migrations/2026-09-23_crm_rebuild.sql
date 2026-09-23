@@ -37,6 +37,8 @@ create index if not exists idx_collab_attrs_store on collab_attrs (store_id);
 drop trigger if exists trg_collab_attrs_updated on collab_attrs;
 create trigger trg_collab_attrs_updated before update on collab_attrs
   for each row execute function set_updated_at();
+-- 新版 Supabase 不再自动给新表授权，必须显式授权，否则前端报 permission denied
+grant select, insert, update, delete on collab_attrs to anon, authenticated, service_role;
 
 -- ③ creators 只保留身份
 alter table creators

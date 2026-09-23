@@ -139,6 +139,8 @@ CREATE TABLE collab_attrs (
 );
 CREATE INDEX idx_collab_attrs_store ON collab_attrs (store_id);
 CREATE TRIGGER trg_collab_attrs_updated BEFORE UPDATE ON collab_attrs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+-- 新版 Supabase 不再自动给新表授权，需显式授权（不开 RLS，前端按 store_id 过滤）
+GRANT SELECT, INSERT, UPDATE, DELETE ON collab_attrs TO anon, authenticated, service_role;
 CREATE INDEX idx_collab_store_creator  ON collaborations (store_id, creator_id);
 CREATE INDEX idx_collab_store_product  ON collaborations (store_id, product_id);
 CREATE INDEX idx_collab_store_staff    ON collaborations (store_id, staff_id);

@@ -8,6 +8,25 @@ import { Field } from "./EntryPanelParts.jsx";
 
 const hintStyle = (color) => ({ fontSize: FONT.note, color, marginTop: 5 });
 
+/** 联想下拉：输入 2 个字符起，现名/别名模糊匹配，点选即填入现名 */
+function Suggestions({ items, onPick }) {
+  if (!items.length) return null;
+  return (
+    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20, marginTop: 4, background: "#fff", border: `1.5px solid ${T.accent}44`, borderRadius: 12, boxShadow: "0 10px 30px rgba(40,90,180,0.16)", overflow: "hidden" }}>
+      {items.map((s) => (
+        <div key={s.id} onMouseDown={(e) => { e.preventDefault(); onPick(s.handle); }}
+          style={{ padding: "8px 12px", cursor: "pointer", borderBottom: `1px solid ${T.glassStroke}`, display: "flex", justifyContent: "space-between", gap: 8 }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = `${T.accent}0d`; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+          <span style={{ fontSize: FONT.body, fontWeight: 700, color: T.text }}>
+            @{s.handle}{s.alias && <span style={{ fontSize: FONT.tiny, fontWeight: 400, color: T.hint, marginLeft: 6 }}>别名 @{s.alias}</span>}
+          </span>
+          <span style={{ fontSize: FONT.tiny, color: T.hint, whiteSpace: "nowrap" }}>合作 {s.count} 次 · 最近 {s.latestDate || "—"}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** 别名：输入后回车或点「添加」生成标签 */
 function AliasInput({ value = [], onChange }) {
   const [text, setText] = useState("");
@@ -38,13 +57,20 @@ function AliasInput({ value = [], onChange }) {
 /**
  * @param f/set    表单与 setter      @param history 该达人的历史寄样（已按日期倒序）
  * @param who      身份识别结果文案：{ text, color }
+ * @param suggest  (输入) => 联想列表；编辑已有寄样时不传（不做联想）
  */
-export default function EntryIdentity({ f, set, history, who, staffName }) {
+export default function EntryIdentity({ f, set, history, who, staffName, suggest }) {
+  const [focused, setFocused] = useState(false);
+  const items = focused && suggest ? suggest(f.influencerId) : [];
   return (
     <>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
         <Field label="达人ID *">
-          <Inp value={f.influencerId} onChange={(v) => set("influencerId", v)} placeholder="username（不含 @）" />
+          <div style={{ position: "relative" }}>
+            <Inp value={f.influencerId} onChange={(v) => set("influencerId", v)} placeholder="输入 2 个字符起自动联想"
+              onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+            <Suggestions items={items} onPick={(h) => { set("influencerId", h); setFocused(false); }} />
+          </div>
           {who && <div style={hintStyle(who.color)}>{who.text}</div>}
         </Field>
         <Field label="别名（曾用名）">
