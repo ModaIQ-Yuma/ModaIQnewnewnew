@@ -1,30 +1,26 @@
-// modules/crm/AddShipmentButton.jsx — CRM 主入口：大大的圆胖「新增寄样」按钮
-// 配色取自 Logo 的粉→蓝渐变；悬停轻轻浮起，按下回弹。
+// modules/crm/AddShipmentButton.jsx — CRM 主入口：握手大圆球「新增寄样」
+// 悬停：圆球浮起歪头、星星闪一下；按下：轻轻压扁。图标来自可替换的图标库。
 import { useState } from "react";
 import { FONT } from "../../constants/tokens.js";
+import { ENTRY_ICONS, DEFAULT_ENTRY_ICON } from "../../components/icons/EntryIcons.jsx";
 
-const GRAD = "linear-gradient(135deg, #FF8FD0 0%, #B79CFF 50%, #6CAEFF 100%)";
-
-export default function AddShipmentButton({ onClick }) {
+export default function AddShipmentButton({ onClick, icon = DEFAULT_ENTRY_ICON }) {
   const [state, setState] = useState("idle");              // idle | hover | press
-  const lift = state === "hover" ? "translateY(-3px) scale(1.03)" : state === "press" ? "translateY(1px) scale(0.97)" : "none";
+  const Icon = ENTRY_ICONS[icon] || ENTRY_ICONS[DEFAULT_ENTRY_ICON];
+  const ball = state === "hover" ? "translateY(-4px) rotate(-6deg)" : state === "press" ? "scale(0.94)" : "none";
   return (
-    <button type="button" onClick={onClick}
+    <button type="button" onClick={onClick} aria-label="新增寄样"
       onMouseEnter={() => setState("hover")} onMouseLeave={() => setState("idle")}
       onMouseDown={() => setState("press")} onMouseUp={() => setState("hover")}
-      style={{
-        display: "inline-flex", alignItems: "center", gap: 12, padding: "12px 30px 12px 12px",
-        borderRadius: 999, border: "3px solid rgba(255,255,255,0.9)", background: GRAD, color: "#fff",
-        fontSize: FONT.h2, fontWeight: 900, letterSpacing: "0.06em", fontFamily: "inherit", cursor: "pointer",
-        boxShadow: state === "hover" ? "0 12px 28px rgba(183,156,255,0.55)" : "0 6px 18px rgba(183,156,255,0.40)",
-        transform: lift, transition: "transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s",
-      }}>
+      style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 8, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
       <span style={{
-        width: 44, height: 44, borderRadius: "50%", background: "#fff", color: "#B79CFF",
-        display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, lineHeight: 1,
-        boxShadow: "inset 0 -3px 0 rgba(183,156,255,0.25)",
-      }}>+</span>
-      新增寄样 <span style={{ fontSize: FONT.h2 }}>📦</span>
+        width: 96, height: 96, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+        border: "4px solid #3D7FEF", borderBottomWidth: 7, boxSizing: "border-box",
+        transform: ball, transition: "transform .2s cubic-bezier(.34,1.56,.64,1)",
+      }}>
+        <Icon size={78} sparkle={state === "hover"} />
+      </span>
+      <span style={{ fontSize: FONT.h2, fontWeight: 800, color: "#2563CC" }}>新增寄样</span>
     </button>
   );
 }
