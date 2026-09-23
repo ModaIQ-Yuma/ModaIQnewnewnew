@@ -39,7 +39,7 @@ export default function CRMImportModal({ storeId, onClose, onDone }) {
     try {
       const res = await importCRM(storeId, rows, (done, total, label) =>
         setProgress({ done, total, label })
-      );
+      , importMode);
       setResult(res);
       setStage("done");
     } catch (e) {
@@ -106,8 +106,21 @@ export default function CRMImportModal({ storeId, onClose, onDone }) {
 
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
               <button onClick={onClose} style={{ padding:"9px 20px", borderRadius:10, border:`1.5px solid ${T.border}`, background:"transparent", color:T.muted, cursor:"pointer", fontFamily:"inherit", fontSize:FONT.lg2 }}>取消</button>
+              {/* 导入模式选择 */}
+              <div style={{ display:"flex", gap:16, marginBottom:12, alignItems:"center" }}>
+                <span style={{ fontSize:FONT.md2, color:T.muted, fontWeight:600 }}>导入模式：</span>
+                {[
+                  { v:"full",       label:"完整导入（新增寄样记录 + 更新达人属性）" },
+                  { v:"attrs_only", label:"仅更新达人属性（不新增寄样记录）" },
+                ].map(({ v, label }) => (
+                  <label key={v} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", fontSize:FONT.lg2, color:importMode===v ? T.accent : T.text, fontWeight:importMode===v ? 700 : 400 }}>
+                    <input type="radio" value={v} checked={importMode===v} onChange={() => setImportMode(v)} style={{ accentColor:T.accent }} />
+                    {label}
+                  </label>
+                ))}
+              </div>
               <button onClick={startImport} style={{ padding:"9px 24px", borderRadius:10, border:"none", background:T.grad, color:"#fff", fontWeight:700, fontSize:FONT.lg2, cursor:"pointer", fontFamily:"inherit" }}>
-                确认导入 {rows.length} 条
+                {importMode==="attrs_only" ? `更新 ${rows.length} 条达人属性` : `确认导入 ${rows.length} 条`}
               </button>
             </div>
           </>

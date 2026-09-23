@@ -9,7 +9,7 @@ const chunk = (arr) => {
   return res;
 };
 
-export async function importCRM(storeId, rows, onProgress) {
+export async function importCRM(storeId, rows, onProgress, mode = "full") {
   const total = rows.length;
 
   onProgress(0, total, "查询产品数据…");
@@ -31,7 +31,29 @@ export async function importCRM(storeId, rows, onProgress) {
   }
 
   onProgress(0, total, "写入达人信息…");
-  const uniqueCreators = Object.values(Object.fromEntries(rows.map((r) => [r.handle, r])));
+  // 同一 handle 可能有多条寄样记录：
+  // 1. 取 shipDate 最新的一条作为基准（属性最新）
+  // 2. 如果最新一条属性为空，向前找最近一条属性非空的记录补填
+  const ATTR_KEYS = ["grade","histSales","convVert","avgViews","femaleRatio","language","bodyType","ageRange","contentVert","style","videoQuality","voiceover","aliases"];
+  const hasAttrs = (r) => ATTR_KEYS.some((k) => r[k] != null && r[k] !== "");
+  const byHandle = {};
+  for (const r of rows) {
+    if (!byHandle[r.handle]) byHandle[r.handle] = [];
+    byHandle[r.handle].push(r);
+  }
+  const uniqueCreators = Object.values(byHandle).map((rs) => {
+    rs.sort((a, b) => (b.shipDate || "").localeCompare(a.shipDate || ""));
+    const latest = rs[0];
+    if (hasAttrs(latest)) return latest;
+    // 最新记录属性为空，找最近一条有属性的记录补填
+    const fallback = rs.find((r) => hasAttrs(r));
+    if (!fallback) return latest;
+    const merged = { ...latest };
+    for (const k of ATTR_KEYS) {
+      if ((merged[k] == null || merged[k] === "") && fallback[k]) merged[k] = fallback[k];
+    }
+    return merged;
+  });
   for (const batch of chunk(uniqueCreators)) {
     const { error: crtErr } = await sb.from("creators").upsert(
       batch.map((r) => ({
@@ -55,6 +77,11 @@ export async function importCRM(storeId, rows, onProgress) {
   for (const batch of chunk(handles)) {
     const { data } = await sb.from("creators").select("id, handle").eq("store_id", storeId).in("handle", batch);
     (data || []).forEach((c) => { creatorMap[c.handle] = c.id; });
+  }
+
+  // 仅更新达人属性模式：跳过寄样记录写入
+  if (mode === "attrs_only") {
+    return { inserted: 0, skipped: rows.length, staffAdded: missingStaff.length, attrsUpdated: uniqueCreators.length };
   }
 
   const collabRowsRaw = rows.map((r) => ({
