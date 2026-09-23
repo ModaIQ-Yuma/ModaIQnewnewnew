@@ -61,3 +61,24 @@ test("联想：现名/别名模糊匹配，排序 完全 > 开头 > 包含", () 
   expect(searchCreators(cs, as, "SOP").map((r) => r.id)).toEqual(["3", "1", "2"]);
   expect(searchCreators(cs, as, "kelly")).toEqual([{ id: "1", handle: "sophiek.stuff", alias: "sophiek.kelly2" }]);
 });
+
+import { buildVideoImportPlan, buildVideoLookup } from "../video/videoImportPlan.js";
+test("视频导入计划：别名匹配 / 只挂同商品 / 文件内重复合并 / 已有累加且记增量 / 0出单非CRM跳过", () => {
+  const lookup = buildVideoLookup({
+    products: [{ id: "P", sku_id: "111" }, { id: "Q", sku_id: "222" }],
+    collabs: [{ id: "c1", creator_id: "A", product_id: "P", ship_date: "2026-01-01" }],
+    videos: [{ id: "v-old", video_id: "900", creator_handle: "amy", sku_id: "111", gmv: 10, orders: 1, clicks: 5, vv: 100 }],
+    nameIndex: buildNameIndex([{ id: "A", handle: "amy" }], [{ creator_id: "A", alias: "amy_old" }]),
+  });
+  const row = (videoId, handle, sku, orders) => ({ videoId, creatorHandle: handle, skuId: sku, publishedAt: "2026-02-01", url: "", gmv: orders * 10, orders, clicks: 1, vv: 10 });
+  const plan = buildVideoImportPlan([
+    row("1", "AMY_OLD", "111", 2), row("1", "amy_old", "111", 3),   // 别名 + 文件内重复
+    row("2", "amy", "222", 1),                                      // 同达人不同商品 → 非CRM
+    row("3", "stranger", "111", 0),                                 // 非CRM 0 出单 → 跳过
+    row("900", "amy", "111", 4),                                    // 已有 → 累加
+  ], lookup);
+  expect(plan.toInsert.find((r) => r.video_id === "1")).toMatchObject({ collaboration_id: "c1", orders: 5, creator_handle: "amy_old" });
+  expect(plan.toInsert.find((r) => r.video_id === "2").collaboration_id).toBe(null);
+  expect(plan.toUpdate[0]).toMatchObject({ id: "v-old", delta: { orders: 4 }, next: { orders: 5, video_id: "900", sku_id: "111" } });
+  expect(plan.stats).toMatchObject({ merged: 1, skipped: 1, crm: 2, nonCrm: 1, inserted: 2, updated: 1 });
+});

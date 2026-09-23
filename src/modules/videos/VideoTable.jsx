@@ -1,39 +1,46 @@
 // modules/videos/VideoTable.jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { usePaged } from "../../hooks/usePaged.js";
+import Pager from "../../components/ui/Pager.jsx";
 import { T } from "../../constants/tokens.js";
 import { vs } from "./videosStyles.js";
 import MergeModal from "./MergeModal.jsx";
 
 const fmt = (n) => Number(n || 0).toLocaleString();
-const defaultFrom = () => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }); };
-const defaultTo = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
 
 export default function VideoTable({ videos, storeId, core, products, showMerge = false, onMerged }) {
-  const [dateFrom, setDateFrom] = useState(defaultFrom());
-  const [dateTo,   setDateTo]   = useState(defaultTo());
+  const [dateFrom, setDateFrom] = useState("");   // 发布日期筛选，默认不限
+  const [dateTo,   setDateTo]   = useState("");
   const [mergeVideo, setMergeVideo] = useState(null);
 
-  const filtered = videos.filter((v) => {
-    const d = v.published_at?.slice(0, 10);
-    if (!d) return true;
-    return d >= dateFrom && d <= dateTo;
-  });
+  const [sort, setSort] = useState({ key: "orders", desc: true });     // 默认按出单件数从高到低
+
+  const filtered = useMemo(() => {
+    const val = (v) => sort.key === "published_at" ? (v.published_at || "") : Number(v[sort.key]) || 0;
+    return videos.filter((v) => {
+      const d = v.published_at?.slice(0, 10);
+      return (!dateFrom || (d && d >= dateFrom)) && (!dateTo || (d && d <= dateTo));
+    }).sort((a, b) => (val(a) < val(b) ? -1 : val(a) > val(b) ? 1 : 0) * (sort.desc ? -1 : 1));
+  }, [videos, dateFrom, dateTo, sort]);
+  const { page, setPage, totalPages, pageRows } = usePaged(filtered, 50, `${dateFrom}|${dateTo}|${sort.key}|${sort.desc}`);
+  const clickSort = (key) => setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: true }));
 
   return (
     <div>
       {/* 时间筛选器 */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "14px 16px",
         borderBottom: `1px solid ${T.glassStroke}`, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: T.muted }}>发布日期</span>
+        <span style={{ fontSize: 12, color: T.muted }}>发布日期（可选）</span>
         <input type="date" style={vs.dateInput} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         <span style={{ color: T.hint }}>—</span>
         <input type="date" style={vs.dateInput} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        <span style={{ fontSize: 12, color: T.hint }}>共 {filtered.length} 条 · 默认显示最近 30 天</span>
+        {(dateFrom || dateTo) && <button style={vs.btnDanger} onClick={() => { setDateFrom(""); setDateTo(""); }}>清除</button>}
+        <span style={{ fontSize: 12, color: T.hint }}>共 {filtered.length} 条 · 按视频<b>发布日期</b>筛选（不是导入的数据区间）；默认按出单件数排序，点表头可换排序</span>
       </div>
 
       {filtered.length === 0
         ? <div style={vs.empty}>该时段暂无数据</div>
-        : (
+        : (<>
           <div style={{ overflowX: "auto" }}>
             <table style={vs.table}>
               <colgroup>
@@ -52,18 +59,21 @@ export default function VideoTable({ videos, storeId, core, products, showMerge 
                     { label: "达人名称",  align: "left"  },
                     { label: "商品",      align: "left"  },
                     { label: "视频链接",  align: "left"  },
-                    { label: "发布日期",  align: "left"  },
-                    { label: "播放量",    align: "right" },
-                    { label: "点击量",    align: "right" },
-                    { label: "出单件数",  align: "right" },
+                    { label: "发布日期",  align: "left",  key: "published_at" },
+                    { label: "播放量",    align: "right", key: "vv" },
+                    { label: "点击量",    align: "right", key: "clicks" },
+                    { label: "出单件数",  align: "right", key: "orders" },
                     ...(showMerge ? [{ label: "操作", align: "center" }] : []),
-                  ].map(({ label, align }) => (
-                    <th key={label} style={{ ...vs.th, textAlign: align }}>{label}</th>
+                  ].map(({ label, align, key }) => (
+                    <th key={label} onClick={key ? () => clickSort(key) : undefined}
+                      style={{ ...vs.th, textAlign: align, cursor: key ? "pointer" : "default", color: sort.key === key ? T.accent : vs.th.color, whiteSpace: "nowrap" }}>
+                      {label}{sort.key === key ? (sort.desc ? " ▼" : " ▲") : key ? " ↕" : ""}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((v) => (
+                {pageRows.map((v) => (
                   <tr key={v.id}>
                     <td style={vs.td}><span style={{ fontWeight: 600, color: T.text }}>{v.creator_handle || "-"}</span></td>
                     <td style={vs.td}>
@@ -90,7 +100,8 @@ export default function VideoTable({ videos, storeId, core, products, showMerge 
               </tbody>
             </table>
           </div>
-        )
+          <Pager page={page} totalPages={totalPages} onChange={setPage} />
+        </>)
       }
 
       {mergeVideo && (

@@ -7,6 +7,8 @@ import { vs } from "./videosStyles.js";
 import VideoTable from "./VideoTable.jsx";
 import { parseVideoXlsx } from "../../lib/video/videoParser.js";
 import { importVideos } from "../../lib/supabase/videosWrite.js";
+import { buildVideoImportPlan, buildVideoLookup } from "../../lib/video/videoImportPlan.js";
+import { buildNameIndex } from "../../lib/crm/identity.js";
 import { revertBatch } from "../../lib/supabase/videosRevert.js";
 
 const TABS = [
@@ -32,6 +34,8 @@ export default function VideosModule({ ctx }) {
   const [errMsg,     setErrMsg]     = useState(null);
   const [batchOpen,  setBatchOpen]  = useState(false);
   const [mergeMsg,   setMergeMsg]   = useState("");
+  const [allBatches, setAllBatches] = useState(false);
+  const [reverting,  setReverting]  = useState(null);
   const fileRef = useRef(null);
 
   const crmVideos    = videos.filter((v) => v.collaboration_id);
@@ -45,17 +49,24 @@ export default function VideosModule({ ctx }) {
     try {
       const parsed = await parseVideoXlsx(file);
       if (!parsed.length) { setErrMsg("文件内没有有效数据"); return; }
-      const result = await importVideos(storeId, parsed, file.name, userId);
-      setModal({ ...result, total: result.inserted + result.updated, fileName: file.name });
+      // 匹配全部在内存完成（产品/达人/别名/寄样/已有视频），不再拿几千个值去数据库查
+      const lookup = buildVideoLookup({ products, collabs: core.collabs, videos: core.videos, nameIndex: buildNameIndex(core.creators, core.aliases) });
+      const result = await importVideos(storeId, buildVideoImportPlan(parsed, lookup), file.name, userId);
+      setModal({ ...result, fileName: file.name });
       reload();
     } catch (err) { setErrMsg(err.message); }
     finally { setImporting(false); }
   }
 
   async function handleRevert(batchId, fileName) {
-    if (!window.confirm(`确认撤销批次「${fileName}」？`)) return;
-    try { await revertBatch(batchId); reload(); }
-    catch (err) { setErrMsg(err.message); }
+    if (!window.confirm(`确认撤销批次「${fileName}」？这批新增的视频会删除，累加的数据会减回去。`)) return;
+    setReverting(batchId); setErrMsg(null);
+    try {
+      const r = await revertBatch(batchId);
+      setErrMsg(`✅ 已撤销「${fileName}」：删除 ${r.removed} 条新增视频，${r.restored} 条减回累加`);
+      reload();
+    } catch (err) { setErrMsg(`撤销失败：${err.message}（可再点一次，已撤销的部分不会重复处理）`); }
+    finally { setReverting(null); }
   }
 
   if (dataLoading) return <div style={vs.center}>加载中…</div>;
@@ -78,7 +89,7 @@ export default function VideosModule({ ctx }) {
                 建议文件命名为右上角框选视频日期，示例：20260101到20260201所有视频
               </Hint>
             </div>
-            {errMsg && <span style={{ fontSize: 13, color: T.danger, fontWeight: 600 }}>{errMsg}</span>}
+            {errMsg && <span style={{ fontSize: 13, color: errMsg.startsWith("✅") ? T.success : T.danger, fontWeight: 600 }}>{errMsg}</span>}
             <span style={vs.summary}>共 <span style={vs.num}>{crmVideos.length}</span> 条</span>
           </div>
 
@@ -92,14 +103,19 @@ export default function VideosModule({ ctx }) {
                 <span>导入批次（{batches.length}）</span>
                 <span style={{ fontSize: 11, color: T.hint }}>{batchOpen ? "▲ 收起" : "▼ 展开"}</span>
               </div>
-              {batchOpen && batches.map((b) => (
+              {batchOpen && batches.slice(0, allBatches ? undefined : 10).map((b) => (
                 <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, fontSize: 13 }}>
                   <span style={{ color: T.muted, flex: 1 }}>{b.file_name}</span>
                   <span style={{ color: T.hint }}>{b.created_at?.slice(0, 10)}</span>
                   <span style={{ color: T.muted }}>{b.row_count} 条</span>
-                  <button style={vs.btnDanger} onClick={() => handleRevert(b.id, b.file_name)}>撤销</button>
+                  <button style={vs.btnDanger} disabled={!!reverting} onClick={() => handleRevert(b.id, b.file_name)}>{reverting === b.id ? "撤销中…" : "撤销"}</button>
                 </div>
               ))}
+              {batchOpen && batches.length > 10 && (
+                <button onClick={() => setAllBatches((v) => !v)} style={{ marginTop: 10, fontSize: 12, color: T.accent, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                  {allBatches ? "只看最近 10 个" : `显示全部 ${batches.length} 个批次`}
+                </button>
+              )}
             </div>
           )}
 
@@ -143,6 +159,11 @@ function ImportModal({ modal, onClose }) {
           <div style={{ borderTop: `1px solid ${T.glassStroke}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
             <Row label="CRM 达人视频" value={modal.crmCount} color={T.accent} />
             <Row label="非 CRM 达人视频" value={modal.nonCrmCount} color={T.muted} />
+          </div>
+          <div style={{ borderTop: `1px solid ${T.glassStroke}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+            <Row label="跳过（非CRM且0出单）" value={modal.skipped} color={T.hint} />
+            {modal.unknownSku > 0 && <Row label="商品ID不在产品库（按非CRM处理）" value={modal.unknownSku} color={T.warning} />}
+            {modal.merged > 0 && <Row label="文件内重复视频（已合并）" value={modal.merged} color={T.hint} />}
           </div>
         </div>
 

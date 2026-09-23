@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect, Fragment } from "react";
+import { useState, useMemo, Fragment } from "react";
+import { usePaged } from "../../hooks/usePaged.js";
+import Pager from "../../components/ui/Pager.jsx";
 import { T } from "../../constants/tokens.js";
 import { OFFICIAL_GRADES } from "../../constants/creatorOptions.js";
 import { CRM_STATUSES, STATUS_COLORS } from "../../constants/crm.js";
@@ -34,7 +36,6 @@ export default function CRMModule({ ctx }) {
   const [expandedId, setExpandedId] = useState(null);
   const [editing,    setEditing]    = useState(null);
   const [showImport, setShowImport] = useState(false);
-  const [page,       setPage]       = useState(1);
   const [selected,   setSelected]   = useState(() => new Set());
   const [notice,     setNotice]     = useState("");
   const readonly = ctx.role === "viewer";
@@ -50,9 +51,7 @@ export default function CRMModule({ ctx }) {
     return true;
   }).sort((a, b) => (b.shipDate || "").localeCompare(a.shipDate || "")),
   [influencers, q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo]);
-  useEffect(() => { setPage(1); }, [q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo]);
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const pageRows   = useMemo(() => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [rows, page]);
+  const { page, setPage, totalPages, pageRows } = usePaged(rows, PAGE_SIZE, [q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo].join("|"));
   const visibleIds = useMemo(() => new Set(pageRows.map((r) => r.id)), [pageRows]);
   const effectiveSelected = useMemo(() => new Set([...selected].filter((id) => visibleIds.has(id))), [selected, visibleIds]);
 
@@ -167,13 +166,7 @@ export default function CRMModule({ ctx }) {
         </div>
       </div>
 
-      {totalPages > 1 && (
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, marginTop:14 }}>
-          <Btn small onClick={() => setPage((p) => Math.max(1,p-1))} disabled={page===1}>‹ 上一页</Btn>
-          <span style={{ fontSize:13, color:T.muted }}>第 {page} / {totalPages} 页</span>
-          <Btn small onClick={() => setPage((p) => Math.min(totalPages,p+1))} disabled={page===totalPages}>下一页 ›</Btn>
-        </div>
-      )}
+      <Pager page={page} totalPages={totalPages} onChange={setPage} />
 
       {showImport && (
         <CRMImportModal storeId={storeId} core={core} products={products} onClose={() => setShowImport(false)} onDone={() => crm.reload()} />

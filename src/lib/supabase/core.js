@@ -37,7 +37,7 @@ const SPEC = {
 };
 
 export const CORE_KEYS = Object.keys(SPEC);
-const ID_CHUNK = 200; // .in() 单次 id 数上限（控制 URL 长度）
+const ID_CHUNK = 150; // .in() 单次 id 数上限（控制 URL 长度）
 
 /** 拉某张核心表的全部行 */
 export async function fetchCoreTable(key, storeId) {

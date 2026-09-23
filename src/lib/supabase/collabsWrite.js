@@ -2,7 +2,7 @@
 import { sb, unwrap } from "./client.js";
 import { attrsToRow } from "../crm/attrs.js";
 
-const ID_CHUNK = 200;
+const ID_CHUNK = 150;
 
 /**
  * 新增或更新一条寄样（含属性）。新增时由调用方生成 id（crypto.randomUUID），
