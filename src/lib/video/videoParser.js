@@ -37,6 +37,11 @@ export function parseVideoXlsx(file) {
         const result = [];
         for (let i = 2; i < rows.length; i++) {
           const r = rows[i];
+          // 视频 ID 有 19 位：若被 Excel 存成数字会丢精度（末几位变 0），导入后无法去重/累加，直接拦下
+          if (typeof r[1] === "number" && r[1] > Number.MAX_SAFE_INTEGER) {
+            reject(new Error(`第 ${i + 1} 行的视频 ID 被存成了数字、末几位已丢失。请直接上传 TK 后台导出的原始文件，不要用 Excel 打开后另存。`));
+            return;
+          }
           const videoId = String(r[1] ?? "").trim();
           if (!videoId) continue;
           result.push({

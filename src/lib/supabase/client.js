@@ -37,3 +37,14 @@ export async function fetchAll(buildQuery, ctx = "") {
     if (pages.some((p) => p.length < PAGE_SIZE)) return all;
   }
 }
+
+/**
+ * .in() 分片查询：值很多时（如一个月几千条视频 ID / 达人名）拆成多批并行请求，
+ * 避免请求地址过长被拒。buildQuery(part) 返回带 .in(列, part) 的查询。
+ */
+export async function selectIn(values, buildQuery, ctx = "", size = 150) {
+  const uniq = [...new Set(values)];
+  const parts = Array.from({ length: Math.ceil(uniq.length / size) }, (_, i) => uniq.slice(i * size, i * size + size));
+  const results = await Promise.all(parts.map(async (part) => unwrap(await buildQuery(part), ctx) || []));
+  return results.flat();
+}
