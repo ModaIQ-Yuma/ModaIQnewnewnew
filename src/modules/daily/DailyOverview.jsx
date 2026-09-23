@@ -61,7 +61,7 @@ export default function DailyOverview({ storeId, products }) {
 
 function BarChart({ rows, maxVal }) {
   const [tooltip, setTooltip] = useState(null);
-  const H = 200, PAD_T = 20, PAD_B = 40, BAR_W = 16, GAP = 6, GROUP_GAP = 24;
+  const H = 220, PAD_T = 20, PAD_B = 60, BAR_W = 16, GAP = 6, GROUP_GAP = 24;
   const chartH = H - PAD_T - PAD_B;
   const groupW = BAR_W * 2 + GAP + GROUP_GAP;
   const W = rows.length * groupW + GROUP_GAP;
@@ -87,7 +87,7 @@ function BarChart({ rows, maxVal }) {
               onMouseLeave={() => setTooltip(null)}>
               <rect x={x} y={PAD_T + chartH - shipH} width={BAR_W} height={shipH} rx={3} fill={COLORS.ship} opacity={0.9} />
               <rect x={x + BAR_W + GAP} y={PAD_T + chartH - vidH} width={BAR_W} height={vidH} rx={3} fill={COLORS.video} opacity={0.9} />
-              <text x={x + BAR_W} y={H - 8} textAnchor="middle" fontSize={10} fill={T.muted}>{p.sku_id}</text>
+              <text x={x + BAR_W} y={H - 8} textAnchor="middle" fontSize={10} fill={T.muted} transform={`rotate(-35, ${x + BAR_W}, ${H - 8})`}>{p.internal_name}</text>
             </g>
           );
         })}

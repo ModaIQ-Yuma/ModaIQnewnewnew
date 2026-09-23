@@ -36,9 +36,7 @@ export default function CRMModule({ ctx }) {
   const [page,       setPage]       = useState(1);
   const [selected,   setSelected]   = useState(() => new Set());
   const readonly = ctx.role === "viewer";
-
   const staffName = (id) => staff.find((s) => String(s.id) === String(id))?.name || "—";
-
   const rows = useMemo(() => influencers.filter((i) => {
     if (q        && !(i.influencerId || "").toLowerCase().includes(q.toLowerCase())) return false;
     if (fStatus  && computeStatus(i) !== fStatus)                                   return false;
@@ -118,7 +116,12 @@ export default function CRMModule({ ctx }) {
         </div>
       </div>
 
-      <div style={{ fontSize:12, color:T.hint, marginBottom:8 }}>共 {rows.length} 条{rows.length > 0 && ` · 第 ${page}/${totalPages} 页`}</div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+        <div style={{ fontSize:12, color:T.hint }}>共 {rows.length} 条{rows.length > 0 && ` · 第 ${page}/${totalPages} 页`}</div>
+        {loading && <span style={{ fontSize:11.5, color:T.accent, background:`${T.accent}12`, border:`1px solid ${T.accent}35`, borderRadius:20, padding:"3px 11px", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
+          <span style={{ width:6, height:6, borderRadius:"50%", background:T.accent, display:"inline-block", opacity:0.85 }} />数据同步中…
+        </span>}
+      </div>
 
       <div style={{ background:"#fff", border:`1.5px solid ${T.border}`, borderRadius:14, overflow:"hidden" }}>
         <div style={{ overflowX:"auto" }}>

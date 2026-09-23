@@ -60,7 +60,7 @@ export default function DailyTrend({ storeId, products }) {
               : productData.map(({ pid, product, totalShips, totalVids, shipMap, vidMap }) => (
                 <div key={pid} style={{ ...glassStyle(14), padding: "16px 20px" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>
-                    {product?.sku_id ?? pid}
+                    {product?.internal_name ?? pid}
                   </div>
                   <div style={{ fontSize: 12, color: T.muted, marginBottom: 10 }}>
                     寄样 <span style={{ color: COLORS.ship, fontWeight: 700 }}>{totalShips}</span> 件 ·

@@ -64,7 +64,10 @@ export default function CRMImportModal({ storeId, onClose, onDone }) {
   return (
     <div style={overlay}>
       <div style={box}>
-        <div style={{ fontSize: FONT.x4l, fontWeight: 700, color: T.text, marginBottom: 6 }}>导入 CRM</div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 6 }}>
+          <div style={{ fontSize: FONT.x4l, fontWeight: 700, color: T.text }}>导入 CRM</div>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, color:T.hint, cursor:"pointer", lineHeight:1, padding:"2px 6px", borderRadius:6 }}>✕</button>
+        </div>
         <div style={{ fontSize: FONT.sm2, color: T.muted, marginBottom: 20 }}>支持旧版导出的 Excel / CSV 格式</div>
 
         {/* ── 选文件 ── */}
@@ -152,10 +155,10 @@ export default function CRMImportModal({ storeId, onClose, onDone }) {
               {importMode === "attrs_only" ? "达人属性更新完成" : "导入完成"}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: importMode === "attrs_only" ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
-              {importMode === "attrs_only"
+              {(importMode === "attrs_only"
                 ? [["更新达人数", result.attrsUpdated ?? hdlCount]]
                 : [["写入寄样记录", result.inserted], ["跳过", result.skipped], ["新增跟进人", result.staffAdded]]
-              }.map(([l, v]) => (
+              ).map(([l, v]) => (
                 <div key={l} style={statBox}>
                   <div style={{ fontSize: 22, fontWeight: 800, color: T.accent }}>{v ?? 0}</div>
                   <div style={{ fontSize: FONT.sm, color: T.muted }}>{l}</div>
