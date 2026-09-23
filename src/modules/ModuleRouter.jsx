@@ -2,6 +2,7 @@
 import { TABS } from "../constants/nav.js";
 import Placeholder from "../components/layout/Placeholder.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
+import { useState } from "react";
 import { useReview } from "../hooks/useReview.js";
 import { useProducts } from "../hooks/useProducts.js";
 import ProductsModule    from "./products/ProductsModule.jsx";
@@ -63,12 +64,24 @@ export default function ModuleRouter({ tab, ctx }) {
     reloadReview,
   };
 
-  const meta = TABS.find((t) => t.id === tab);
-  const Mod  = MODULES[tab];
-  if (!meta || !Mod || !meta.ready) return <Placeholder label={meta?.label || tab} />;
+  // 已经激活过的模块集合（懒初始化 + 保活：首次切到才 mount，之后只隐藏不卸载）
+  const [mounted, setMounted] = useState(new Set([tab]));
+  if (!mounted.has(tab)) setMounted((prev) => new Set([...prev, tab]));
+
   return (
-    <ErrorBoundary key={tab}>
-      <Mod ctx={sharedCtx} />
-    </ErrorBoundary>
+    <>
+      {TABS.filter((t) => t.ready && MODULES[t.id]).map((t) => {
+        const Mod = MODULES[t.id];
+        const isActive = t.id === tab;
+        if (!mounted.has(t.id)) return null;
+        return (
+          <div key={t.id} style={{ display: isActive ? "block" : "none" }}>
+            <ErrorBoundary>
+              <Mod ctx={sharedCtx} />
+            </ErrorBoundary>
+          </div>
+        );
+      })}
+    </>
   );
 }

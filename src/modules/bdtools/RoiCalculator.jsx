@@ -60,7 +60,7 @@ export default function RoiCalculator({ products = [] }) {
           {chip(T.warning, "板块二")}单件产品固定成本项
           <span style={{ fontSize: 11.5, color: T.hint, fontWeight: 400, marginLeft: 8 }}>每卖出一件都要承担的货物本体成本</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "start" }}>
           <div>
             <div style={lbl}>产品物料成本 ($)</div>
             <Inp value={v["materialCost"] || ""} onChange={(val) => set("materialCost", val)} placeholder="eg. 6.00" />
@@ -85,7 +85,7 @@ export default function RoiCalculator({ products = [] }) {
         {/* 各方抽佣 */}
         <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 16, paddingTop: 14 }}>
           <div style={{ fontSize: 12.5, color: T.muted, fontWeight: 700, marginBottom: 10 }}>各方抽佣比例（按售价计算）</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, alignItems: "end" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, alignItems: "start" }}>
             <div>
               <div style={lbl}>平台抽佣 (%)</div>
               <Inp value={v["platformRate"] || ""} onChange={(val) => set("platformRate", val)} placeholder="eg. 8" />
@@ -119,7 +119,7 @@ export default function RoiCalculator({ products = [] }) {
           {chip(T.danger, "板块三")}坑位费（推广固定成本）
           <span style={{ fontSize: 11.5, color: T.hint, fontWeight: 400, marginLeft: 8 }}>不随出单量变化的固定推广支出</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "end", maxWidth: 420 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "start", maxWidth: 420 }}>
           <div>
             <div style={lbl}>坑位费 ($)</div>
             <Inp value={v["pitFee"] || ""} onChange={(val) => set("pitFee", val)} placeholder="eg. 300" />
