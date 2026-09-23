@@ -2,13 +2,13 @@ import { useState } from "react";
 import { T, glassStyle } from "../../constants/tokens.js";
 import { PRODUCT_STATUSES, PS_COLORS, PRODUCT_TYPES } from "../../constants/products.js";
 import { Inp, Btn, Pill } from "../../components/ui/index.jsx";
-import { useProducts } from "../../hooks/useProducts.js";
+import { SectionIntro } from "../../components/layout/SubNav.jsx";
 import { filterProducts, countByStatus } from "./productFilters.js";
 import ProductForm from "./ProductForm.jsx";
 import ProductCard from "./ProductCard.jsx";
 
 export default function ProductsModule({ ctx }) {
-  const { products, loading, error, create, update, remove } = useProducts(ctx.storeId);
+  const { products, loading, error, create, update, remove } = ctx.productsApi;
   const [form, setForm]         = useState(null);   // null | "new" | product
   const [expanded, setExpanded] = useState(null);
   const [search, setSearch]     = useState("");
@@ -30,7 +30,9 @@ export default function ProductsModule({ ctx }) {
 
   return (
     <div>
-      {/* 状态统计 + 筛选 */}
+      <SectionIntro style={{ marginBottom: 14 }}>
+        产品库是全站的基础档案：CRM 寄样、视频匹配（按商品 ID）、复盘统计都从这里取产品。点击下方数字卡片可按推广状态筛选，再点一次取消。
+      </SectionIntro>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
         {PRODUCT_STATUSES.map((s) => (
           <div key={s} onClick={() => setStatus(status === s ? "" : s)} style={{

@@ -1,19 +1,9 @@
 # ModaIQ v2 · Supabase 迁移
 
-在新 Supabase 项目 → SQL Editor 按文件名顺序逐个执行：
+**唯一权威 SQL：`ALL_IN_ONE.sql`**（24 张表一次建完，与前端代码逐列对应）。
+旧的 00~07 分文件已作废并删除，请勿再执行。
 
-| 文件 | 板块 | 表 |
-|---|---|---|
-| 00_infra.sql | 基础设施 | stores, user_store_roles, super_admins, staff, invite_codes, import_batches |
-| 01_products.sql | ① 产品库 | products |
-| 02_crm.sql | ② CRM | creators, creator_aliases, collaborations |
-| 03_invite_pool.sql | ③ 未建连邀约库 | invite_pool, creator_owners |
-| 04_videos.sql | ⑤ 视频回收 | video_records, video_import_lines |
-| 05_review.sql | ⑥⑦ 复盘/归因 | grade_snapshots, store_snapshots |
-| 06_tasks.sql | ⑧ 任务中心 | shipping_goals, goal_allocations, gantt_strategies, weekly_menus, weekly_menu_slots, action_tasks, strategy_change_logs |
-| 07_bdtools.sql | ⑨ BD工具箱 | viral_videos |
-
-不落表的板块：④日数据、⑩绩效评估（全部实时计算），⑪员工管理（用 00 的表），⑫AI助手（RAG 表待 embedding 模型确认后单独加）。
+不落表的板块：④日数据、⑩绩效评估（全部实时计算），⑪员工管理（用 staff / user_store_roles / invite_codes），⑫AI助手（RAG 表待 embedding 模型确认后单独加）。
 
 ## 设计原则
 - 一实体一表，无 jsonb 数组嵌套；跨表一律外键，不用名称字符串关联

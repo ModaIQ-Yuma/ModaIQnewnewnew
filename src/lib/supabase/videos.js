@@ -1,22 +1,5 @@
 // lib/supabase/videos.js
-import { sb, unwrap, fetchAll } from "./client.js";
-
-/** 拉取全部视频记录（含产品名、达人名） */
-export async function fetchVideos(storeId) {
-  return fetchAll(
-    (from, to) =>
-      sb.from("video_records")
-        .select(`
-          id, video_id, published_at, url, creator_handle,
-          gmv, orders, clicks, vv, collaboration_id,
-          products ( id, internal_name )
-        `)
-        .eq("store_id", storeId)
-        .order("published_at", { ascending: false })
-        .range(from, to),
-    "video_records"
-  );
-}
+import { sb, unwrap } from "./client.js";
 
 /** 拉取导入批次列表 */
 export async function fetchBatches(storeId) {

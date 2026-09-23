@@ -5,11 +5,12 @@ import { CRM_STATUSES, STATUS_COLORS } from "../../constants/crm.js";
 import { cumOrders } from "../../lib/crm/cumOrders.js";
 import { computeStatus } from "../../lib/crm/crmFlow.js";
 import { Inp, Sel, Btn, Badge } from "../../components/ui/index.jsx";
+import { SectionIntro } from "../../components/layout/SubNav.jsx";
+import { REPOST_THRESHOLD_ORDERS } from "../../constants/config.js";
 import InfluencerEntryPanel from "./InfluencerEntryPanel.jsx";
 import InfluencerDetailRow  from "./InfluencerDetailRow.jsx";
 import CRMImportModal       from "./CRMImportModal.jsx";
 import { useCRM } from "../../hooks/useCRM.js";
-import { useProducts } from "../../hooks/useProducts.js";
 import * as XLSX from "xlsx";
 import { todayPST } from "../../lib/utils.js";
 
@@ -18,10 +19,9 @@ const linkBtn = (c) => ({ border:"none", background:"transparent", color:c, curs
 const PAGE_SIZE = 50;
 
 export default function CRMModule({ ctx }) {
-  const { storeId } = ctx;
-  const { products } = useProducts(storeId);
-  const crm = useCRM(storeId, products);
-  const { influencers, staff, loading, error, loadVideos, save, remove, updateStatus, bulkRemove, addStaff } = crm;
+  const { storeId, core, products } = ctx;
+  const crm = useCRM(storeId, core, products);
+  const { influencers, staff, loading, save, remove, updateStatus, bulkRemove } = crm;
 
   const [q,          setQ]          = useState("");
   const [fStatus,    setFStatus]    = useState("");
@@ -48,9 +48,7 @@ export default function CRMModule({ ctx }) {
     return true;
   }).sort((a, b) => (b.shipDate || "").localeCompare(a.shipDate || "")),
   [influencers, q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo]);
-
   useEffect(() => { setPage(1); }, [q, fStatus, fGrade, fProduct, fStaff, fDateFrom, fDateTo]);
-
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pageRows   = useMemo(() => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [rows, page]);
   const visibleIds = useMemo(() => new Set(pageRows.map((r) => r.id)), [pageRows]);
@@ -62,12 +60,14 @@ export default function CRMModule({ ctx }) {
   const bulkDelete = async () => {
     if (!effectiveSelected.size) return;
     if (!confirm(`确认删除选中的 ${effectiveSelected.size} 条记录？`)) return;
-    await bulkRemove(effectiveSelected); setSelected(new Set());
+    setSelected(new Set());
+    bulkRemove(effectiveSelected).catch((e) => alert(`删除失败，已恢复：${e.message}`));
   };
 
   const saveAndClose = async (inf) => { await save(inf); setEditing(null); };
-  const updateInline = async (inf) => { await updateStatus(inf, inf.baseStatus); };
-  const del = (id) => { if (confirm("确认删除？关联视频将变为非CRM视频。")) remove(id); };
+  const changeStatus = (inf, v) => updateStatus(inf, v).catch((e) => alert(`状态保存失败，已恢复：${e.message}`));
+  const updateInline = (inf) => changeStatus(inf, inf.baseStatus);
+  const del = (id) => { if (confirm("确认删除？关联视频将变为非CRM视频。")) remove(id).catch((e) => alert(`删除失败，已恢复：${e.message}`)); };
 
   function exportXLSX() {
     const data = rows.map((i) => {
@@ -82,9 +82,8 @@ export default function CRMModule({ ctx }) {
         "视频数": (i.videoRecords || []).length, "备注": i.note, ...attrs,
       };
     });
-    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "CRM");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "CRM");
     XLSX.writeFile(wb, `CRM_${todayPST()}.xlsx`);
   }
 
@@ -93,7 +92,9 @@ export default function CRMModule({ ctx }) {
 
   return (
     <div>
-      {/* 时间筛选 */}
+      <SectionIntro style={{ marginBottom: 14 }}>
+        每行 = 一位达人 × 一个产品的寄样合作。合作进度自动计算：有视频 → 已发布，累计出单 ≥ {REPOST_THRESHOLD_ORDERS} 单 → 待复投；「复投完成 / 不合作」需手动选择，选了之后不再自动变化。点击行可展开视频明细。
+      </SectionIntro>
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
         <span style={{ fontSize:12.5, fontWeight:700, color:T.muted, whiteSpace:"nowrap" }}>寄样时间</span>
         <input type="date" value={fDateFrom} onChange={(e) => setFDateFrom(e.target.value)} style={{ background:"rgba(255,255,255,0.45)", border:`1.5px solid ${T.border}`, borderRadius:10, fontSize:13, padding:"7px 11px", fontFamily:"inherit", outline:"none" }} />
@@ -101,7 +102,6 @@ export default function CRMModule({ ctx }) {
         <input type="date" value={fDateTo} onChange={(e) => setFDateTo(e.target.value)} style={{ background:"rgba(255,255,255,0.45)", border:`1.5px solid ${T.border}`, borderRadius:10, fontSize:13, padding:"7px 11px", fontFamily:"inherit", outline:"none" }} />
         <button onClick={() => { setFDateFrom(""); setFDateTo(""); }} style={{ fontSize:12, color:T.muted, background:"none", border:`1px solid ${T.border}`, borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"inherit" }}>清除</button>
       </div>
-      {/* 其他筛选 */}
       <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginBottom:14 }}>
         <div style={{ width:180 }}><Inp value={q} onChange={setQ} placeholder="搜索达人ID" /></div>
         <Sel value={fStatus} onChange={setFStatus}><option value="">全部进度</option>{CRM_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</Sel>
@@ -138,7 +138,7 @@ export default function CRMModule({ ctx }) {
                 const status = computeStatus(i);
                 return (
                   <Fragment key={i.id}>
-                    <tr onClick={() => { setExpandedId(open ? null : i.id); if (!open) loadVideos(i); }} style={{ cursor:"pointer", background:open?"rgba(255,255,255,0.45)":"transparent" }}>
+                    <tr onClick={() => setExpandedId(open ? null : i.id)} style={{ cursor:"pointer", background:open?"rgba(255,255,255,0.45)":"transparent" }}>
                       {!readonly && <td style={td} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={effectiveSelected.has(i.id)} onChange={() => toggleOne(i.id)} style={{ cursor:"pointer" }} /></td>}
                       <td style={{ ...td, fontWeight:700 }}>{i.influencerId}</td>
                       <td style={td}>{i.product || "—"}{i.productColor ? <span style={{ fontSize:11, color:T.hint, marginLeft:4 }}>({i.productColor})</span> : null}</td>
@@ -147,7 +147,7 @@ export default function CRMModule({ ctx }) {
                       <td style={td}>{i.official_grade || "—"}</td>
                       <td style={td} onClick={(e) => e.stopPropagation()}>
                         {readonly ? <Badge label={status} color={STATUS_COLORS[status]||T.muted} /> :
-                          <Sel value={status} onChange={(v) => updateStatus(i, v)} style={{ fontSize:12, padding:"5px 8px", color:STATUS_COLORS[status]||T.text }}>
+                          <Sel value={status} onChange={(v) => changeStatus(i, v)} style={{ fontSize:12, padding:"5px 8px", color:STATUS_COLORS[status]||T.text }}>
                             {CRM_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                           </Sel>}
                       </td>

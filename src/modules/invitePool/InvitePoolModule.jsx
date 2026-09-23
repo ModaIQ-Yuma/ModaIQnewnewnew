@@ -1,15 +1,15 @@
 // modules/invitePool/InvitePoolModule.jsx
 import { useState } from "react";
 import * as XLSX from "xlsx";
-import { useUnconnected } from "../../hooks/useUnconnected.js";
+import { SectionIntro } from "../../components/layout/SubNav.jsx";
 import { checkDuplicateInPool, checkDuplicateInCRM } from "../../lib/supabase/unconnected.js";
 import { addToPool, removeFromPool } from "../../lib/supabase/unconnectedWrite.js";
 import { T, glassStyle } from "../../constants/tokens.js";
 import { s } from "./invitePoolStyles.js";
 
 export default function InvitePoolModule({ ctx }) {
-  const { storeId, userId, products } = ctx;
-  const { records, loading, error, reload } = useUnconnected(storeId, userId);
+  const { storeId, userId, products, core, dataLoading, dataError } = ctx;
+  const records = core.invites;
 
   const [filterProduct, setFilterProduct] = useState("all");
   const [filterStatus,  setFilterStatus]  = useState("pending");
@@ -43,14 +43,17 @@ export default function InvitePoolModule({ ctx }) {
         }
       }
       await addToPool(storeId, handle, selectedProducts, userId);
-      setCreatorHandle(""); setSelectedProducts([]); reload();
+      setCreatorHandle(""); setSelectedProducts([]);
+      await core.refresh(["invites"]);
     } catch (e) { setFormError(e.message); }
     finally { setAdding(false); }
   }
 
   async function handleRemove(id) {
     if (!window.confirm("确认删除这条记录？")) return;
-    await removeFromPool(id); reload();
+    core.removeRows("invites", [id]);
+    try { await removeFromPool(id); }
+    catch (e) { core.refresh(["invites"]); alert(`删除失败，已恢复：${e.message}`); }
   }
 
   function handleExport() {
@@ -66,12 +69,14 @@ export default function InvitePoolModule({ ctx }) {
     return true;
   });
 
-  if (loading) return <div style={s.center}>加载中…</div>;
-  if (error)   return <div style={s.center}>错误：{error}</div>;
+  if (dataLoading) return <div style={s.center}>加载中…</div>;
+  if (dataError && !records.length) return <div style={s.center}>错误：{dataError}</div>;
 
   return (
-    <div style={s.wrap}>
-      <h2 style={s.title}>未建联邀约库</h2>
+    <div>
+      <SectionIntro style={{ marginBottom: 14 }}>
+        还没合作过的精选达人名单，供助理后续邀约。录入时自动查重：同一达人 + 同一产品已在邀约库里，或已在 CRM 合作过，都会拦下并提示。
+      </SectionIntro>
 
       <div style={{ ...glassStyle(14), padding: "16px 20px", marginBottom: 16 }}>
         <div style={s.row}>

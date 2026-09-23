@@ -1,4 +1,4 @@
-import { T, Z } from "../../constants/tokens.js";
+import { T, Z, FONT } from "../../constants/tokens.js";
 import { TABS } from "../../constants/nav.js";
 import { signOut } from "../../lib/supabase/auth.js";
 import WaterBackground from "./WaterBackground.jsx";
@@ -9,31 +9,23 @@ import WaterBackground from "./WaterBackground.jsx";
  */
 export default function AppShell({ store, stores, isAdmin, onSwitchStore, tab, onTab, userEmail, children }) {
   const visibleTabs = TABS.filter((t) => !t.adminOnly || isAdmin);
+  const pill = { fontSize: FONT.note, fontWeight: 600, color: T.text, fontFamily: "inherit", background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`, borderRadius: 20, padding: "5px 12px", whiteSpace: "nowrap" };
 
   return (
-    <div style={{ minHeight: "100vh", fontFamily: "-apple-system, 'PingFang SC', sans-serif", color: T.text, position: "relative" }}>
+    <div style={{ minHeight: "100vh", fontFamily: "-apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif", fontSize: FONT.h3, color: T.text, position: "relative" }}>
       <WaterBackground />
       <header style={{
         position: "sticky", top: 0, zIndex: Z.sticky, background: T.navGrad,
         backdropFilter: T.blur, WebkitBackdropFilter: T.blur, borderBottom: `1px solid ${T.glassStroke}`,
-        padding: "0 22px", display: "flex", alignItems: "center", gap: 18, height: 52,
+        boxShadow: "0 2px 16px rgba(61,127,239,0.07)",
+        padding: "0 22px", display: "flex", alignItems: "center", gap: 18, height: 60,
       }}>
-        <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "0.08em", background: "linear-gradient(135deg, #FF8FD0 0%, #6CAEFF 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Moda.IQ</span>
+        <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: "0.04em", whiteSpace: "nowrap", background: "linear-gradient(135deg, #FF8FD0 0%, #6CAEFF 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Moda.IQ</span>
 
-        {stores.length > 1 ? (
-          <select value={store?.store_id || ""} onChange={(e) => onSwitchStore(e.target.value)}
-            style={{ fontSize: 12.5, padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: "rgba(255,255,255,0.6)", fontFamily: "inherit" }}>
-            {stores.map((s) => <option key={s.store_id} value={s.store_id}>{s.store_name}</option>)}
-          </select>
-        ) : (
-          <span style={{ fontSize: 12.5, color: T.muted, fontWeight: 600 }}>{store?.store_name}</span>
-        )}
-
-        <nav style={{ display: "flex", gap: 4, marginLeft: 8, flex: 1, overflowX: "auto" }}>
+        <nav style={{ display: "flex", gap: 5, flex: 1, overflowX: "auto" }}>
           {visibleTabs.map((t) => (
             <button key={t.id} onClick={() => onTab(t.id)} style={{
-              fontSize: 12.5, padding: "5px 12px", borderRadius: 14, whiteSpace: "nowrap",
-              border: `1.5px solid ${tab === t.id ? T.accent : "transparent"}`,
+              fontSize: FONT.body, padding: "7px 15px", borderRadius: 20, whiteSpace: "nowrap", border: "none",
               background: tab === t.id ? T.grad : "transparent",
               color: tab === t.id ? "#fff" : t.ready ? T.muted : T.hint,
               cursor: "pointer", fontFamily: "inherit", fontWeight: tab === t.id ? 700 : 600,
@@ -43,8 +35,17 @@ export default function AppShell({ store, stores, isAdmin, onSwitchStore, tab, o
           ))}
         </nav>
 
-        <span style={{ fontSize: 11.5, color: T.hint }}>{userEmail}</span>
-        <button onClick={signOut} style={{ fontSize: 11.5, padding: "4px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: "transparent", color: T.muted, cursor: "pointer", fontFamily: "inherit" }}>退出</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          {stores.length > 1 ? (
+            <select value={store?.store_id || ""} onChange={(e) => onSwitchStore(e.target.value)} style={{ ...pill, cursor: "pointer", outline: "none" }}>
+              {stores.map((s) => <option key={s.store_id} value={s.store_id}>{s.store_name}</option>)}
+            </select>
+          ) : (
+            <span style={pill}>🏪 {store?.store_name}</span>
+          )}
+          <span title={userEmail} style={{ fontSize: FONT.note, color: T.hint, maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</span>
+          <button onClick={signOut} style={{ fontSize: FONT.note, padding: "5px 12px", borderRadius: 16, border: `1.5px solid ${T.border}`, background: "transparent", color: T.muted, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>退出</button>
+        </div>
       </header>
 
       {/* 右下角水印 */}
@@ -52,7 +53,7 @@ export default function AppShell({ store, stores, isAdmin, onSwitchStore, tab, o
         <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "0.12em", background: "linear-gradient(135deg, rgba(108,123,240,0.6) 0%, rgba(155,107,227,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Moda.IQ</span>
       </div>
 
-      <main style={{ position: "relative", zIndex: 1, padding: "22px 22px 60px", maxWidth: 1440, margin: "0 auto" }}>
+      <main style={{ position: "relative", zIndex: 1, padding: "24px 22px 80px", maxWidth: 1440, margin: "0 auto" }}>
         {children}
       </main>
     </div>

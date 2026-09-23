@@ -39,7 +39,7 @@ export function StrategySelector({ product, label, current, onSelect, onCancel }
               onMouseLeave={e => { if (!isCurrent) { e.currentTarget.style.background = `${c}0D`; e.currentTarget.style.transform = 'none'; } }}
               >
                 {s}
-                {isCurrent && <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 600 }}>当前</span>}
+                {isCurrent && <span style={{ fontSize: 11, opacity: 0.85, fontWeight: 600 }}>当前</span>}
               </button>
             );
           })}

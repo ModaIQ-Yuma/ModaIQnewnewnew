@@ -2,8 +2,9 @@
 import { useState, useMemo } from "react";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
+import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
 import { calcGradeMetrics, calcMonthMetrics } from "../../lib/review/reviewCalc.js";
-import { monthsBetween, videoRange } from "../../lib/utils.js";
+import { monthsBetween } from "../../lib/utils.js";
 import { saveProductSnapshot } from "../../lib/supabase/reviewWrite.js";
 
 const GRADE_COLORS = { Lv1:"#94A3B8",Lv2:"#60A5FA",Lv3:"#34D399",Lv4:"#FBBF24",Lv5:"#F97316",Lv6:"#A78BFA",Lv7:"#EC4899","未标注":"#CBD5E1","非CRM":"#F59E0B" };
@@ -48,16 +49,6 @@ export default function GradeReview({ collabs, videos, creators, products, store
     finally { setSaving(false); setTimeout(()=>setSaveMsg(""),5000); }
   }
 
-  const DateFilters = () => (
-    <>
-      <span style={rs.label}>视频日期</span>
-      <input type="date" style={rs.monthInp} value={videoFrom} onChange={e=>setVideoFrom(e.target.value)} />
-      <span style={{ color:T.hint }}>—</span>
-      <input type="date" style={rs.monthInp} value={videoTo}   onChange={e=>setVideoTo(e.target.value)} />
-      {(videoFrom||videoTo) && <button style={rs.btnGhost} onClick={()=>{setVideoFrom("");setVideoTo("");}}>清除</button>}
-    </>
-  );
-
   return (
     <div>
       <div style={rs.tabs}>
@@ -71,9 +62,10 @@ export default function GradeReview({ collabs, videos, creators, products, store
           <div style={rs.toolbar}>
             <span style={rs.label}>统计月份</span>
             <input type="month" style={rs.monthInp} value={ym} onChange={e=>setYm(e.target.value)} />
-            <DateFilters />
+            <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
             <button style={rs.btn} onClick={handleSave} disabled={saving}>{saving?"保存中…":"📸 一键保存快照"}</button>
             {saveMsg && <span style={{ fontSize:FONT.sm2, color:saveMsg.startsWith("✅")?T.success:T.danger }}>{saveMsg}</span>}
+            <ScopeHint />
           </div>
           <div style={{ ...glassStyle(14), overflow:"hidden" }}>
             {!singleData.length ? <div style={rs.empty}>该时段暂无视频数据</div> : (
@@ -112,10 +104,12 @@ export default function GradeReview({ collabs, videos, creators, products, store
       {view==="all" && (
         <>
           <div style={rs.toolbar}>
+            <span style={rs.label}>月份区间</span>
             <input type="month" style={rs.monthInp} value={fromYm} onChange={e=>setFromYm(e.target.value)} />
             <span style={{ color:T.hint }}>—</span>
             <input type="month" style={rs.monthInp} value={toYm} onChange={e=>setToYm(e.target.value)} />
-            <DateFilters />
+            <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
+            <ScopeHint />
           </div>
           <div style={{ ...glassStyle(14), overflow:"auto" }}>
             <table style={rs.table}>

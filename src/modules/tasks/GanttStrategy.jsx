@@ -1,21 +1,19 @@
 // modules/tasks/GanttStrategy.jsx — 照旧版移植，数据源改为 Supabase
 import { useState, useMemo, useCallback } from 'react';
-import { T, glassStyle } from '../../constants/tokens.js';
-import { FONT } from '../../constants/tokens.js';
+import { T, FONT, glassStyle } from '../../constants/tokens.js';
 import { GANTT_MONTHS_PER_VIEW, GANTT_COL_PRODUCT_WIDTH } from '../../constants/config.js';
-import { STRATEGIES, STRATEGY_COLORS } from './constants.js';
 import { normalizeStatus } from '../../constants/crm.js';
-import { currentYearMonth, currentHalfKey, halfMonthColumns, shiftMonth, uid, currentCycleStart, cycleEnd, halfKeyToCycleStart } from './utils.js';
+import { currentYearMonth, currentHalfKey, halfMonthColumns, shiftMonth, currentCycleStart, halfKeyToCycleStart } from './utils.js';
 import StrategyChangeConfirm from './StrategyChangeConfirm.jsx';
 import GanttBatchBar from './GanttBatchBar.jsx';
 import ChangeLogModal from './ChangeLogModal.jsx';
-import { StrategySelector, DebugPanel } from './GanttModals.jsx';
+import { StrategySelector } from './GanttModals.jsx';
 import { GanttRowCells } from './GanttCell.jsx';
+import { GanttHeaderRow, GanttCategoryTitle, GanttLegend } from './GanttParts.jsx';
 import { upsertGanttStrategy, deleteGanttStrategy, upsertShippingGoal } from '../../lib/supabase/taskData.js';
 
 const CAT_ORDER = ['爆款','合格款','可卖款','撤退款','测款'];
 const toolbarBtn = (active) => ({ ...glassStyle(12), border:`1px solid ${active ? T.accent : T.glassStroke}`, padding:'8px 16px', fontSize:FONT.lg2, fontWeight:600, color:active ? T.accent : T.muted, cursor:'pointer', fontFamily:'inherit', background:active ? 'rgba(61,127,239,0.10)' : undefined });
-const stratGrad = (c) => `linear-gradient(135deg, ${c}D9 0%, ${c}99 100%)`;
 const arrowBtn = { border:'none', background:'transparent', cursor:'pointer', fontSize:20, color:T.muted, padding:'6px 14px', fontFamily:'inherit', lineHeight:1 };
 
 export default function GanttStrategy({ storeId, products=[], ganttStrategies=[], shippingGoals=[], changeLogs=[], influencers=[], isAdmin, onReload }) {
@@ -25,14 +23,12 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
   const [pending,   setPending]   = useState(null);
   const [hoverKey,  setHoverKey]  = useState(null);
   const [onlySet,   setOnlySet]   = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
   const [batchSelected, setBatchSelected] = useState(new Set());
 
   const columns = useMemo(() => halfMonthColumns(viewStart, GANTT_MONTHS_PER_VIEW), [viewStart]);
   const nowHalf = currentHalfKey(now);
   const cs = currentCycleStart(now);
-  const ce = cycleEnd(cs);
 
   // 适配新版：product_id + half_key
   const ganttMap = useMemo(() => {
@@ -40,8 +36,6 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
     ganttStrategies.forEach(g => { if (g.strategy) m[`${g.product_id}__${g.half_key}`] = g; });
     return m;
   }, [ganttStrategies]);
-
-  const productMap = useMemo(() => Object.fromEntries(products.map(p => [p.id, p])), [products]);
 
   const grouped = useMemo(() => {
     const hasStrategy = new Set(ganttStrategies.filter(g => g.strategy).map(g => g.product_id));
@@ -150,29 +144,11 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
 
       <div style={{ ...glassStyle(20, true), padding:'4px 0 12px', overflowX:'auto' }}>
         <div style={{ minWidth: GANTT_COL_PRODUCT_WIDTH + columns.length * 96 }}>
-          <div style={{ display:'flex', borderBottom:`1.5px solid ${T.glassStroke}`, padding:'12px 0 10px' }}>
-            <div style={{ width:GANTT_COL_PRODUCT_WIDTH, flexShrink:0, padding:'0 18px', fontSize:FONT.md, fontWeight:800, color:T.hint, letterSpacing:'0.1em', display:'flex', alignItems:'center' }}>产品 / 半月</div>
-            {columns.map(col => {
-              const isNow = col.key === nowHalf;
-              return (
-                <div key={col.key} style={{ flex:1, textAlign:'center' }}>
-                  <div style={{ display:'inline-flex', flexDirection:'column', alignItems:'center', padding:'4px 10px', borderRadius:12, background:isNow ? T.gradSoft : 'transparent', border:isNow ? `1px solid ${T.accent}33` : '1px solid transparent' }}>
-                    <span style={{ fontSize:FONT.xl, fontWeight:800, color:isNow ? T.accent : T.text }}>{col.label}</span>
-                    <span style={{ fontSize:FONT.xs, fontWeight:600, color:isNow ? T.accent : T.hint, marginTop:1 }}>{col.half === 'H1' ? '1-14日' : '15日-月底'}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <GanttHeaderRow columns={columns} nowHalf={nowHalf} />
 
           {grouped.map(({ cat, items }) => (
             <div key={cat}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'14px 18px 8px' }}>
-                <span style={{ width:5, height:5, borderRadius:'50%', background:T.grad }} />
-                <span style={{ fontSize:FONT.md, fontWeight:800, color:T.muted, letterSpacing:'0.12em' }}>{cat}</span>
-                <span style={{ fontSize:FONT.sm, color:T.hint }}>{items.length} 款</span>
-                <div style={{ flex:1, height:1, background:`linear-gradient(90deg, ${T.glassStroke}, transparent)` }} />
-              </div>
+              <GanttCategoryTitle cat={cat} count={items.length} />
               {items.map(product => (
                 <div key={product.id} style={{ display:'flex', alignItems:'stretch', minHeight:52, borderBottom:`1px solid ${T.glassStroke}55` }}>
                   <div style={{ width:GANTT_COL_PRODUCT_WIDTH, flexShrink:0, padding:'8px 18px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
@@ -194,15 +170,7 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
         </div>
       </div>
 
-      <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginTop:16, alignItems:'center', padding:'0 4px' }}>
-        <span style={{ fontSize:FONT.md, color:T.hint, fontWeight:700, letterSpacing:'0.05em' }}>策略</span>
-        {STRATEGIES.map(s => (
-          <span key={s} style={{ display:'flex', alignItems:'center', gap:6, fontSize:FONT.md2 }}>
-            <span style={{ width:22, height:12, borderRadius:6, display:'inline-block', background:stratGrad(STRATEGY_COLORS[s]) }} />
-            <span style={{ color:T.muted, fontWeight:600 }}>{s}</span>
-          </span>
-        ))}
-      </div>
+      <GanttLegend />
 
       {pending?.selectMode && <StrategySelector product={{ internalName: pending.product.internal_name, ...pending.product }} label={pending.col.label} current={pending.fromStrategy} onSelect={handleStrategySelect} onCancel={() => setPending(null)} />}
       {pending && !pending.selectMode && pending.toStrategy && (

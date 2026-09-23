@@ -5,7 +5,7 @@ const COLS = "id, store_id, sku_id, internal_name, product_title, status, is_new
 
 export const fetchProducts = (storeId) =>
   fetchAll((from, to) =>
-    sb.from("products").select(COLS).eq("store_id", storeId).order("created_at", { ascending: false }).range(from, to),
+    sb.from("products").select(COLS).eq("store_id", storeId).order("created_at", { ascending: false }).order("id").range(from, to),
     "products"
   );
 

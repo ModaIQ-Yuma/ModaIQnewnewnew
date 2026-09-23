@@ -2,6 +2,11 @@
 import { sb, unwrap } from "./client.js";
 import { markUnconnectedConverted } from "./unconnectedWrite.js";
 
+// creators.style 是 text 列：多选数组存成逗号分隔
+const joinStyle = (v) => (Array.isArray(v) ? v.join(",") : v) || null;
+// collaborations.status 是人工基线（text）；status_manual 是布尔标记「人工改过」
+const statusFields = (inf, manual) => ({ status: inf.baseStatus || "已寄样", status_manual: manual });
+
 /** 新增或更新达人档案，返回 creator.id */
 async function upsertCreator(storeId, inf) {
   const fields = {
@@ -16,7 +21,7 @@ async function upsertCreator(storeId, inf) {
     body_type:        inf.body_type        || null,
     age_range:        inf.age_range        || null,
     content_vertical: inf.content_vertical || null,
-    style:            inf.style?.length ? inf.style : null,
+    style:            joinStyle(inf.style),
     video_quality:    inf.video_quality    || null,
     voiceover:        inf.voiceover       || null,
     aliases:          inf.aliases         || null,
@@ -53,7 +58,7 @@ export async function createInfluencer(storeId, inf, productId) {
       product_id:     productId,
       staff_id:       inf.staffId       || null,
       ship_date:      inf.shipDate,
-      status_manual:  inf.baseStatus    || "已寄样",
+      ...statusFields(inf, false),
       product_color:  inf.productColor  || null,
       ship_score:     inf.shipScore     || null,
       note:           inf.note          || null,
@@ -78,7 +83,7 @@ export async function updateInfluencer(storeId, inf, productId) {
       product_id:     productId,
       staff_id:       inf.staffId       || null,
       ship_date:      inf.shipDate,
-      status_manual:  inf.baseStatus    || "已寄样",
+      ...statusFields(inf, true),
       product_color:  inf.productColor  || null,
       ship_score:     inf.shipScore     || null,
       note:           inf.note          || null,
@@ -88,10 +93,13 @@ export async function updateInfluencer(storeId, inf, productId) {
   );
 }
 
-/** 删除合作记录（视频 collaboration_id 由 DB ON DELETE SET NULL 自动置空） */
-export const deleteInfluencer = async (id) =>
-  unwrap(await sb.from("collaborations").delete().eq("id", id), "collaborations");
+/** 批量删除合作记录（视频 collaboration_id 由 DB ON DELETE SET NULL 自动置空） */
+export async function deleteInfluencers(ids) {
+  for (let i = 0; i < ids.length; i += 200) {
+    unwrap(await sb.from("collaborations").delete().in("id", ids.slice(i, i + 200)), "collaborations");
+  }
+}
 
 /** 只改状态（状态下拉行内编辑） */
 export const setInfluencerStatus = async (id, baseStatus) =>
-  unwrap(await sb.from("collaborations").update({ status_manual: baseStatus }).eq("id", id), "collaborations");
+  unwrap(await sb.from("collaborations").update({ status: baseStatus, status_manual: true }).eq("id", id), "collaborations");

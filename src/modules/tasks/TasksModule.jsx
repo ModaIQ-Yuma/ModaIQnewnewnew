@@ -1,9 +1,8 @@
 // modules/tasks/TasksModule.jsx
 import { useState } from 'react';
-import { T, FONT, tabStyle } from '../../constants/tokens.js';
-import { useTasks } from '../../hooks/useTasks.js';
+import { T, FONT } from '../../constants/tokens.js';
+import SubNav from '../../components/layout/SubNav.jsx';
 import { createTask, clearAutoTasks } from '../../lib/supabase/tasks.js';
-import { todayLocal } from './utils.js';
 import GanttStrategy     from './GanttStrategy.jsx';
 import CycleGoals        from './CycleGoals.jsx';
 import WeeklyMenu        from './WeeklyMenu.jsx';
@@ -11,20 +10,18 @@ import ActionList        from './ActionList.jsx';
 import PerformanceModule from './PerformanceModule.jsx';
 
 const SUBTABS = [
-  { id:'gantt',  label:'📊 策略甘特图'  },
-  { id:'goals',  label:'🎯 本周期目标'  },
-  { id:'menu',   label:'📅 周邀约日程单' },
-  { id:'action', label:'✅ 行动清单'    },
-  { id:'perf',   label:'📋 绩效评估'    },
+  { id:'gantt',  label:'📊 策略甘特图',  desc:'按半月（1-14 日 / 15 日-月底）规划每个产品的推广策略；点格子改策略，可同步调整对应账期的寄样目标。' },
+  { id:'goals',  label:'🎯 本周期目标',  desc:'本账期（15 日 ~ 次月 14 日）每个产品的寄样目标和实际进度，进度按 CRM 寄样记录实时计算。' },
+  { id:'menu',   label:'📅 周邀约日程单', desc:'每周 7 天 × 4 格的邀约排期，管理员发布后助理按单邀约。' },
+  { id:'action', label:'✅ 行动清单',    desc:'指派给助理的具体任务（催发视频、复投等），完成后勾选。「生成本周任务」会按寄样和出单数据自动生成。' },
+  { id:'perf',   label:'📋 绩效评估',    desc:'按账期计算助理绩效得分；管理员可切换查看全店或单个助理。' },
 ];
 
 export default function TasksModule({ ctx }) {
-  const { storeId, isAdmin, userId, products, collabs, videos, creators } = ctx;
-  const { goals, gantt, menus, tasks, loading, error, reload } = useTasks(storeId);
+  const { storeId, isAdmin, userId, products, collabs, videos, creators, staff, tasksApi } = ctx;
+  const { goals, gantt, menus, tasks, loading, error, reload } = tasksApi;
   const [sub,    setSub]    = useState(isAdmin ? 'goals' : 'action');
   const [genMsg, setGenMsg] = useState('');
-
-  const staff = [];
 
   async function generateWeeklyTasks() {
     const pst = (d) => d.toLocaleDateString('sv-SE', { timeZone:'America/Los_Angeles' });
@@ -60,26 +57,22 @@ export default function TasksModule({ ctx }) {
     reload();
   }
 
-  if (loading) return <div style={{ padding:48, textAlign:'center', color:T.hint }}>加载中…</div>;
+  if (loading || ctx.dataLoading) return <div style={{ padding:48, textAlign:'center', color:T.hint }}>加载中…</div>;
   if (error)   return <div style={{ padding:48, textAlign:'center', color:T.danger }}>错误：{error}</div>;
 
   return (
-    <div style={{ padding:20 }}>
-      <h2 style={{ fontSize:FONT.x4l, fontWeight:700, color:T.text, marginBottom:14 }}>任务中心</h2>
-      <div style={{ display:'flex', gap:6, marginBottom:24, flexWrap:'wrap', alignItems:'center' }}>
-        {SUBTABS.map(t => (
-          <button key={t.id} onClick={() => setSub(t.id)} style={tabStyle(sub===t.id)}>{t.label}</button>
-        ))}
+    <div>
+      <SubNav tabs={SUBTABS} active={sub} onChange={setSub} right={<>
         {isAdmin && (
           <>
-            <button onClick={generateWeeklyTasks} style={{ marginLeft:'auto', fontSize:FONT.sm2, padding:'6px 14px', borderRadius:18, border:`1.5px solid ${T.success}`, background:'transparent', color:T.success, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>⚡ 生成本周任务</button>
+            <button onClick={generateWeeklyTasks} style={{ fontSize:FONT.sm2, padding:'6px 14px', borderRadius:18, border:`1.5px solid ${T.success}`, background:'transparent', color:T.success, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>⚡ 生成本周任务</button>
             {tasks.some(t => t.is_auto) && (
               <button onClick={async () => { if (confirm('确认删除所有自动生成的任务？')) { await clearAutoTasks(storeId); reload(); } }} style={{ fontSize:FONT.sm2, padding:'6px 14px', borderRadius:18, border:`1.5px solid ${T.danger}`, background:'transparent', color:T.danger, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>🗑 清除自动任务</button>
             )}
           </>
         )}
         {genMsg && <span style={{ fontSize:FONT.sm2, color:T.success }}>{genMsg}</span>}
-      </div>
+      </>} />
 
       {sub==='gantt'  && <GanttStrategy     storeId={storeId} products={products} ganttStrategies={gantt} shippingGoals={goals} changeLogs={[]} collabs={collabs} isAdmin={isAdmin} onReload={reload} />}
       {sub==='goals'  && <CycleGoals        storeId={storeId} products={products} shippingGoals={goals} ganttStrategies={gantt} collabs={collabs} staff={staff} isAdmin={isAdmin} onReload={reload} />}

@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
+import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
 import { calcBurstVideos } from "../../lib/review/burstCalc.js";
 import { safeDiv } from "../../lib/utils.js";
 import { BURST_ORDER_THRESHOLD } from "../../constants/config.js";
@@ -27,15 +28,12 @@ export default function BurstWall({ videos, products, burstThreshold, onThreshol
       <div style={rs.toolbar}>
         <span style={rs.label}>统计月份</span>
         <input type="month" style={rs.monthInp} value={ym} onChange={e=>setYm(e.target.value)} />
-        <span style={rs.label}>视频日期</span>
-        <input type="date" style={rs.monthInp} value={videoFrom} onChange={e=>setVideoFrom(e.target.value)} />
-        <span style={{ color:T.hint }}>—</span>
-        <input type="date" style={rs.monthInp} value={videoTo}   onChange={e=>setVideoTo(e.target.value)} />
-        {(videoFrom||videoTo)&&<button style={rs.btnGhost} onClick={()=>{setVideoFrom("");setVideoTo("");}}>清除</button>}
+        <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
         <span style={rs.label}>爆单阈值</span>
         <input type="number" min={1} style={{ ...rs.monthInp,width:72 }} value={burstThreshold}
           onChange={e=>onThresholdChange?.(Number(e.target.value)||BURST_ORDER_THRESHOLD)} />
-        <span style={rs.hint}>单条视频出单 ≥ 此值</span>
+        <span style={rs.hint}>单条视频当月出单 ≥ 此值即算爆单</span>
+        <ScopeHint />
       </div>
       {byProduct.length===0
         ?<div style={rs.empty}>该时段暂无爆单视频（阈值 {burstThreshold} 单）</div>

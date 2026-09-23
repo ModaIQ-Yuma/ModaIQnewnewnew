@@ -1,10 +1,16 @@
 // modules/ModuleRouter.jsx
-import { TABS } from "../constants/nav.js";
-import Placeholder from "../components/layout/Placeholder.jsx";
-import ErrorBoundary from "../components/ErrorBoundary.jsx";
+// 数据策略（对齐旧版的「快」）：
+//   ① 核心数据（合作/达人/视频/员工/邀约）登录后并行拉一次，全站共享，切板块不再请求
+//   ② 核心数据到位后，后台预取快照、任务数据
+//   ③ 板块懒挂载 + 保活：首次切到才渲染，之后只隐藏不卸载（筛选条件、滚动位置都保留）
 import { useState } from "react";
-import { useReview } from "../hooks/useReview.js";
+import { TABS } from "../constants/nav.js";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
+import SyncPill from "../components/layout/SyncPill.jsx";
+import { useCoreData } from "../hooks/useCoreData.js";
 import { useProducts } from "../hooks/useProducts.js";
+import { useSnapshots } from "../hooks/useSnapshots.js";
+import { useTasks } from "../hooks/useTasks.js";
 import ProductsModule    from "./products/ProductsModule.jsx";
 import CRMModule         from "./crm/CRMModule.jsx";
 import InvitePoolModule  from "./invitePool/InvitePoolModule.jsx";
@@ -12,13 +18,10 @@ import DailyModule       from "./daily/DailyModule.jsx";
 import VideosModule      from "./videos/VideosModule.jsx";
 import ReviewModule      from "./review/ReviewModule.jsx";
 import AttributionModule from "./attribution/AttributionModule.jsx";
-import TasksModule        from "./tasks/TasksModule.jsx";
-import BDToolsModule      from "./bdtools/BDToolsModule.jsx";
-import StaffModule        from "./staff/StaffModule.jsx";
-import PerformanceModule  from "./tasks/PerformanceModule.jsx";
-
-// 需要复盘数据（useReview）的板块
-const REVIEW_TABS = new Set(["review", "attribution", "tasks", "performance"]);
+import TasksModule       from "./tasks/TasksModule.jsx";
+import BDToolsModule     from "./bdtools/BDToolsModule.jsx";
+import StaffModule       from "./staff/StaffModule.jsx";
+import PerformanceModule from "./tasks/PerformanceModule.jsx";
 
 const MODULES = {
   products:    ProductsModule,
@@ -28,60 +31,53 @@ const MODULES = {
   videos:      VideosModule,
   review:      ReviewModule,
   attribution: AttributionModule,
-  tasks:        TasksModule,
-  bdtools:      BDToolsModule,
-  performance:  PerformanceModule,
-  staff:        StaffModule,
+  tasks:       TasksModule,
+  bdtools:     BDToolsModule,
+  performance: PerformanceModule,
+  staff:       StaffModule,
 };
 
 export default function ModuleRouter({ tab, ctx }) {
   const { storeId } = ctx;
 
-  // 产品库：所有板块都需要，始终拉
-  const { products, reload: reloadProducts } = useProducts(storeId);
-
-  // 复盘数据：只在需要的板块才激活（懒加载）
-  const reviewEnabled = REVIEW_TABS.has(tab);
-  const {
-    collabs, videos, creators, invites,
-    gradeSnapshots, storeSnapshots,
-    loading: reviewLoading, error: reviewError,
-    reload: reloadReview,
-  } = useReview(reviewEnabled ? storeId : null);
+  const core        = useCoreData(storeId);
+  const productsApi = useProducts(storeId);
+  const prefetchId  = core.loading ? null : storeId;   // 核心数据到位后再预取次要数据
+  const snapshots   = useSnapshots(prefetchId);
+  const tasksApi    = useTasks(prefetchId);
 
   const sharedCtx = {
     ...ctx,
-    products:        products ?? [],
-    reloadProducts,
-    collabs:         collabs  ?? [],
-    videos:          videos   ?? [],
-    creators:        creators ?? [],
-    invites:         invites  ?? [],
-    gradeSnapshots:  gradeSnapshots ?? [],
-    storeSnapshots:  storeSnapshots ?? [],
-    reviewLoading,
-    reviewError,
-    reloadReview,
+    core, productsApi, tasksApi,
+    products:        productsApi.products,
+    collabs:         core.collabs,
+    videos:          core.videos,
+    creators:        core.creators,
+    invites:         core.invites,
+    staff:           core.staff,
+    dataLoading:     core.loading,
+    dataError:       core.error,
+    gradeSnapshots:  snapshots.gradeSnapshots,
+    storeSnapshots:  snapshots.storeSnapshots,
+    reloadSnapshots: snapshots.reload,
   };
 
-  // 已经激活过的模块集合（懒初始化 + 保活：首次切到才 mount，之后只隐藏不卸载）
-  const [mounted, setMounted] = useState(new Set([tab]));
+  // 已经激活过的模块集合（懒初始化 + 保活）
+  const [mounted, setMounted] = useState(() => new Set([tab]));
   if (!mounted.has(tab)) setMounted((prev) => new Set([...prev, tab]));
 
   return (
     <>
       {TABS.filter((t) => t.ready && MODULES[t.id]).map((t) => {
-        const Mod = MODULES[t.id];
-        const isActive = t.id === tab;
         if (!mounted.has(t.id)) return null;
+        const Mod = MODULES[t.id];
         return (
-          <div key={t.id} style={{ display: isActive ? "block" : "none" }}>
-            <ErrorBoundary>
-              <Mod ctx={sharedCtx} />
-            </ErrorBoundary>
+          <div key={t.id} style={{ display: t.id === tab ? "block" : "none" }}>
+            <ErrorBoundary><Mod ctx={sharedCtx} /></ErrorBoundary>
           </div>
         );
       })}
+      <SyncPill show={core.syncing && !core.loading} error={core.error} />
     </>
   );
 }

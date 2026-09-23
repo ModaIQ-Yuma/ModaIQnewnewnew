@@ -1,98 +1,62 @@
-// ─── CRM 数据 hook：拉取 + 拼接成旧版 influencer 格式 ───────────────────────
-import { useCallback, useEffect, useState } from "react";
-import { fetchInfluencers, fetchCollabVideos } from "../lib/supabase/collabs.js";
-import { fetchVideoSummaries } from "../lib/supabase/videoRecords.js";
-import { createInfluencer, updateInfluencer, deleteInfluencer, setInfluencerStatus } from "../lib/supabase/collabsWrite.js";
-import { fetchStaff, createStaff } from "../lib/supabase/staff.js";
+// ─── CRM hook：从核心数据派生 influencer 列表；写操作乐观更新 + 局部回拉 ───
+import { useCallback, useMemo } from "react";
+import { buildInfluencers } from "../lib/crm/buildInfluencers.js";
 import { withComputedStatus } from "../lib/crm/crmFlow.js";
+import { createInfluencer, updateInfluencer, deleteInfluencers, setInfluencerStatus } from "../lib/supabase/collabsWrite.js";
+import { createStaff } from "../lib/supabase/staff.js";
 
-export function useCRM(storeId, products) {
-  const [influencers, setInfluencers] = useState([]);
-  const [staff,       setStaff]       = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
+export function useCRM(storeId, core, products) {
+  const { collabs, creators, videos, staff, loading, error } = core;
+  const { refresh, refreshRows, patchRow, removeRows, upsertRows } = core;
 
-  // product_id → internalName 索引（供数据层转换用）
-  const productById  = Object.fromEntries((products || []).map((p) => [p.id, p.internal_name]));
-  const productByName = Object.fromEntries((products || []).map((p) => [p.internal_name, p]));
+  const productById   = useMemo(() => Object.fromEntries(products.map((p) => [p.id, p.internal_name])), [products]);
+  const productByName = useMemo(() => Object.fromEntries(products.map((p) => [p.internal_name, p])), [products]);
 
-  const reload = useCallback(async () => {
-    if (!storeId) return;
-    setLoading(true); setError(null);
-    try {
-      const [infs, st, videoSummaries] = await Promise.all([
-        fetchInfluencers(storeId), fetchStaff(storeId), fetchVideoSummaries(storeId),
-      ]);
-      // product_id → internalName，注入视频摘要后用 withComputedStatus 精确重算状态
-      const mapped = infs.map((inf) => {
-        const summary = videoSummaries[inf.id] || { videoCount: 0, totalOrders: 0 };
-        // 用摘要构造轻量 videoRecords 占位，让 computeStatus / cumOrders 精确计算
-        const videoPlaceholders = summary.videoCount > 0
-          ? Array.from({ length: summary.videoCount }, (_, i) =>
-              i === 0 ? { videoId: `_summary`, orders: summary.totalOrders, date: "" } : { videoId: `_summary_${i}`, orders: 0, date: "" }
-            )
-          : [];
-        return withComputedStatus({
-          ...inf,
-          product: productById[inf.product] || inf.product,
-          videoRecords: videoPlaceholders,
-          _videoSummary: summary,  // 保留原始摘要供任务中心用
-        });
-      });
-      setInfluencers(mapped);
-      setStaff(st);
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  }, [storeId, JSON.stringify(productById)]);
+  // 纯内存派生：切 tab / 改产品名都不再发请求
+  const influencers = useMemo(
+    () => buildInfluencers(collabs, creators, videos, productById),
+    [collabs, creators, videos, productById]
+  );
 
-  useEffect(() => { reload(); }, [reload]);
+  /** 写库后只回拉这一条合作记录和它的达人 */
+  const syncOne = useCallback(async (collabId) => {
+    const [row] = await refreshRows("collabs", [collabId]);
+    if (row?.creator_id) await refreshRows("creators", [row.creator_id]);
+  }, [refreshRows]);
 
-  // 视频懒加载：展开行时调用，结果直接更新该 influencer 的 videoRecords
-  const loadVideos = useCallback(async (inf) => {
-    const videos = await fetchCollabVideos(storeId, inf.id);
-    const updated = withComputedStatus({ ...inf, videoRecords: videos });
-    setInfluencers((prev) => prev.map((i) => i.id === inf.id ? updated : i));
-    return videos;
-  }, [storeId]);
-
-  // ── 写操作（入参是旧版 influencer 对象，内部转换为两张表）──
   const save = useCallback(async (inf) => {
     const prod = productByName[inf.product];
     if (!prod) throw new Error(`产品「${inf.product}」不存在，请先在产品库建档`);
-    if (inf.id && inf.id !== inf.influencerId) {
-      // 编辑
-      await updateInfluencer(storeId, inf, prod.id);
-      setInfluencers((prev) => prev.map((i) => i.id === inf.id ? withComputedStatus(inf) : i));
-    } else {
-      // 新增
-      const collabId = await createInfluencer(storeId, inf, prod.id);
-      setInfluencers((prev) => [withComputedStatus({ ...inf, id: collabId }), ...prev]);
-    }
-  }, [storeId, JSON.stringify(productByName)]);
+    const isEdit = inf.id && inf.id !== inf.influencerId;
+    const id = isEdit ? inf.id : await createInfluencer(storeId, inf, prod.id);
+    if (isEdit) await updateInfluencer(storeId, inf, prod.id);
+    await syncOne(id);
+    if (!isEdit && inf.creatorSource === "auto_invite") refresh(["invites"]);
+  }, [storeId, productByName, syncOne, refresh]);
 
-  const remove = useCallback(async (id) => {
-    await deleteInfluencer(id);
-    setInfluencers((prev) => prev.filter((i) => i.id !== id));
-  }, []);
+  /** 行内改状态：先改界面，失败回滚 */
+  const updateStatus = useCallback(async (inf, picked) => {
+    const next = withComputedStatus(inf, picked).baseStatus;
+    const prev = inf.baseStatus;
+    patchRow("collabs", inf.id, { status: next, status_manual: true });
+    try { await setInfluencerStatus(inf.id, next); }
+    catch (e) { patchRow("collabs", inf.id, { status: prev }); throw e; }
+  }, [patchRow]);
 
-  // 行内状态变更（下拉框）
-  const updateStatus = useCallback(async (inf, newBaseStatus) => {
-    await setInfluencerStatus(inf.id, newBaseStatus);
-    const updated = withComputedStatus(inf, newBaseStatus);
-    setInfluencers((prev) => prev.map((i) => i.id === inf.id ? updated : i));
-  }, []);
-
-  // 批量删除
+  /** 删除（单条/批量）：先从界面移除，失败则整表回拉恢复；成功后后台刷新视频归属 */
   const bulkRemove = useCallback(async (ids) => {
-    await Promise.all([...ids].map((id) => deleteInfluencer(id)));
-    setInfluencers((prev) => prev.filter((i) => !ids.has(i.id)));
-  }, []);
+    const list = [...ids];
+    removeRows("collabs", list);
+    try { await deleteInfluencers(list); refresh(["videos"]); }
+    catch (e) { refresh(["collabs"]); throw e; }
+  }, [removeRows, refresh]);
+  const remove = useCallback((id) => bulkRemove([id]), [bulkRemove]);
 
   const addStaff = useCallback(async (name) => {
     const s = await createStaff(storeId, name);
-    setStaff((prev) => [...prev, s]);
+    upsertRows("staff", [s]);
     return s;
-  }, [storeId]);
+  }, [storeId, upsertRows]);
 
-  return { influencers, staff, loading, error, reload, loadVideos, save, remove, updateStatus, bulkRemove, addStaff };
+  return { influencers, staff, loading, error, reload: refresh, save, remove, updateStatus, bulkRemove, addStaff };
 }

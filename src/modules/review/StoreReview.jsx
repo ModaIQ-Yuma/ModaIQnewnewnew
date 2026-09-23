@@ -3,8 +3,9 @@ import { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
+import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
 import { calcMonthMetrics } from "../../lib/review/reviewCalc.js";
-import { monthsBetween, videoRange } from "../../lib/utils.js";
+import { monthsBetween } from "../../lib/utils.js";
 
 const COLORS = { ship: "#F59E0B", video: "#3B82F6", orders: "#EC4899" };
 const defFrom = () => { const d = new Date(); d.setMonth(d.getMonth()-5); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
@@ -99,11 +100,8 @@ export default function StoreReview({ collabs, videos, products }) {
         <input type="month" style={rs.monthInp} value={fromYm} onChange={e=>setFromYm(e.target.value)} />
         <span style={{ color:T.hint }}>—</span>
         <input type="month" style={rs.monthInp} value={toYm}   onChange={e=>setToYm(e.target.value)} />
-        <span style={rs.label}>视频日期</span>
-        <input type="date"  style={rs.monthInp} value={videoFrom} onChange={e=>setVideoFrom(e.target.value)} placeholder="不限" />
-        <span style={{ color:T.hint }}>—</span>
-        <input type="date"  style={rs.monthInp} value={videoTo}   onChange={e=>setVideoTo(e.target.value)}   placeholder="不限" />
-        {(videoFrom||videoTo) && <button style={rs.btnGhost} onClick={()=>{setVideoFrom("");setVideoTo("");}}>清除</button>}
+        <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
+        <ScopeHint />
       </div>
       <div style={rs.metricGrid}>
         <MetricCard label="合作达人数"   value={rs.num(summary.shipCount)}   sub="CRM寄样记录数" />

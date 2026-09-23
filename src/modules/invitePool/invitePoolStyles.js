@@ -2,8 +2,6 @@
 import { T } from "../../constants/tokens.js";
 
 export const s = {
-  wrap:       { padding: "24px" },
-  title:      { fontSize: 20, fontWeight: 700, marginBottom: 16, color: T.text },
   row:        { display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" },
   input:      { padding: "9px 14px", borderRadius: 10, minWidth: 220, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.6)", color: T.text, fontSize: 14, outline: "none", fontFamily: "inherit" },
   checks:     { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" },

@@ -5,7 +5,7 @@ const Card = ({ children, style = {} }) => <div style={{ ...glassStyle(14), padd
 const SectionLabel = ({ children }) => <div style={{ fontSize:FONT.x4l, fontWeight:700, color:T.text, marginBottom:14 }}>{children}</div>;
 
 const chip = (color, text) => (
-  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: `${color}22`, color, fontWeight: 700, marginRight: 8 }}>{text}</span>
+  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: `${color}22`, color, fontWeight: 700, marginRight: 8 }}>{text}</span>
 );
 
 export default function RoiCalculator({ products = [] }) {
@@ -78,7 +78,7 @@ export default function RoiCalculator({ products = [] }) {
           <div style={{ background: `${T.info}10`, border: `1.5px solid ${T.info}33`, borderRadius: 10, padding: "12px 14px", minWidth: 120 }}>
             <div style={{ fontSize: 11, color: T.info, fontWeight: 700, marginBottom: 4 }}>固定成本小计</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: T.info }}>{fixedCost > 0 ? `$${fixedCost.toFixed(2)}` : "—"}</div>
-            <div style={{ fontSize: 10.5, color: T.hint, marginTop: 2 }}>物料 + 头程 + 尾程</div>
+            <div style={{ fontSize: 11, color: T.hint, marginTop: 2 }}>物料 + 头程 + 尾程</div>
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export default function RoiCalculator({ products = [] }) {
           <div style={{ background: `${T.danger}10`, border: `1.5px solid ${T.danger}33`, borderRadius: 10, padding: "12px 14px", minWidth: 150 }}>
             <div style={{ fontSize: 11, color: T.danger, fontWeight: 700, marginBottom: 4 }}>坑位费总成本</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: T.danger }}>{(pit + fixedCost) > 0 ? `$${(pit + fixedCost).toFixed(2)}` : "—"}</div>
-            <div style={{ fontSize: 10.5, color: T.hint, marginTop: 2 }}>坑位费 + 物料 + 头程 + 尾程</div>
+            <div style={{ fontSize: 11, color: T.hint, marginTop: 2 }}>坑位费 + 物料 + 头程 + 尾程</div>
           </div>
         </div>
       </Card>

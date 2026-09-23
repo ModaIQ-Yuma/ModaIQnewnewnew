@@ -3,8 +3,8 @@ import { useState, useMemo } from 'react';
 import { T, glassStyle, FONT } from '../../constants/tokens.js';
 import { currentCycleStart, cycleEnd, prevCycleStart, nextCycleStart } from './utils.js';
 import { calcPerfMetrics } from '../../lib/perf/perfCalc.js';
-import { useTasks } from '../../hooks/useTasks.js';
 import PerfTable from './PerfTable.jsx';
+import { SectionIntro } from '../../components/layout/SubNav.jsx';
 
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRadius:12, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.4)', color:T.muted, cursor:'pointer', fontFamily:'inherit' };
 
@@ -14,10 +14,9 @@ export default function PerformanceModule({ ctx, storeId: _storeId, collabs: _co
   const collabs      = ctx?.collabs      ?? _collabs      ?? [];
   const videos       = ctx?.videos       ?? _videos       ?? [];
   const creators     = ctx?.creators     ?? _creators     ?? [];
-  const { goals: ctxGoals } = useTasks(ctx ? storeId : null);
-  const shippingGoals = ctx ? (ctxGoals ?? []) : (_goals ?? []);
+  const shippingGoals = ctx ? (ctx.tasksApi?.goals ?? []) : (_goals ?? []);
   const products     = ctx?.products     ?? _products     ?? [];
-  const staff        = ctx ? [] : (_staff ?? []);
+  const staff        = ctx?.staff        ?? _staff        ?? [];
   const isAdmin      = ctx?.isAdmin      ?? _isAdmin      ?? false;
   const userId       = ctx?.userId       ?? _userId       ?? null;
   const now = new Date();
@@ -36,8 +35,11 @@ export default function PerformanceModule({ ctx, storeId: _storeId, collabs: _co
     ? '全店（Admin）'
     : (staff.find(s => s.id === viewStaffId)?.name || viewStaffId);
 
+  if (ctx?.dataLoading) return <div style={{ padding:48, textAlign:'center', color:T.hint }}>加载中…</div>;
+
   return (
     <div>
+      {ctx && <SectionIntro style={{ marginBottom:14 }}>按账期（15 日 ~ 次月 14 日）计算绩效：寄样看账期内的寄样记录，视频和出单看账期结束月的自然月。管理员可切换查看全店或单个助理，助理只能看到自己。</SectionIntro>}
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:22, flexWrap:'wrap' }}>
         <button onClick={() => setCycleStart(prevCycleStart(cycleStart))} style={navBtn}>‹ 上周期</button>
         <div style={{ ...glassStyle(12), padding:'8px 18px', fontSize:FONT.xl2, fontWeight:700, color:T.text }}>

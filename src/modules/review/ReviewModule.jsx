@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { rs } from "./reviewStyles.js";
 import { T, FONT } from "../../constants/tokens.js";
+import SubNav from "../../components/layout/SubNav.jsx";
 import { BURST_ORDER_THRESHOLD } from "../../constants/config.js";
 import { calcMonthMetrics } from "../../lib/review/reviewCalc.js";
 import { saveProductSnapshot } from "../../lib/supabase/reviewWrite.js";
@@ -14,13 +15,13 @@ import StaffReview     from "./StaffReview.jsx";
 import BurstWall       from "./BurstWall.jsx";
 
 const SUBTABS = [
-  { id:"store",     label:"全店复盘"   },
-  { id:"grade",     label:"等级复盘"   },
-  { id:"product",   label:"单品月报"   },
-  { id:"dashboard", label:"横向看板"   },
-  { id:"archive",   label:"快照记录"   },
-  { id:"staff",     label:"助理复盘"   },
-  { id:"burst",     label:"爆单视频墙" },
+  { id:"store",     label:"全店复盘",   desc:"全店的寄样、视频、出单汇总，以及按月的趋势变化（全店 + 每个产品）。" },
+  { id:"grade",     label:"等级复盘",   desc:"按达人官方等级（Lv1~Lv7）对比视频产出和出单，看哪个等级的达人最值得寄。" },
+  { id:"product",   label:"单品月报",   desc:"单个产品某个月的完整指标；确认无误后可保存为月度快照，快照数值以后不再随数据变化。" },
+  { id:"dashboard", label:"横向看板",   desc:"同一个月所有产品放在一起横向对比，数据来自已保存的快照。" },
+  { id:"archive",   label:"快照记录",   desc:"所有已保存的产品月度快照，可查看或删除。" },
+  { id:"staff",     label:"助理复盘",   desc:"按助理统计每个产品的寄样、邀约录入和视频产出。" },
+  { id:"burst",     label:"爆单视频墙", desc:"单条视频当月出单达到阈值（默认 50 单，可调）的视频，按产品分组。" },
 ];
 
 function prevMonth() {
@@ -32,8 +33,8 @@ function prevMonth() {
 export default function ReviewModule({ ctx }) {
   const {
     storeId, userId,
-    products, collabs, videos, creators, invites,
-    gradeSnapshots, reviewLoading, reviewError, reloadReview,
+    products, collabs, videos, creators, invites, staff,
+    gradeSnapshots, dataLoading, dataError, reloadSnapshots: reloadReview,
   } = ctx;
 
   const [tab,            setTab]            = useState("store");
@@ -66,14 +67,13 @@ export default function ReviewModule({ ctx }) {
     }
   }
 
-  if (reviewLoading) return <div style={rs.center}>加载中…</div>;
-  if (reviewError)   return <div style={rs.center}>错误：{reviewError}</div>;
+  if (dataLoading) return <div style={rs.center}>加载中…</div>;
+  if (dataError && !collabs.length) return <div style={rs.center}>错误：{dataError}</div>;
 
   const common = { collabs, videos, creators, products, storeId, userId, burstThreshold, reloadReview };
 
   return (
-    <div style={rs.wrap}>
-      <h2 style={rs.title}>月度复盘</h2>
+    <div>
       {showReminder && (
         <div style={rs.reminder}>
           <span style={{ fontSize:FONT.lg2, color:T.warning, fontWeight:700 }}>📅 本月快照提醒</span>
@@ -94,17 +94,13 @@ export default function ReviewModule({ ctx }) {
           )}
         </div>
       )}
-      <div style={rs.tabs}>
-        {SUBTABS.map((t) => (
-          <button key={t.id} style={rs.tab(tab===t.id)} onClick={() => setTab(t.id)}>{t.label}</button>
-        ))}
-      </div>
+      <SubNav tabs={SUBTABS} active={tab} onChange={setTab} />
       {tab==="store"     && <StoreReview    {...common} />}
       {tab==="grade"     && <GradeReview    {...common} onSnapshotSaved={reloadReview} />}
       {tab==="product"   && <ProductReview  {...common} />}
       {tab==="dashboard" && <Dashboard      gradeSnapshots={gradeSnapshots} collabs={collabs} videos={videos} products={products} />}
       {tab==="archive"   && <SnapshotArchive gradeSnapshots={gradeSnapshots} onDeleted={reloadReview} />}
-      {tab==="staff"     && <StaffReview    {...common} invites={invites} staff={[]} />}
+      {tab==="staff"     && <StaffReview    {...common} invites={invites} staff={staff} />}
       {tab==="burst"     && <BurstWall      videos={videos} products={products} burstThreshold={burstThreshold} onThresholdChange={setBurstThreshold} />}
     </div>
   );

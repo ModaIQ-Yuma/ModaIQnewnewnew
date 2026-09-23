@@ -37,12 +37,18 @@ export function calcMonthMetrics(collabs, videos, ym, productId = null, videoFro
   const withSalesCollabIds = new Set(withSalesVids.map((x) => x.collaboration_id).filter(Boolean));
   const withSalesCount = [...fulfilledIds].filter((id) => withSalesCollabIds.has(id)).length;
 
+  // 每条寄样的首条视频日期：一次遍历建索引（避免 寄样数×视频数 的嵌套循环）
+  const firstVid = new Map();
+  for (const x of v) {
+    if (!x.published_at || !collabIds.has(x.collaboration_id)) continue;
+    const cur = firstVid.get(x.collaboration_id);
+    if (!cur || x.published_at < cur) firstVid.set(x.collaboration_id, x.published_at);
+  }
   const gaps = [];
   for (const col of sampled) {
-    const colVids = v.filter((x) => x.collaboration_id === col.id && x.published_at)
-      .sort((a, b) => a.published_at.localeCompare(b.published_at));
-    if (!colVids.length) continue;
-    const diff = Math.round((new Date(colVids[0].published_at.slice(0,10)) - new Date(col.ship_date)) / 86400000);
+    const first = firstVid.get(col.id);
+    if (!first) continue;
+    const diff = Math.round((new Date(first.slice(0,10)) - new Date(col.ship_date)) / 86400000);
     if (diff >= 0) gaps.push(diff);
   }
 

@@ -28,7 +28,7 @@ export default function VideoTable({ videos, storeId, showMerge = false, onMerge
         <input type="date" style={vs.dateInput} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         <span style={{ color: T.hint }}>—</span>
         <input type="date" style={vs.dateInput} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        <span style={{ fontSize: 12, color: T.hint }}>共 {filtered.length} 条</span>
+        <span style={{ fontSize: 12, color: T.hint }}>共 {filtered.length} 条 · 默认显示最近 30 天</span>
       </div>
 
       {filtered.length === 0

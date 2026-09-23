@@ -13,15 +13,6 @@ export const BAR_PALETTE = [
 ];
 
 export const ds = {
-  wrap:       { padding: 24 },
-  title:      { fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 16 },
-  tabs:       { display: "flex", gap: 8, marginBottom: 20 },
-  tab:        (active) => ({
-    padding: "7px 20px", borderRadius: 10, cursor: "pointer", fontSize: 14,
-    fontWeight: active ? 700 : 500, border: "none", fontFamily: "inherit",
-    background: active ? T.grad : "rgba(61,127,239,0.08)",
-    color: active ? "#fff" : T.accent,
-  }),
   toolbar:    { display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" },
   label:      { fontSize: 13, color: T.muted, fontWeight: 500 },
   dateInput:  {

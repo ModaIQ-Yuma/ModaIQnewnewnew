@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { glassStyle, T } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
+import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
 import { calcStaffMetrics } from "../../lib/review/reviewCalc.js";
 import { videoRange } from "../../lib/utils.js";
 
@@ -36,11 +37,8 @@ export default function StaffReview({ collabs, videos, invites, products, staff 
       <div style={rs.toolbar}>
         <span style={rs.label}>统计月份</span>
         <input type="month" style={rs.monthInp} value={ym} onChange={e=>setYm(e.target.value)} />
-        <span style={rs.label}>视频日期</span>
-        <input type="date" style={rs.monthInp} value={videoFrom} onChange={e=>setVideoFrom(e.target.value)} />
-        <span style={{ color:T.hint }}>—</span>
-        <input type="date" style={rs.monthInp} value={videoTo}   onChange={e=>setVideoTo(e.target.value)} />
-        {(videoFrom||videoTo)&&<button style={rs.btnGhost} onClick={()=>{setVideoFrom("");setVideoTo("");}}>清除</button>}
+        <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
+        <ScopeHint />
       </div>
       {products.map(p=>{
         const rows = calcStaffMetrics(collabs,videos,ym,p.id,vFrom,vTo);

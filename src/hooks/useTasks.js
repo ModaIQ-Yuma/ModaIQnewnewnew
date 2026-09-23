@@ -1,35 +1,20 @@
-// hooks/useTasks.js
-import { useState, useEffect, useCallback } from "react";
+// ─── 任务中心数据（目标 / 甘特 / 周日程 / 行动任务）；任务中心与绩效共用一份 ─
 import { fetchShippingGoals, fetchGanttStrategies, fetchWeeklyMenus } from "../lib/supabase/taskData.js";
 import { fetchTasks } from "../lib/supabase/tasks.js";
+import { useAsyncData } from "./useAsyncData.js";
 
 export function useTasks(storeId) {
-  const [goals,   setGoals]   = useState([]);
-  const [gantt,   setGantt]   = useState([]);
-  const [menus,   setMenus]   = useState([]);
-  const [tasks,   setTasks]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-
-  const load = useCallback(async () => {
-    if (!storeId) return;
-    setLoading(true); setError(null);
-    try {
-      const [g, gs, m, t] = await Promise.all([
-        fetchShippingGoals(storeId),
-        fetchGanttStrategies(storeId),
-        fetchWeeklyMenus(storeId),
-        fetchTasks(storeId),
+  const { data, loading, error, reload } = useAsyncData(
+    async () => {
+      const [goals, gantt, menus, tasks] = await Promise.all([
+        fetchShippingGoals(storeId), fetchGanttStrategies(storeId), fetchWeeklyMenus(storeId), fetchTasks(storeId),
       ]);
-      setGoals(g ?? []);
-      setGantt(gs ?? []);
-      setMenus(m ?? []);
-      setTasks(t ?? []);
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  }, [storeId]);
-
-  useEffect(() => { load(); }, [load]);
-
-  return { goals, gantt, menus, tasks, loading, error, reload: load };
+      return { goals: goals ?? [], gantt: gantt ?? [], menus: menus ?? [], tasks: tasks ?? [] };
+    },
+    storeId
+  );
+  return {
+    goals: data?.goals ?? [], gantt: data?.gantt ?? [], menus: data?.menus ?? [], tasks: data?.tasks ?? [],
+    loading, error, reload,
+  };
 }

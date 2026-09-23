@@ -54,7 +54,7 @@ export default function Dashboard({ gradeSnapshots, collabs, videos, products })
       <div style={rs.toolbar}>
         <span style={rs.label}>统计月份</span>
         <input type="month" style={rs.monthInp} value={ym} onChange={(e) => setYm(e.target.value)} />
-        <span style={{ fontSize: 12, color: T.hint }}>数据来自已保存快照</span>
+        <span style={rs.hint}>寄样/视频/出单等数值来自已保存的产品快照（在「单品月报」或「等级复盘」保存）；没有快照的月份这里为空。</span>
       </div>
 
       {rows.length === 0

@@ -1,14 +1,15 @@
 // modules/daily/DailyModule.jsx
 import { useState, useMemo } from "react";
 import { ds } from "./dailyStyles.js";
-import { useDaily } from "../../hooks/useDaily.js";
+import { aggDaily } from "../../lib/daily/dailyAgg.js";
+import SubNav from "../../components/layout/SubNav.jsx";
 import { todayPST } from "../../lib/utils.js";
 import DailyOverview from "./DailyOverview.jsx";
 import DailyTrend    from "./DailyTrend.jsx";
 
 const TABS = [
-  { id: "overview", label: "当日概览" },
-  { id: "trend",    label: "趋势分析" },
+  { id: "overview", label: "当日概览", desc: "选定某一天：各产品寄样数、视频发布数，以及每位成员在邀约库的录入数。日期按美西时间（GMT-8）。" },
+  { id: "trend",    label: "趋势分析", desc: "日期范围内每天的寄样和视频发布变化，按产品拆分。日期按美西时间（GMT-8）。" },
 ];
 
 function daysAgo(n) {
@@ -24,27 +25,29 @@ function dateList(from, to) {
 }
 
 export default function DailyModule({ ctx }) {
-  const { storeId, products } = ctx;
+  const { products, collabs, videos: allVideos, invites: allInvites, dataLoading } = ctx;
   const [tab,  setTab]  = useState("overview");
   const [date, setDate] = useState(todayPST);
   const [from, setFrom] = useState(() => daysAgo(13));
   const [to,   setTo]   = useState(todayPST);
 
-  // dateFrom/dateTo 取两个视图的并集，只拉一次
   const dateFrom = tab === "overview" ? date : from;
   const dateTo   = tab === "overview" ? date : to;
 
-  const { shipments, videos, invites } = useDaily(storeId, dateFrom, dateTo);
+  // 内存聚合：换日期不再请求数据库
+  const { shipments, videos, invites } = useMemo(
+    () => aggDaily({ collabs, videos: allVideos, invites: allInvites }, dateFrom, dateTo),
+    [collabs, allVideos, allInvites, dateFrom, dateTo]
+  );
   const dates = useMemo(() => dateList(from, to), [from, to]);
 
   const inp = { padding: "6px 12px", borderRadius: 9, border: "1.5px solid rgba(100,140,220,0.45)", fontSize: 13, background: "rgba(255,255,255,0.5)", outline: "none", fontFamily: "inherit" };
 
+  if (dataLoading) return <div style={ds.center}>加载中…</div>;
+
   return (
-    <div style={ds.wrap}>
-      <h2 style={ds.title}>每日数据</h2>
-      <div style={ds.tabs}>
-        {TABS.map((t) => <button key={t.id} style={ds.tab(tab === t.id)} onClick={() => setTab(t.id)}>{t.label}</button>)}
-      </div>
+    <div>
+      <SubNav tabs={TABS} active={tab} onChange={setTab} />
 
       {/* 日期控件 */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 20 }}>

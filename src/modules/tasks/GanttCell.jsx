@@ -119,7 +119,7 @@ function StrategyBandCell({ seg, si, columns, product, batchMode, batchSelected,
           {seg.strategy}
         </span>
         {seg.span > 1 && (
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>×{seg.span}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>×{seg.span}</span>
         )}
         {batchMode && segCheckedCount > 0 && (
           <span style={{ position: 'absolute', top: 4, right: 6, fontSize: 12, color: '#fff', fontWeight: 800, textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>

@@ -1,35 +1,27 @@
 // modules/staff/StaffRoster.jsx — 助理名册
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { T, FONT, glassStyle } from "../../constants/tokens.js";
-import { fetchStaff, createStaff, updateStaff, deleteStaff } from "../../lib/supabase/staff.js";
+import { createStaff, updateStaff, deleteStaff } from "../../lib/supabase/staff.js";
 
 const lk = (c) => ({ border: "none", background: "transparent", color: c, cursor: "pointer", fontSize: FONT.sm2, padding: 0, fontFamily: "inherit" });
 const inp = { padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.6)", color: T.text, fontSize: FONT.lg2, fontFamily: "inherit", outline: "none" };
 
-export default function StaffRoster({ storeId }) {
-  const [staff,    setStaff]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
+/** 名册数据来自核心数据中心（ctx.core.staff），改动即时同步到 CRM / 任务 / 复盘 */
+export default function StaffRoster({ storeId, core }) {
+  const staff = core.staff;
+  const loading = core.loading;
   const [newName,  setNewName]  = useState("");
   const [editId,   setEditId]   = useState(null);
   const [editName, setEditName] = useState("");
   const [editAuth, setEditAuth] = useState("");
   const [err,      setErr]      = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const rows = await fetchStaff(storeId);
-    setStaff(rows ?? []);
-    setLoading(false);
-  }, [storeId]);
-
-  useEffect(() => { load(); }, [load]);
-
   async function add() {
     if (!newName.trim()) return;
     setErr("");
     try {
       const row = await createStaff(storeId, newName);
-      setStaff((prev) => [...prev, row]);
+      core.upsertRows("staff", [row]);
       setNewName("");
     } catch (e) { setErr(e.message); }
   }
@@ -38,7 +30,7 @@ export default function StaffRoster({ storeId }) {
     if (!editName.trim()) return;
     try {
       const row = await updateStaff(id, { name: editName.trim(), auth_user_id: editAuth.trim() || null });
-      setStaff((prev) => prev.map((s) => s.id === id ? row : s));
+      core.upsertRows("staff", [row]);
       setEditId(null);
     } catch (e) { setErr(e.message); }
   }
@@ -46,16 +38,11 @@ export default function StaffRoster({ storeId }) {
   async function remove(id) {
     if (!window.confirm("删除该助理？CRM 里已指派给她的记录不受影响（仍存 staff_id）。")) return;
     await deleteStaff(id);
-    setStaff((prev) => prev.filter((s) => s.id !== id));
+    core.removeRows("staff", [id]);
   }
 
   return (
     <div>
-      <div style={{ fontSize: FONT.x4l, fontWeight: 700, color: T.text, marginBottom: 6 }}>助理名册</div>
-      <div style={{ fontSize: FONT.lg2, color: T.muted, marginBottom: 16 }}>
-        这里维护的成员，会出现在 CRM 录入时「跟进人」下拉的选项里。
-      </div>
-
       {/* 添加助理 */}
       <div style={{ ...glassStyle(14), padding: "16px 18px", marginBottom: 16 }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>

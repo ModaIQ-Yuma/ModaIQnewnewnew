@@ -39,28 +39,22 @@ export const glassStyle = (radius = 18, strong = false) => ({
 // ─── z-index ─────────────────────────────────────────────────────────────────
 export const Z = { dropdown: 300, sticky: 100, modal: 2000, modalTop: 2200, fixed: 4999, toast: 5000 };
 
-// ─── 字号 ────────────────────────────────────────────────────────────────────
+// ─── 字号：6 档语义层级（新代码只用这 6 个名字）────────────────────────────
+//   kpi  22  指标大数字        h2 16  区块标题（加粗）   h3 14  小节标题（加粗）
+//   body 13  正文/按钮/tab     note 12 说明文字          tiny 11 角标/表头注释
+// 旧档位名（xs~x4l）保留为别名，映射到最近的语义档，存量代码无需逐个改。
 export const FONT = {
-  xs:   9.5,
-  sm:   10,
-  sm2:  10.5,
-  base: 11,
-  md:   11.5,
-  md2:  12,
-  lg:   12.5,
-  lg2:  13,
-  xl:   13.5,
-  xl2:  14,
-  xxl:  14.5,
-  x3l:  15,
-  x4l:  16,
+  kpi: 22, h2: 16, h3: 14, body: 13, note: 12, tiny: 11,
+  xs: 11, sm: 11, sm2: 12, base: 12, md: 12, md2: 12,
+  lg: 13, lg2: 13, xl: 14, xl2: 14, xxl: 14, x3l: 16, x4l: 16,
 };
 
-// ─── 全局通用 tab 按钮样式 ────────────────────────────────────────────────────
+// ─── 全局通用 tab 按钮样式（板块子导航、页内切换统一用它）──────────────────
 export const tabStyle = (active) => ({
-  padding: "5px 14px", borderRadius: 18, cursor: "pointer",
-  fontSize: 13, fontWeight: active ? 700 : 600, fontFamily: "inherit",
-  border: `1.5px solid ${active ? "#3D7FEF" : "rgba(180,195,220,0.5)"}`,
-  background: active ? "#3D7FEF" : "transparent",
-  color: active ? "#fff" : "#8899BB",
+  padding: "6px 16px", borderRadius: 18, cursor: "pointer", whiteSpace: "nowrap",
+  fontSize: FONT.body, fontWeight: active ? 700 : 600, fontFamily: "inherit",
+  border: `1.5px solid ${active ? T.accent : T.border}`,
+  background: active ? T.accent : "transparent",
+  color: active ? "#fff" : T.muted,
+  transition: "all 0.15s",
 });

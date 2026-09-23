@@ -75,9 +75,10 @@ export function calcPerfMetrics({ collabs, videos, creators, shippingGoals, prod
   const oldSampled    = sampled.filter(c => oldPids.has(c.product_id));
   const oldCollabIds  = new Set(oldSampled.map(c => c.id));
   const oldCreatorIds = new Set(oldSampled.map(c => c.creator_id));
+  const oldCreatorOf  = new Map(oldSampled.map(c => [c.id, c.creator_id]));
   const oldWithSales  = new Set(
     videos.filter(v => oldCollabIds.has(v.collaboration_id) && (v.orders || 0) > 0)
-      .map(v => oldSampled.find(c => c.id === v.collaboration_id)?.creator_id)
+      .map(v => oldCreatorOf.get(v.collaboration_id))
       .filter(Boolean)
   );
   const b = safeDiv(oldWithSales.size, oldCreatorIds.size);

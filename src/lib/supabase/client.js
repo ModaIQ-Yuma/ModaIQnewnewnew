@@ -1,7 +1,7 @@
 // ─── Supabase 客户端单例（全项目唯一 createClient 调用点）───────────────────
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../constants/env.js";
-import { PAGE_SIZE } from "../../constants/config.js";
+import { PAGE_SIZE, PAGE_WAVE } from "../../constants/config.js";
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true },
@@ -13,16 +13,27 @@ export function unwrap({ data, error }, ctx = "") {
   return data;
 }
 
+/** 拉一页；越界（PGRST103）视为空页 */
+async function fetchPage(buildQuery, page, ctx) {
+  const from = page * PAGE_SIZE;
+  const res = await buildQuery(from, from + PAGE_SIZE - 1);
+  if (res.error?.code === "PGRST103") return [];
+  return unwrap(res, ctx) || [];
+}
+
 /**
  * 自动翻页拉取，突破 Supabase 单次 1000 条限制。
- * @param buildQuery (from, to) => PostgrestBuilder，调用方负责 select/eq/order
+ * 先拉第 1 页；满页再按波次并行拉（每波 PAGE_WAVE 页），8000 条只需 3 轮往返。
+ * @param buildQuery (from, to) => PostgrestBuilder，调用方负责 select/eq/order（order 必须唯一稳定）
  */
 export async function fetchAll(buildQuery, ctx = "") {
-  let all = [], from = 0;
-  for (;;) {
-    const page = unwrap(await buildQuery(from, from + PAGE_SIZE - 1), ctx);
-    all = all.concat(page || []);
-    if (!page || page.length < PAGE_SIZE) return all;
-    from += PAGE_SIZE;
+  let all = await fetchPage(buildQuery, 0, ctx);
+  if (all.length < PAGE_SIZE) return all;
+  for (let next = 1; ; next += PAGE_WAVE) {
+    const pages = await Promise.all(
+      Array.from({ length: PAGE_WAVE }, (_, i) => fetchPage(buildQuery, next + i, ctx))
+    );
+    for (const p of pages) all = all.concat(p);
+    if (pages.some((p) => p.length < PAGE_SIZE)) return all;
   }
 }

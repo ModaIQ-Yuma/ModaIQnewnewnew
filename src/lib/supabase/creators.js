@@ -5,7 +5,7 @@ const COLS = "id,store_id,handle,official_grade,hist_sales,conv_vertical,avg_vie
 
 export const fetchCreators = (storeId) =>
   fetchAll((from, to) =>
-    sb.from("creators").select(COLS).eq("store_id", storeId).order("created_at", { ascending: false }).range(from, to),
+    sb.from("creators").select(COLS).eq("store_id", storeId).order("created_at", { ascending: false }).order("id").range(from, to),
     "creators"
   );
 

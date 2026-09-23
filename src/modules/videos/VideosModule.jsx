@@ -1,7 +1,8 @@
 // modules/videos/VideosModule.jsx
-import { useRef, useState } from "react";
-import { useVideos } from "../../hooks/useVideos.js";
+import { useMemo, useRef, useState } from "react";
+import { useVideoBatches } from "../../hooks/useVideoBatches.js";
 import { glassStyle, T } from "../../constants/tokens.js";
+import SubNav, { Hint } from "../../components/layout/SubNav.jsx";
 import { vs } from "./videosStyles.js";
 import VideoTable from "./VideoTable.jsx";
 import { parseVideoXlsx } from "../../lib/video/videoParser.js";
@@ -9,13 +10,22 @@ import { importVideos } from "../../lib/supabase/videosWrite.js";
 import { revertBatch } from "../../lib/supabase/videosRevert.js";
 
 const TABS = [
-  { id: "imported", label: "导入视频" },
-  { id: "noncrm",   label: "非CRM视频" },
+  { id: "imported", label: "导入视频",  desc: "上传 TK 后台导出的视频 xlsx，系统按达人名称匹配 CRM 寄样记录（优先同一商品 ID），这里列出已匹配上的视频。同一视频再次导入会把数据累加上去，所以同一时段不要重复导入；导错了可在「导入批次」里撤销。" },
+  { id: "noncrm",   label: "非CRM视频", desc: "达人不在 CRM 里、但有出单的视频（没出单的非 CRM 视频导入时直接跳过）。如果其实是某位已合作达人换了名字，可点「归入 CRM」归到对应寄样记录。" },
 ];
+// 影响合作归属的写操作后需要同步的核心表
+const LINKED = ["videos", "collabs", "creators"];
 
 export default function VideosModule({ ctx }) {
-  const { storeId, userId } = ctx;
-  const { videos, batches, loading, error, reload } = useVideos(storeId);
+  const { storeId, userId, core, products, dataLoading, dataError } = ctx;
+  const { batches, reload: reloadBatches } = useVideoBatches(storeId);
+  const reload = () => { core.refresh(LINKED); reloadBatches(); };
+  // 视频行附上产品简称（表格按 v.products.internal_name 显示）
+  const videos = useMemo(() => {
+    const byId = Object.fromEntries(products.map((p) => [p.id, p]));
+    return core.videos.map((v) => ({ ...v, products: byId[v.product_id] || null }))
+      .sort((a, b) => (b.published_at || "").localeCompare(a.published_at || ""));
+  }, [core.videos, products]);
   const [tab,       setTab]       = useState("imported");
   const [importing,  setImporting]  = useState(false);
   const [modal,      setModal]      = useState(null);
@@ -47,20 +57,12 @@ export default function VideosModule({ ctx }) {
     catch (err) { setErrMsg(err.message); }
   }
 
-  if (loading) return <div style={vs.center}>加载中…</div>;
-  if (error)   return <div style={vs.center}>错误：{error}</div>;
+  if (dataLoading) return <div style={vs.center}>加载中…</div>;
+  if (dataError && !core.videos.length) return <div style={vs.center}>错误：{dataError}</div>;
 
   return (
-    <div style={vs.wrap}>
-      <h2 style={vs.title}>视频采集</h2>
-
-      <div style={vs.tabs}>
-        {TABS.map((t) => (
-          <button key={t.id} style={vs.tab(tab === t.id)} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+    <div>
+      <SubNav tabs={TABS} active={tab} onChange={setTab} />
 
       {tab === "imported" && (
         <>
@@ -70,10 +72,10 @@ export default function VideosModule({ ctx }) {
               <button style={vs.uploadBtn} disabled={importing} onClick={() => fileRef.current?.click()}>
                 {importing ? "导入中…" : "📥 上传 xlsx"}
               </button>
-              <div style={{ fontSize: 11, color: T.hint, marginTop: 6, lineHeight: 1.7 }}>
+              <Hint style={{ marginTop: 6 }}>
                 数据获取路径：联盟重心 → 数据分析 → 所有视频<br />
                 建议文件命名为右上角框选视频日期，示例：20260101到20260201所有视频
-              </div>
+              </Hint>
             </div>
             {errMsg && <span style={{ fontSize: 13, color: T.danger, fontWeight: 600 }}>{errMsg}</span>}
             <span style={vs.summary}>共 <span style={vs.num}>{crmVideos.length}</span> 条</span>
