@@ -11,16 +11,22 @@ export function useCoreData(storeId) {
   const [error,   setError]   = useState(null);
   const liveStore = useRef(storeId);
 
-  /** 静默刷新指定表（默认全部）；刷新期间旧数据照常显示 */
-  const refresh = useCallback(async (keys = CORE_KEYS) => {
-    if (!storeId) return;
+  /**
+   * 静默刷新指定表（默认全部）；刷新期间旧数据照常显示。
+   * 返回刚拉到的最新数据 { 表名: rows }——需要「以数据库此刻为准」的操作（如导入）直接用返回值。
+   * throwOnError=true 时出错直接抛出（导入等不能带着旧数据继续的场景）。
+   */
+  const refresh = useCallback(async (keys = CORE_KEYS, throwOnError = false) => {
+    if (!storeId) return {};
     setSyncing(true);
     try {
       const rows = await Promise.all(keys.map((k) => fetchCoreTable(k, storeId)));
-      if (liveStore.current !== storeId) return;   // 期间切了店铺，丢弃
-      setData((d) => ({ ...d, ...Object.fromEntries(keys.map((k, i) => [k, rows[i]])) }));
+      const fresh = Object.fromEntries(keys.map((k, i) => [k, rows[i]]));
+      if (liveStore.current !== storeId) return {};  // 期间切了店铺，丢弃
+      setData((d) => ({ ...d, ...fresh }));
       setError(null);
-    } catch (e) { setError(e.message); }
+      return fresh;
+    } catch (e) { setError(e.message); if (throwOnError) throw e; return {}; }
     finally { setSyncing(false); setLoading(false); }
   }, [storeId]);
 

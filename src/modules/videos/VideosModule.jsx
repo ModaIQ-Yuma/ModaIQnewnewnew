@@ -49,8 +49,10 @@ export default function VideosModule({ ctx }) {
     try {
       const parsed = await parseVideoXlsx(file);
       if (!parsed.length) { setErrMsg("文件内没有有效数据"); return; }
-      // 匹配全部在内存完成（产品/达人/别名/寄样/已有视频），不再拿几千个值去数据库查
-      const lookup = buildVideoLookup({ products, collabs: core.collabs, videos: core.videos, nameIndex: buildNameIndex(core.creators, core.aliases) });
+      // 先从数据库拉一份此刻最新的数据再匹配：上一个文件刚导完、后台还没刷新完时，
+      // 用旧数据会把已存在的视频误判为新增（导致重复键报错）
+      const fresh = await core.refresh(LINKED, true);
+      const lookup = buildVideoLookup({ products, collabs: fresh.collabs, videos: fresh.videos, nameIndex: buildNameIndex(fresh.creators, fresh.aliases) });
       const result = await importVideos(storeId, buildVideoImportPlan(parsed, lookup), file.name, userId);
       setModal({ ...result, fileName: file.name });
       reload();
