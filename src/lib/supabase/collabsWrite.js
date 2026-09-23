@@ -1,105 +1,28 @@
-// ─── collaborations 写操作 ─────────────────────────────────────────────────────
+// ─── 寄样记录写操作：collaborations（寄样事实）+ collab_attrs（寄样时属性）──
 import { sb, unwrap } from "./client.js";
-import { markUnconnectedConverted } from "./unconnectedWrite.js";
+import { attrsToRow } from "../crm/attrs.js";
 
-// creators.style 是 text 列：多选数组存成逗号分隔
-const joinStyle = (v) => (Array.isArray(v) ? v.join(",") : v) || null;
-// collaborations.status 是人工基线（text）；status_manual 是布尔标记「人工改过」
-const statusFields = (inf, manual) => ({ status: inf.baseStatus || "已寄样", status_manual: manual });
+const ID_CHUNK = 200;
 
-/** 新增或更新达人档案，返回 creator.id */
-async function upsertCreator(storeId, inf) {
-  const fields = {
-    store_id:         storeId,
-    handle:           inf.influencerId.trim(),
-    official_grade:   inf.official_grade   || null,
-    hist_sales:       inf.hist_sales       || null,
-    conv_vertical:    inf.conv_vertical    || null,
-    avg_views:        inf.avg_views        || null,
-    female_ratio:     inf.female_ratio     || null,
-    language:         inf.language        || null,
-    body_type:        inf.body_type        || null,
-    age_range:        inf.age_range        || null,
-    content_vertical: inf.content_vertical || null,
-    style:            joinStyle(inf.style),
-    video_quality:    inf.video_quality    || null,
-    voiceover:        inf.voiceover       || null,
-    aliases:          inf.aliases         || null,
-    note:             inf.note            || null,
-  };
-  const existing = unwrap(
-    await sb.from("creators").select("id").eq("store_id", storeId).ilike("handle", fields.handle).maybeSingle(),
-    "creators"
-  );
-  if (existing) {
-    unwrap(await sb.from("creators").update(fields).eq("id", existing.id), "creators");
-    return existing.id;
-  }
-  const created = unwrap(await sb.from("creators").insert(fields).select("id").single(), "creators");
-  return created.id;
+/**
+ * 新增或更新一条寄样（含属性）。新增时由调用方生成 id（crypto.randomUUID），
+ * 这样属性行可以直接引用，不依赖数据库返回顺序；重复执行结果相同。
+ * @param c { id, creator_id, product_id, staff_id, ship_date, status, status_manual, product_color, ship_score, note, creator_source }
+ */
+export async function saveCollab(storeId, c, attrs) {
+  unwrap(await sb.from("collaborations").upsert({ ...c, store_id: storeId }, { onConflict: "id" }), "collaborations");
+  unwrap(await sb.from("collab_attrs").upsert(
+    { collaboration_id: c.id, store_id: storeId, ...attrsToRow(attrs) }, { onConflict: "collaboration_id" }
+  ), "collab_attrs");
 }
 
-/** 新增合作记录（influencer 对象 → 两张表） */
-export async function createInfluencer(storeId, inf, productId) {
-  const creatorId = await upsertCreator(storeId, inf);
-  // 去重检查
-  const dup = unwrap(
-    await sb.from("collaborations")
-      .select("id,ship_date").eq("store_id", storeId)
-      .eq("creator_id", creatorId).eq("product_id", productId).maybeSingle(),
-    "collaborations"
-  );
-  if (dup) throw new Error(`该达人已合作此产品（寄样日期：${dup.ship_date}）`);
-
-  const collab = unwrap(
-    await sb.from("collaborations").insert({
-      store_id:       storeId,
-      creator_id:     creatorId,
-      product_id:     productId,
-      staff_id:       inf.staffId       || null,
-      ship_date:      inf.shipDate,
-      ...statusFields(inf, false),
-      product_color:  inf.productColor  || null,
-      ship_score:     inf.shipScore     || null,
-      note:           inf.note          || null,
-      creator_source: inf.creatorSource || null,
-    }).select("id").single(),
-    "collaborations"
-  );
-
-  // 自动邀约转化：批量标记未建联库归属
-  if (inf.creatorSource === "auto_invite") {
-    await markUnconnectedConverted(storeId, inf.influencerId.trim(), inf.staffId || null);
-  }
-
-  return collab.id;
-}
-
-/** 更新合作记录（influencer 对象 → 两张表） */
-export async function updateInfluencer(storeId, inf, productId) {
-  await upsertCreator(storeId, inf);
-  unwrap(
-    await sb.from("collaborations").update({
-      product_id:     productId,
-      staff_id:       inf.staffId       || null,
-      ship_date:      inf.shipDate,
-      ...statusFields(inf, true),
-      product_color:  inf.productColor  || null,
-      ship_score:     inf.shipScore     || null,
-      note:           inf.note          || null,
-      creator_source: inf.creatorSource || null,
-    }).eq("id", inf.id),
-    "collaborations"
-  );
-}
-
-/** 批量删除合作记录（视频 collaboration_id 由 DB ON DELETE SET NULL 自动置空） */
+/** 批量删除寄样（属性随外键级联删除；视频 collaboration_id 由数据库置空） */
 export async function deleteInfluencers(ids) {
-  for (let i = 0; i < ids.length; i += 200) {
-    unwrap(await sb.from("collaborations").delete().in("id", ids.slice(i, i + 200)), "collaborations");
+  for (let i = 0; i < ids.length; i += ID_CHUNK) {
+    unwrap(await sb.from("collaborations").delete().in("id", ids.slice(i, i + ID_CHUNK)), "collaborations");
   }
 }
 
-/** 只改状态（状态下拉行内编辑） */
+/** 只改状态（表格里的状态下拉）：status = 人工基线，status_manual 标记「人工改过」 */
 export const setInfluencerStatus = async (id, baseStatus) =>
   unwrap(await sb.from("collaborations").update({ status: baseStatus, status_manual: true }).eq("id", id), "collaborations");

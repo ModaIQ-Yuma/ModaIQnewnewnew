@@ -35,74 +35,30 @@ export async function fetchProductsBySkuIds(storeId, skuIds) {
   );
 }
 
-/** 按 handle 批量查达人→合作记录映射（同时查 aliases） */
+/**
+ * 按达人名批量查寄样：名字可以是现名或别名（不分大小写）。
+ * @returns { [名字小写]: [{ collabId, productId, shipDate }] }
+ */
 export async function fetchCollabsByHandles(storeId, handles) {
-  if (!handles.length) return {};
-  // 正向匹配
-  const creators = unwrap(
-    await sb.from("creators").select("id, handle").eq("store_id", storeId).in("handle", handles),
-    "creators"
-  );
-  // 别名匹配：找 alias 在 handles 里的达人
-  const aliasRows = unwrap(
-    await sb.from("creator_aliases").select("creator_id, alias").in("alias", handles),
-    "creator_aliases"
-  );
-  // 合并：alias → creator_id，再查 creators 补全 handle
-  const aliasCreatorIds = [...new Set(aliasRows.map((a) => a.creator_id))];
-  const aliasCreators = aliasCreatorIds.length
-    ? unwrap(await sb.from("creators").select("id, handle").in("id", aliasCreatorIds), "creators")
-    : [];
-  // handle → creator id（正向 + 别名）
-  const handleToId = {};
-  for (const c of [...creators, ...aliasCreators]) handleToId[c.handle] = c.id;
-  for (const a of aliasRows) {
-    const c = aliasCreators.find((cr) => cr.id === a.creator_id);
-    if (c) handleToId[a.alias] = c.id; // alias → same creator id
-  }
-  const allCreatorIds = [...new Set(Object.values(handleToId))];
-  if (!allCreatorIds.length) return {};
-  const collabs = unwrap(
-    await sb.from("collaborations").select("id, creator_id, product_id")
-      .eq("store_id", storeId).in("creator_id", allCreatorIds),
-    "collaborations"
-  );
-  const idToHandle = Object.fromEntries(
-    [...creators, ...aliasCreators].map((c) => [c.id, c.handle])
-  );
-  const map = {};
-  for (const c of collabs) {
-    // 找所有指向这个 creator_id 的 handle/alias
-    const keys = Object.entries(handleToId)
-      .filter(([, id]) => id === c.creator_id).map(([k]) => k);
-    for (const key of keys) {
-      if (!map[key]) map[key] = [];
-      map[key].push({ collabId: c.id, productId: c.product_id });
-    }
-  }
-  return map;
+  const names = [...new Set(handles.map((h) => h.trim().toLowerCase()).filter(Boolean))];
+  if (!names.length) return {};
+  const [creators, aliasRows] = await Promise.all([
+    sb.from("creators").select("id, handle").eq("store_id", storeId).in("handle", names).then((r) => unwrap(r, "creators") || []),
+    sb.from("creator_aliases").select("creator_id, alias").eq("store_id", storeId).in("alias", names).then((r) => unwrap(r, "creator_aliases") || []),
+  ]);
+  const nameToId = {};
+  for (const c of creators)  nameToId[c.handle] = c.id;
+  for (const a of aliasRows) nameToId[a.alias] ??= a.creator_id;
+  const ids = [...new Set(Object.values(nameToId))];
+  if (!ids.length) return {};
+  const collabs = unwrap(await sb.from("collaborations").select("id, creator_id, product_id, ship_date")
+    .eq("store_id", storeId).in("creator_id", ids), "collaborations") || [];
+  const byCreator = {};
+  for (const c of collabs) (byCreator[c.creator_id] ||= []).push({ collabId: c.id, productId: c.product_id, shipDate: c.ship_date });
+  return Object.fromEntries(Object.entries(nameToId).map(([n, id]) => [n, byCreator[id] || []]));
 }
 
-/** 联想搜索旧 handle（归入CRM用） */
-export async function searchCreators(storeId, query) {
-  if (!query.trim()) return [];
-  return unwrap(
-    await sb.from("creators").select("id, handle")
-      .eq("store_id", storeId).ilike("handle", `%${query}%`).limit(10),
-    "creators"
-  );
-}
 
-/** 查某达人在CRM里的所有寄样记录（归入CRM用） */
-export async function fetchCreatorCollabs(storeId, creatorId) {
-  return unwrap(
-    await sb.from("collaborations")
-      .select("id, ship_date, products(internal_name)")
-      .eq("store_id", storeId).eq("creator_id", creatorId)
-      .order("ship_date", { ascending: false }),
-    "collaborations"
-  );
-}
 
 /** 按 videoId 批量查已有记录 */
 export async function fetchExistingVideos(storeId, videoIds) {

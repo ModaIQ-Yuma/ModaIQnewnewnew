@@ -47,7 +47,6 @@ export const CREATOR_FIELDS = [
   { key: "style",             label: "达人风格",      type: "multi",  options: STYLE_TYPES,      category: "sub" },
   { key: "video_quality",     label: "画质",          type: "single", options: QUALITY,          category: "sub" },
   { key: "voiceover",         label: "口播",          type: "single", options: VOICEOVER,        category: "sub" },
-  { key: "note",              label: "别名/备注",     type: "text",   category: "sub", placeholder: "如有多个别名，用逗号分隔" },
 ];
 
 /** 取某字段 value 对应的展示 label */

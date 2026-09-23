@@ -85,21 +85,8 @@ CREATE TRIGGER trg_products_updated BEFORE UPDATE ON products FOR EACH ROW EXECU
 CREATE TABLE creators (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id         uuid NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-  handle           text NOT NULL,
-  official_grade   text,
-  hist_sales       text,
-  conv_vertical    text,
-  avg_views        text,
-  female_ratio     text,
-  language         text,
-  body_type        text,
-  age_range        text,
-  content_vertical text,
-  style            text,
-  video_quality    text,
-  voiceover        text,
-  aliases          text,
-  note             text,
+  handle           text NOT NULL,              -- 现名（小写）；曾用名存 creator_aliases
+  note             text,                       -- 达人备注（描述这个人，跟着达人走）
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now(),
   UNIQUE (store_id, handle)
@@ -131,6 +118,27 @@ CREATE TABLE collaborations (
   created_at     timestamptz NOT NULL DEFAULT now(),
   updated_at     timestamptz NOT NULL DEFAULT now()
 );
+
+-- 寄样时的达人属性：一条寄样一行（属性会随时间变化，每次寄样各记一份）
+CREATE TABLE collab_attrs (
+  collaboration_id uuid PRIMARY KEY REFERENCES collaborations(id) ON DELETE CASCADE,
+  store_id         uuid NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  official_grade   text,
+  hist_sales       text,
+  conv_vertical    text,
+  avg_views        text,
+  female_ratio     text,
+  language         text,
+  body_type        text,
+  age_range        text,
+  content_vertical text,
+  style            text,                       -- 多选，逗号分隔
+  video_quality    text,
+  voiceover        text,
+  updated_at       timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_collab_attrs_store ON collab_attrs (store_id);
+CREATE TRIGGER trg_collab_attrs_updated BEFORE UPDATE ON collab_attrs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE INDEX idx_collab_store_creator  ON collaborations (store_id, creator_id);
 CREATE INDEX idx_collab_store_product  ON collaborations (store_id, product_id);
 CREATE INDEX idx_collab_store_staff    ON collaborations (store_id, staff_id);

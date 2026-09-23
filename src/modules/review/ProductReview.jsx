@@ -37,7 +37,7 @@ function AreaTitle({ chip, label, note }) {
 // ── 日期输入 ──────────────────────────────────────────────────────────────────
 const inpStyle = { background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: FONT.lg2, padding: "7px 10px", fontFamily: "inherit", outline: "none" };
 
-export default function ProductReview({ collabs, videos, creators, products, storeId, userId, burstThreshold, reloadReview }) {
+export default function ProductReview({ collabs, videos, products, storeId, userId, burstThreshold, reloadReview }) {
   const [ym,        setYm]        = useState(thisMonth);
   const [productId, setProductId] = useState(() => products[0]?.id || "");
   const [videoFrom, setVideoFrom] = useState("");
@@ -57,7 +57,7 @@ export default function ProductReview({ collabs, videos, creators, products, sto
   const vTo   = videoTo   || undefined;
 
   const metrics   = useMemo(() => productId ? calcMonthMetrics(collabs, videos, ym, productId, vFrom, vTo)   : null, [collabs, videos, ym, productId, vFrom, vTo]);
-  const gradeRows = useMemo(() => productId ? calcGradeMetrics(collabs, videos, creators, ym, productId, burstThreshold, vFrom, vTo) : [], [collabs, videos, creators, ym, productId, burstThreshold, vFrom, vTo]);
+  const gradeRows = useMemo(() => productId ? calcGradeMetrics(collabs, videos, ym, productId, burstThreshold, vFrom, vTo) : [], [collabs, videos, ym, productId, burstThreshold, vFrom, vTo]);
   const crmRows   = gradeRows.filter((r) => r.grade !== "非CRM");
 
   // 该产品该月是否已有快照

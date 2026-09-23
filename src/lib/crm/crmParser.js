@@ -1,78 +1,56 @@
-// lib/crm/crmParser.js — CRM Excel/CSV 行解析（按列序号，不依赖列名）
-function parseGrade(s) {
-  const m = String(s || "").match(/Lv\d/);
-  return m ? m[0] : null;
-}
+// ─── CRM 导入行解析（按旧版导出的固定列序，不依赖列名）──────────────────────
+// 输出已规范化：达人名小写、属性转成选项值、别名去掉「原名」前缀。
+import { normalizeAttrs, splitMulti } from "./attrs.js";
+import { normName } from "./identity.js";
 
-function parseDate(v) {
-  if (!v && v !== 0) return "";
-  const s = String(v).trim();
-  if (!s) return "";
-  // 已经是 YYYY-MM-DD 或 YYYY/MM/DD
-  const iso = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-  if (iso) return `${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;
-  // Excel 日期序列号（浮点数）
-  const num = parseFloat(s);
-  if (!isNaN(num) && num > 40000 && num < 60000) {
-    // Excel epoch: 1899-12-30
-    const d = new Date(Math.round((num - 25569) * 86400 * 1000));
-    const y = d.getUTCFullYear();
-    const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const da = String(d.getUTCDate()).padStart(2, "0");
-    return `${y}-${mo}-${da}`;
-  }
-  return s;
-}
-
-const STAFF_NULL = new Set(["—", "其它渠道", "其他渠道", ""]);
-
-// 旧版导出固定列序（0-indexed）
+// 旧版导出列序（0 起）
 const IDX = {
   handle: 0, product: 1, shipDate: 3, staff: 4, status: 5,
-  grade: 8, histSales: 9, convVert: 10, avgViews: 11,
-  femaleRatio: 12, language: 13, bodyType: 14, ageRange: 15,
-  contentVert: 16, style: 17, videoQuality: 18, voiceover: 19,
-  aliases: 20, note: 22,
+  official_grade: 8, hist_sales: 9, conv_vertical: 10, avg_views: 11, female_ratio: 12,
+  language: 13, body_type: 14, age_range: 15, content_vertical: 16, style: 17,
+  video_quality: 18, voiceover: 19, aliases: 20, note: 22,
 };
+const ATTR_COLS = ["official_grade", "hist_sales", "conv_vertical", "avg_views", "female_ratio", "language",
+  "body_type", "age_range", "content_vertical", "style", "video_quality", "voiceover"];
+const STAFF_NULL = new Set(["—", "-", "其它渠道", "其他渠道", ""]);
+
+export function parseDate(v) {
+  const s = String(v ?? "").trim();
+  if (!s) return "";
+  const iso = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
+  const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (us) return `${us[3]}-${us[1].padStart(2, "0")}-${us[2].padStart(2, "0")}`;
+  const num = parseFloat(s);                               // Excel 日期序列号
+  if (!isNaN(num) && num > 40000 && num < 60000) {
+    const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+    return d.toISOString().slice(0, 10);
+  }
+  return "";
+}
 
 /**
- * rawRows: xlsx.utils.sheet_to_json(ws, { header: 1 }) 返回的二维数组
- * 第0行是列名，从第1行开始是数据
+ * @param raw 二维数组（第 0 行表头）
+ * @returns { rows:[…], skipped:[{ line, handle, reason }] }；line 为 Excel 行号（表头是第 1 行）
  */
-export function parseRows(rawRows) {
-  if (!rawRows || rawRows.length < 2) return [];
-
-  // 跳过第0行（列名行）
-  const dataRows = rawRows.slice(1);
-
-  function get(row, idx) {
-    const v = row[idx];
-    return v != null ? String(v).trim() : "";
-  }
-
-  return dataRows.map((row) => {
-    const staff = get(row, IDX.staff);
-    return {
-      handle:       get(row, IDX.handle),
-      product:      get(row, IDX.product),
-      shipDate:     parseDate(get(row, IDX.shipDate)),
-      staff,
-      staffNull:    STAFF_NULL.has(staff),
-      status:       get(row, IDX.status) || "已寄样",
-      grade:        parseGrade(get(row, IDX.grade)),
-      histSales:    get(row, IDX.histSales)    || null,
-      convVert:     get(row, IDX.convVert)     || null,
-      avgViews:     get(row, IDX.avgViews)     || null,
-      femaleRatio:  get(row, IDX.femaleRatio)  || null,
-      language:     get(row, IDX.language)     || null,
-      bodyType:     get(row, IDX.bodyType)     || null,
-      ageRange:     get(row, IDX.ageRange)     || null,
-      contentVert:  get(row, IDX.contentVert)  || null,
-      style:        get(row, IDX.style)        || null,
-      videoQuality: get(row, IDX.videoQuality) || null,
-      voiceover:    get(row, IDX.voiceover)    || null,
-      aliases:      get(row, IDX.aliases)      || null,
-      note:         get(row, IDX.note)         || null,
-    };
-  }).filter((r) => r.handle && r.product && r.shipDate);
+export function parseRows(raw) {
+  const rows = [], skipped = [];
+  (raw || []).slice(1).forEach((r, i) => {
+    const get = (k) => String(r[IDX[k]] ?? "").trim();
+    const line = i + 2, handle = normName(get("handle")), product = get("product"), shipDate = parseDate(get("shipDate"));
+    if (!handle && !product) return;                       // 空行
+    const reason = !handle ? "缺达人ID" : !product ? "缺合作产品" : !shipDate ? "缺寄样日期" : null;
+    if (reason) { skipped.push({ line, handle, product, reason }); return; }
+    const { attrs, unknown } = normalizeAttrs(Object.fromEntries(ATTR_COLS.map((k) => [k, get(k)])));
+    const staff = get("staff");
+    rows.push({
+      line, handle, product, shipDate,
+      staff: STAFF_NULL.has(staff) ? null : staff,
+      status: get("status") || "已寄样",
+      note: get("note") || null,
+      aliases: splitMulti(get("aliases")).map(normName).filter((a) => a && a !== handle),
+      attrs, unknown,
+    });
+  });
+  return { rows, skipped };
 }

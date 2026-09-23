@@ -8,8 +8,8 @@ const field = {
   fontFamily: "inherit", outline: "none", boxSizing: "border-box", width: "100%",
 };
 
-export function Inp({ value, onChange, placeholder, style = {} }) {
-  return <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ ...field, ...style }} />;
+export function Inp({ value, onChange, placeholder, style = {}, ...rest }) {
+  return <input {...rest} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ ...field, ...style }} />;
 }
 
 export function TextArea({ value, onChange, placeholder, rows = 2, style = {} }) {

@@ -67,16 +67,15 @@ export function calcMonthMetrics(collabs, videos, ym, productId = null, videoFro
   };
 }
 
-/** 等级复盘：按 official_grade 分组 */
-export function calcGradeMetrics(collabs, videos, creators, ym, productId, burstThreshold, videoFrom, videoTo) {
+/** 等级复盘：按「寄样时等级」分组（collab.attrs.official_grade） */
+export function calcGradeMetrics(collabs, videos, ym, productId, burstThreshold, videoFrom, videoTo) {
   const vr     = videoRange(ym);
   const vFrom  = videoFrom || vr.from;
   const vTo    = videoTo   || vr.to;
   const thresh = burstThreshold ?? BURST_ORDER_THRESHOLD;
 
-  const gradeMap     = Object.fromEntries(creators.map((c) => [c.id, c.official_grade || "未标注"]));
   const collabGradeMap = {};
-  for (const col of collabs) collabGradeMap[col.id] = gradeMap[col.creator_id] || "未标注";
+  for (const col of collabs) collabGradeMap[col.id] = col.attrs?.official_grade || "未标注";
 
   const v = productId ? videos.filter((x) => x.product_id === productId) : videos;
   const periodVideos = v.filter((x) => inRange(x.published_at?.slice(0,10), vFrom, vTo));

@@ -1,8 +1,9 @@
 // modules/invitePool/InvitePoolModule.jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { SectionIntro } from "../../components/layout/SubNav.jsx";
-import { checkDuplicateInPool, checkDuplicateInCRM } from "../../lib/supabase/unconnected.js";
+import { checkPoolEntry } from "../../lib/invitePool/poolChecks.js";
+import { buildNameIndex } from "../../lib/crm/identity.js";
 import { addToPool, removeFromPool } from "../../lib/supabase/unconnectedWrite.js";
 import { T, glassStyle } from "../../constants/tokens.js";
 import { s } from "./invitePoolStyles.js";
@@ -10,6 +11,8 @@ import { s } from "./invitePoolStyles.js";
 export default function InvitePoolModule({ ctx }) {
   const { storeId, userId, products, core, dataLoading, dataError } = ctx;
   const records = core.invites;
+  const nameIndex = useMemo(() => buildNameIndex(core.creators, core.aliases), [core.creators, core.aliases]);
+  const staffName = (id) => (ctx.staff || []).find((s) => s.id === id)?.name || "未指定";
 
   const [filterProduct, setFilterProduct] = useState("all");
   const [filterStatus,  setFilterStatus]  = useState("pending");
@@ -25,22 +28,10 @@ export default function InvitePoolModule({ ctx }) {
     if (selectedProducts.length === 0) { setFormError("请至少选择一个产品"); return; }
     setAdding(true);
     try {
-      // 所有产品并行查重（层一+层二同时发）
-      const checks = await Promise.all(
-        selectedProducts.map((pid) =>
-          Promise.all([
-            checkDuplicateInPool(storeId, handle, pid),
-            checkDuplicateInCRM(storeId, handle, pid),
-          ]).then(([dup, crmDup]) => ({ pid, dup, crmDup }))
-        )
-      );
-      for (const { pid, dup, crmDup } of checks) {
-        if (dup) { setFormError(`此达人已在邀约库中（${dup.products?.internal_name}）`); setAdding(false); return; }
-        if (crmDup) {
-          const pName = (products ?? []).find((p) => p.id === pid)?.internal_name ?? pid;
-          setFormError(`此达人已合作 ${pName}，跟进人 ${crmDup.staff?.name ?? "未知"}`);
-          setAdding(false); return;
-        }
+      for (const pid of selectedProducts) {
+        const productName = (products ?? []).find((p) => p.id === pid)?.internal_name ?? pid;
+        const reason = checkPoolEntry({ handle, productId: pid, productName, core, nameIndex, staffName });
+        if (reason) { setFormError(reason); setAdding(false); return; }
       }
       await addToPool(storeId, handle, selectedProducts, userId);
       setCreatorHandle(""); setSelectedProducts([]);
@@ -130,7 +121,7 @@ export default function InvitePoolModule({ ctx }) {
                 <td style={s.td}><span style={s.handle}>{r.creator_id}</span></td>
                 <td style={s.td}><span style={s.productTag}>{r.products?.internal_name ?? "-"}</span></td>
                 <td style={{ ...s.td, color: T.muted }}>{r.added_at?.slice(0, 10)}</td>
-                <td style={{ ...s.td, color: T.muted }}>{r.owner_id ? "已归属" : "-"}</td>
+                <td style={{ ...s.td, color: T.muted }}>{r.owner_id ? staffName(r.owner_id) : "-"}</td>
                 <td style={{ ...s.td, color: T.muted }}>{r.owned_at?.slice(0, 10) ?? "-"}</td>
                 <td style={s.td}>
                   <span style={r.status === "converted" ? s.tagDone : s.tagPending}>

@@ -21,7 +21,7 @@ function getFieldValues(creator, key, type) {
 }
 
 /**
- * 把 collaborations + video_records + creators 组装成归因计算需要的格式
+ * 把 collaborations（含寄样时属性 attrs）+ video_records + creators（取现名）组装成归因计算需要的格式
  * 返回 [{ creatorId, handle, product_id, productName, attrs, videos }]
  */
 export function buildAttrEntries(collabs, videos, creators, products) {
@@ -43,7 +43,7 @@ export function buildAttrEntries(collabs, videos, creators, products) {
       handle:      creator.handle,
       product_id:  col.product_id,
       productName: product.internal_name,
-      attrs:       creator,
+      attrs:       col.attrs || {},        // 寄样时属性（不是达人现在的属性）
       videos:      (videosByCollab[col.id] || []).map((v) => ({ orders: v.orders || 0, vv: v.vv || 0, clicks: v.clicks || 0 })),
     };
   }).filter(Boolean);
@@ -103,14 +103,10 @@ export function calcProductFactors(entries, productId, threshold = BURST_ORDER_T
 
 export function scoreCreators(entries, productId, factors) {
   const shippedIds = new Set(entries.filter((e) => e.product_id === productId).map((e) => e.creatorId));
-  const seen = new Set();
-  const candidates = [];
-  for (const e of entries) {
-    if (shippedIds.has(e.creatorId)) continue;
-    if (seen.has(e.creatorId)) continue;
-    seen.add(e.creatorId);
-    candidates.push(e);
-  }
+  // 每位候选达人取最近一次寄样的属性（entries 按寄样日期升序，后出现的覆盖前面的）
+  const latest = new Map();
+  for (const e of entries) if (!shippedIds.has(e.creatorId)) latest.set(e.creatorId, e);
+  const candidates = [...latest.values()];
 
   const maxDisc = Math.max(...factors.map((f) => f.discrimination), 0.001);
 

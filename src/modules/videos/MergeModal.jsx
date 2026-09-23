@@ -1,121 +1,77 @@
-// modules/videos/MergeModal.jsx — 非CRM视频归入CRM弹窗
-import { useState, useEffect } from "react";
-import { glassStyle, T } from "../../constants/tokens.js";
-import { searchCreators, fetchCreatorCollabs } from "../../lib/supabase/videos.js";
-import { mergeIntoCreator } from "../../lib/supabase/videosMerge.js";
+// modules/videos/MergeModal.jsx — 非CRM视频归入 CRM（达人换了名）
+// 搜索现名或别名 → 选达人 → 预览会挂上几条视频 → 确认：改名（旧名记为别名）+ 按商品挂视频
+import { useMemo, useState } from "react";
+import { glassStyle, T, FONT } from "../../constants/tokens.js";
+import { Hint } from "../../components/layout/SubNav.jsx";
+import { buildNameIndex, resolveName, namesOf, normName } from "../../lib/crm/identity.js";
+import { assignByProduct } from "../../lib/video/assignVideos.js";
+import { mergeVideosIntoCreator } from "../../lib/supabase/videosMerge.js";
 
-export default function MergeModal({ storeId, video, onClose, onDone }) {
-  const [query,    setQuery]    = useState("");
-  const [results,  setResults]  = useState([]);
-  const [selected, setSelected] = useState(null); // { id, handle }
-  const [collabs,  setCollabs]  = useState([]);
-  const [collabId, setCollabId] = useState(null);
-  const [saving,   setSaving]   = useState(false);
-  const [err,      setErr]      = useState("");
+const inp = { width: "100%", boxSizing: "border-box", padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.6)", color: T.text, fontSize: FONT.body, fontFamily: "inherit", outline: "none" };
+const btn = (primary) => ({ padding: "9px 20px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", fontSize: FONT.body, fontWeight: 700,
+  border: primary ? "none" : `1.5px solid ${T.accent}`, background: primary ? T.grad : "transparent", color: primary ? "#fff" : T.accent });
 
-  useEffect(() => {
-    if (query.length < 1) { setResults([]); return; }
-    const t = setTimeout(async () => {
-      const res = await searchCreators(storeId, query);
-      setResults(res);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query, storeId]);
+export default function MergeModal({ storeId, video, core, products, onClose, onDone }) {
+  const [query, setQuery]     = useState("");
+  const [creator, setCreator] = useState(null);
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState("");
+  const newHandle = normName(video.creator_handle);
+  const index = useMemo(() => buildNameIndex(core.creators, core.aliases), [core.creators, core.aliases]);
+  const productName = (id) => products.find((p) => p.id === id)?.internal_name || "?";
 
-  useEffect(() => {
-    if (!selected) { setCollabs([]); setCollabId(null); return; }
-    fetchCreatorCollabs(storeId, selected.id).then((rows) => {
-      setCollabs(rows);
-      setCollabId(rows[0]?.id || null);
-    });
-  }, [selected, storeId]);
+  const results = useMemo(() => {
+    const q = normName(query);
+    if (!q || creator) return [];
+    return core.creators.filter((c) => namesOf(c.id, core.creators, core.aliases).some((n) => n.includes(q))).slice(0, 10);
+  }, [query, creator, core.creators, core.aliases]);
+
+  // 预览：该达人全部名字 + 视频里的新名字下，所有未归属视频按商品能挂上几条
+  const preview = useMemo(() => {
+    if (!creator) return null;
+    const owner = resolveName(index, newHandle);
+    if (owner && owner.creatorId !== creator.id) return { conflict: owner.creatorId };
+    const names = new Set([...namesOf(creator.id, core.creators, core.aliases), newHandle]);
+    const videos = core.videos.filter((v) => !v.collaboration_id && names.has(normName(v.creator_handle)));
+    const collabs = core.collabs.filter((c) => c.creator_id === creator.id).map((c) => ({ collabId: c.id, productId: c.product_id, shipDate: c.ship_date }));
+    const { byCollab, unmatched } = assignByProduct(videos, collabs);
+    return { videos, collabs, attach: [...byCollab.values()].flat().length, unmatched: unmatched.length };
+  }, [creator, index, newHandle, core]);
 
   async function handleSave() {
-    if (!selected || !collabId) { setErr("请选择达人和寄样记录"); return; }
     setSaving(true); setErr("");
-    try {
-      await mergeIntoCreator(
-        storeId, video.id, selected.id,
-        selected.handle, video.creator_handle, collabId
-      );
-      onDone();
-    } catch (e) { setErr(e.message); }
-    finally { setSaving(false); }
+    try { onDone(await mergeVideosIntoCreator(storeId, { creator, newHandle, videos: preview.videos, collabs: preview.collabs })); }
+    catch (e) { setErr(e.message); setSaving(false); }
   }
 
+  const handleOf = (id) => core.creators.find((c) => c.id === id)?.handle;
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 9999,
-      background: "rgba(10,22,40,0.55)", backdropFilter: "blur(4px)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{ ...glassStyle(18, true), padding: "28px 32px", width: 420 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 4 }}>归入 CRM</div>
-        <div style={{ fontSize: 12, color: T.muted, marginBottom: 20 }}>
-          达人：<span style={{ fontWeight: 600, color: T.accent }}>{video.creator_handle}</span>
-        </div>
-
-        {/* 搜索旧 handle */}
-        <div style={{ fontSize: 13, color: T.muted, marginBottom: 6 }}>输入达人旧名称</div>
-        <input
-          style={inp}
-          placeholder="搜索旧 handle…"
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-        />
-        {results.length > 0 && !selected && (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(10,22,40,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ ...glassStyle(18, true), padding: "26px 30px", width: 460 }}>
+        <div style={{ fontSize: FONT.h2, fontWeight: 800, color: T.text, marginBottom: 4 }}>归入 CRM</div>
+        <Hint style={{ marginBottom: 16 }}>视频达人 <b style={{ color: T.accent }}>@{newHandle}</b> 不在 CRM。如果她是某位已合作达人换了名，搜她的旧名选中即可：现名改成 @{newHandle}，旧名自动记为别名，以后导入会自动匹配。</Hint>
+        <input style={inp} placeholder="搜索现名或别名…" value={query} onChange={(e) => { setQuery(e.target.value); setCreator(null); }} />
+        {results.length > 0 && (
           <div style={{ ...glassStyle(10), marginTop: 4, overflow: "hidden" }}>
-            {results.map((r) => (
-              <div key={r.id} onClick={() => { setSelected(r); setQuery(r.handle); setResults([]); }}
-                style={{ padding: "9px 14px", cursor: "pointer", fontSize: 13, color: T.text,
-                  borderBottom: `1px solid ${T.glassStroke}` }}>
-                {r.handle}
-              </div>
+            {results.map((c) => (
+              <div key={c.id} onClick={() => { setCreator(c); setQuery(c.handle); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: FONT.body, color: T.text, borderBottom: `1px solid ${T.glassStroke}` }}>@{c.handle}</div>
             ))}
           </div>
         )}
-
-        {/* 寄样记录选择 */}
-        {selected && collabs.length > 0 && (
-          <>
-            <div style={{ fontSize: 13, color: T.muted, margin: "16px 0 6px" }}>选择寄样记录</div>
-            <select style={{ ...inp, cursor: "pointer" }}
-              value={collabId || ""} onChange={(e) => setCollabId(e.target.value)}>
-              {collabs.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.products?.internal_name} · {c.ship_date}
-                </option>
-              ))}
-            </select>
-          </>
+        {preview?.conflict && <div style={{ fontSize: FONT.note, color: T.danger, marginTop: 12 }}>@{newHandle} 已是 @{handleOf(preview.conflict)} 的名字，请先在 CRM 里确认这两位是否同一人。</div>}
+        {preview && !preview.conflict && (
+          <div style={{ fontSize: FONT.body, color: T.text, marginTop: 14, lineHeight: 1.8 }}>
+            她的寄样：{preview.collabs.map((c) => `${productName(c.productId)}（${c.shipDate}）`).join("、") || "无"}<br />
+            将挂上 <b style={{ color: T.success }}>{preview.attach}</b> 条视频
+            {preview.unmatched > 0 && <>，<b style={{ color: T.warning }}>{preview.unmatched}</b> 条商品不在她的寄样里，保持非CRM</>}
+          </div>
         )}
-        {selected && collabs.length === 0 && (
-          <div style={{ fontSize: 13, color: T.warning, marginTop: 12 }}>该达人在 CRM 暂无寄样记录</div>
-        )}
-
-        {err && <div style={{ fontSize: 12, color: T.danger, marginTop: 10 }}>{err}</div>}
-
-        <div style={{ display: "flex", gap: 10, marginTop: 24, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={btnGhost}>取消</button>
-          <button onClick={handleSave} disabled={saving || !selected || !collabId} style={btnPrimary}>
-            {saving ? "保存中…" : "确认归入"}
-          </button>
+        {err && <div style={{ fontSize: FONT.note, color: T.danger, marginTop: 10 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 10, marginTop: 22, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={btn(false)}>取消</button>
+          <button onClick={handleSave} disabled={saving || !preview || preview.conflict} style={{ ...btn(true), opacity: !preview || preview.conflict ? 0.5 : 1 }}>{saving ? "保存中…" : "确认归入"}</button>
         </div>
       </div>
     </div>
   );
 }
-
-const inp = {
-  width: "100%", boxSizing: "border-box", padding: "9px 13px", borderRadius: 10,
-  border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.6)",
-  color: T.text, fontSize: 13, fontFamily: "inherit", outline: "none",
-};
-const btnPrimary = {
-  padding: "9px 20px", borderRadius: 10, border: "none", cursor: "pointer",
-  background: T.grad, color: "#fff", fontWeight: 700, fontSize: 13, fontFamily: "inherit",
-};
-const btnGhost = {
-  padding: "9px 20px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-  background: "transparent", color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 13,
-};

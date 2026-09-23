@@ -33,7 +33,7 @@ function prevMonth() {
 export default function ReviewModule({ ctx }) {
   const {
     storeId, userId,
-    products, collabs, videos, creators, invites, staff,
+    products, collabs, videos, invites, staff,
     gradeSnapshots, dataLoading, dataError, reloadSnapshots: reloadReview,
   } = ctx;
 
@@ -70,7 +70,7 @@ export default function ReviewModule({ ctx }) {
   if (dataLoading) return <div style={rs.center}>加载中…</div>;
   if (dataError && !collabs.length) return <div style={rs.center}>错误：{dataError}</div>;
 
-  const common = { collabs, videos, creators, products, storeId, userId, burstThreshold, reloadReview };
+  const common = { collabs, videos, products, storeId, userId, burstThreshold, reloadReview };
 
   return (
     <div>

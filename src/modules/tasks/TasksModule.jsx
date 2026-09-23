@@ -18,7 +18,7 @@ const SUBTABS = [
 ];
 
 export default function TasksModule({ ctx }) {
-  const { storeId, isAdmin, userId, products, collabs, videos, creators, staff, tasksApi } = ctx;
+  const { storeId, isAdmin, userId, products, collabs, videos, staff, tasksApi } = ctx;
   const { goals, gantt, menus, tasks, loading, error, reload } = tasksApi;
   const [sub,    setSub]    = useState(isAdmin ? 'goals' : 'action');
   const [genMsg, setGenMsg] = useState('');
@@ -78,7 +78,7 @@ export default function TasksModule({ ctx }) {
       {sub==='goals'  && <CycleGoals        storeId={storeId} products={products} shippingGoals={goals} ganttStrategies={gantt} collabs={collabs} staff={staff} isAdmin={isAdmin} onReload={reload} />}
       {sub==='menu'   && <WeeklyMenu        storeId={storeId} menus={menus} products={products} isAdmin={isAdmin} onReload={reload} />}
       {sub==='action' && <ActionList        storeId={storeId} tasks={tasks} products={products} staff={staff} currentStaffId={userId} isAdmin={isAdmin} onReload={reload} />}
-      {sub==='perf'   && <PerformanceModule storeId={storeId} collabs={collabs} videos={videos} creators={creators} shippingGoals={goals} products={products} staff={staff} isAdmin={isAdmin} userId={userId} />}
+      {sub==='perf'   && <PerformanceModule storeId={storeId} collabs={collabs} videos={videos} shippingGoals={goals} products={products} staff={staff} isAdmin={isAdmin} userId={userId} />}
     </div>
   );
 }

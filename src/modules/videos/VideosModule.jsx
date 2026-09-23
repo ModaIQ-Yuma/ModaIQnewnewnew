@@ -14,7 +14,7 @@ const TABS = [
   { id: "noncrm",   label: "非CRM视频", desc: "达人不在 CRM 里、但有出单的视频（没出单的非 CRM 视频导入时直接跳过）。如果其实是某位已合作达人换了名字，可点「归入 CRM」归到对应寄样记录。" },
 ];
 // 影响合作归属的写操作后需要同步的核心表
-const LINKED = ["videos", "collabs", "creators"];
+const LINKED = ["videos", "collabs", "creators", "aliases"];
 
 export default function VideosModule({ ctx }) {
   const { storeId, userId, core, products, dataLoading, dataError } = ctx;
@@ -31,6 +31,7 @@ export default function VideosModule({ ctx }) {
   const [modal,      setModal]      = useState(null);
   const [errMsg,     setErrMsg]     = useState(null);
   const [batchOpen,  setBatchOpen]  = useState(false);
+  const [mergeMsg,   setMergeMsg]   = useState("");
   const fileRef = useRef(null);
 
   const crmVideos    = videos.filter((v) => v.collaboration_id);
@@ -110,9 +111,10 @@ export default function VideosModule({ ctx }) {
         <>
           <div style={vs.toolbar}>
             <span style={vs.summary}>非CRM视频共 <span style={vs.num}>{nonCrmVideos.length}</span> 条</span>
+            {mergeMsg && <span style={{ fontSize: 13, color: T.success, fontWeight: 600 }}>{mergeMsg}</span>}
           </div>
           <div style={glassStyle(14)}>
-            <VideoTable videos={nonCrmVideos} storeId={storeId} showMerge onMerged={reload} />
+            <VideoTable videos={nonCrmVideos} storeId={storeId} core={core} products={products} showMerge onMerged={(res) => { reload(); setMergeMsg(`✅ 已挂上 ${res.attached} 条视频${res.unmatched ? `，${res.unmatched} 条商品对不上仍为非CRM` : ""}`); }} />
           </div>
         </>
       )}

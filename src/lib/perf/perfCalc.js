@@ -40,13 +40,12 @@ function videoMonthRange(cEnd) {
  * 计算绩效指标
  * @param collabs   collaborations[]（含 ship_date, staff_id, product_id, creator_id, id）
  * @param videos    video_records[]（含 published_at, orders, collaboration_id）
- * @param creators  creators[]（含 id, official_grade）
  * @param shippingGoals  shipping_goals[]（含 cycle_start, product_id, target_qty）
  * @param products  products[]（含 id, is_new）
  * @param cycleStart "YYYY-MM-DD"
  * @param staffId   null = 全店
  */
-export function calcPerfMetrics({ collabs, videos, creators, shippingGoals, products, cycleStart, staffId }) {
+export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId }) {
   const cEnd = cycleEndDate(cycleStart);
   const { vFrom, vTo } = videoMonthRange(cEnd);
   const inShip  = (d) => d && d >= cycleStart && d <= cEnd;
@@ -54,7 +53,6 @@ export function calcPerfMetrics({ collabs, videos, creators, shippingGoals, prod
 
   const newPids    = new Set(products.filter(p => p.is_new === true).map(p => p.id));
   const oldPids    = new Set(products.filter(p => p.is_new === false).map(p => p.id));
-  const gradeMap   = Object.fromEntries((creators || []).map(c => [c.id, c.official_grade || ""]));
   const goalsInCycle = shippingGoals.filter(g => g.cycle_start === cycleStart);
 
   const scoped  = staffId ? collabs.filter(c => c.staff_id === staffId) : collabs;
@@ -96,7 +94,7 @@ export function calcPerfMetrics({ collabs, videos, creators, shippingGoals, prod
 
   // ── e：Lv1 达人占比 ────────────────────────────────────────────────────────
   const shipTotal = sampled.length;
-  const lv1Count  = sampled.filter(c => gradeMap[c.creator_id] === "Lv1").length;
+  const lv1Count  = sampled.filter(c => c.attrs?.official_grade === "Lv1").length;   // 寄样时等级
   const e = safeDiv(lv1Count, shipTotal);
 
   return {

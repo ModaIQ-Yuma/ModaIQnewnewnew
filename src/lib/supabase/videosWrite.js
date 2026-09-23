@@ -1,5 +1,6 @@
 // lib/supabase/videosWrite.js — 视频批量导入（分批处理，避免超时）
 import { sb, unwrap } from "./client.js";
+import { pickCollab } from "../video/assignVideos.js";
 import {
   fetchProductsBySkuIds,
   fetchCollabsByHandles,
@@ -42,8 +43,9 @@ export async function importVideos(storeId, parsed, fileName, userId) {
 
   for (const r of parsed) {
     const product = productMap[r.skuId] || null;
-    const collabs = collabMap[r.creatorHandle] || [];
-    const collab  = collabs.find((c) => c.productId === product?.id) || collabs[0] || null;
+    // 只挂同商品的寄样（复投时挂发布前最近一次）；商品对不上 → 非 CRM
+    const collabId = product ? pickCollab(collabMap[r.creatorHandle?.toLowerCase()] || [], product.id, r.publishedAt) : null;
+    const collab   = collabId ? { collabId } : null;
     const ex      = existingMap[r.videoId];
 
     // 非CRM且无出单 → 跳过

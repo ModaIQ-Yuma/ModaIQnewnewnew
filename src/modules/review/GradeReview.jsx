@@ -11,7 +11,7 @@ const GRADE_COLORS = { Lv1:"#94A3B8",Lv2:"#60A5FA",Lv3:"#34D399",Lv4:"#FBBF24",L
 const defFrom = () => { const d=new Date(); d.setMonth(d.getMonth()-5); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
 const thisMonth = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
 
-export default function GradeReview({ collabs, videos, creators, products, storeId, userId, burstThreshold, onSnapshotSaved }) {
+export default function GradeReview({ collabs, videos, products, storeId, userId, burstThreshold, onSnapshotSaved }) {
   const [view,      setView]      = useState("single");
   const [ym,        setYm]        = useState(thisMonth);
   const [fromYm,    setFromYm]    = useState(defFrom);
@@ -25,14 +25,14 @@ export default function GradeReview({ collabs, videos, creators, products, store
   const vTo   = videoTo   || undefined;
 
   const singleData = useMemo(() =>
-    calcGradeMetrics(collabs,videos,creators,ym,null,burstThreshold,vFrom,vTo),
-    [collabs,videos,creators,ym,burstThreshold,vFrom,vTo]
+    calcGradeMetrics(collabs,videos,ym,null,burstThreshold,vFrom,vTo),
+    [collabs,videos,ym,burstThreshold,vFrom,vTo]
   );
 
   const months  = useMemo(() => monthsBetween(fromYm,toYm),[fromYm,toYm]);
   const allData = useMemo(() =>
-    months.map((m) => ({ ym:m, rows:calcGradeMetrics(collabs,videos,creators,m,null,burstThreshold,vFrom,vTo) })),
-    [collabs,videos,creators,months,burstThreshold,vFrom,vTo]
+    months.map((m) => ({ ym:m, rows:calcGradeMetrics(collabs,videos,m,null,burstThreshold,vFrom,vTo) })),
+    [collabs,videos,months,burstThreshold,vFrom,vTo]
   );
   const activeGrades = useMemo(() => { const s=new Set(); allData.forEach(({rows})=>rows.forEach(r=>s.add(r.grade))); return [...s]; },[allData]);
 

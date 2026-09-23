@@ -55,7 +55,7 @@ export function ProductSearch({ value, products, onChange, inputStyle }) {
   useEffect(() => { setQuery(value || ""); }, [value]);
 
   const filtered = query.trim()
-    ? products.filter((p) => (p.internalName || "").toLowerCase().includes(query.toLowerCase()))
+    ? products.filter((p) => (p.internalName || p.internal_name || "").toLowerCase().includes(query.toLowerCase()))
     : products;
 
   useEffect(() => {

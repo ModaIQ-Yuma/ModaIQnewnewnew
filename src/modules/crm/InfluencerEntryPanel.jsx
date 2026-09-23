@@ -1,199 +1,126 @@
-import { useState } from "react";
-import { T } from "../../constants/tokens.js";
+// modules/crm/InfluencerEntryPanel.jsx — 新增 / 编辑一条寄样
+// 身份（达人ID/别名/达人备注）跟着人走；属性、合作备注只属于这一条寄样。
+import { useEffect, useMemo, useState } from "react";
+import { T, FONT } from "../../constants/tokens.js";
 import { CREATOR_FIELDS } from "../../constants/creatorOptions.js";
 import { Inp, Btn } from "../../components/ui/index.jsx";
-import { withComputedStatus, computeStatus } from "../../lib/crm/crmFlow.js";
-import ShipScoreModal from "./ShipScoreModal.jsx";
-import { findInfluencerMatches } from "../../lib/crm/influencerLookup.js";
-import { Field, SectionBar, ProductSearch, StatusPicker, AttrSection } from "./EntryPanelParts.jsx";
+import { emptyAttrs, ATTR_KEYS } from "../../lib/crm/attrs.js";
+import { normName } from "../../lib/crm/identity.js";
 import { todayPST } from "../../lib/utils.js";
+import ShipScoreModal from "./ShipScoreModal.jsx";
+import EntryIdentity from "./EntryIdentity.jsx";
+import { Field, SectionBar, ProductSearch, StatusPicker, AttrSection } from "./EntryPanelParts.jsx";
 
 const OBJ_FIELDS = CREATOR_FIELDS.filter((f) => f.category === "obj");
 const SUB_FIELDS = CREATOR_FIELDS.filter((f) => f.category === "sub");
-const today = () => todayPST();
 const blank = () => ({
-  influencerId: "", product: "", productColor: "", productTitle: "",
-  shipDate: today(), staffId: "",
-  crmStatus: "已寄样", baseStatus: "已寄样", note: "", style: [], videoRecords: [], aliases: "",
+  influencerId: "", aliases: [], creatorNote: "", product: "", productColor: "", shipDate: todayPST(), staffId: "",
+  crmStatus: "已寄样", baseStatus: "已寄样", note: "", ...emptyAttrs(),
 });
-const inputStyle = {
-  width: "100%", background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`,
-  borderRadius: 10, color: T.text, fontSize: 14, padding: "9px 13px",
-  fontFamily: "inherit", outline: "none", boxSizing: "border-box",
-};
+const inputStyle = { width: "100%", background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`, borderRadius: 10, color: T.text, fontSize: FONT.body, padding: "9px 13px", fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
 
-function currentCycleStart() {
-  const pst = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
-  const [y, mo, d] = pst.split("-").map(Number);
-  const pad = (n) => String(n).padStart(2, "0");
-  if (d >= 15) return `${y}-${pad(mo)}-15`;
-  const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y;
-  return `${py}-${pad(pm)}-15`;
-}
-
-export default function InfluencerEntryPanel({ initial, products = [], staff = [], influencers = [], shippingGoals = [], onSubmit, onClose }) {
+/**
+ * @param crm     useCRM 的返回（resolve / check / save / handleOf / latest / influencers）
+ * @param onSaved (res) => void   保存成功回调（res.pool 为邀约库联动结果）
+ */
+export default function InfluencerEntryPanel({ initial, products = [], staff = [], crm, onSaved, onClose }) {
   const [showShipScore, setShowShipScore] = useState(false);
   const [f, setF] = useState(() => ({ ...blank(), ...(initial || {}) }));
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [prefilledFrom, setPrefilled] = useState(initial?.creatorId || null);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const staffName = (id) => staff.find((s) => String(s.id) === String(id))?.name || "—";
 
-  const matches = findInfluencerMatches(f.influencerId, influencers, initial?.id ?? null);
-  const basicsDone = f.influencerId.trim() && f.product && f.shipDate && f.staffId;
+  const resolvedId = initial?.creatorId || crm.resolve(f.influencerId);
+  const history = useMemo(() => crm.influencers.filter((i) => i.creatorId === resolvedId && i.id !== initial?.id)
+    .sort((a, b) => b.shipDate.localeCompare(a.shipDate)), [crm.influencers, resolvedId, initial?.id]);
+  const repeat = history.find((h) => h.product === f.product);
 
-  function submit() {
-    if (!f.influencerId.trim() || !f.product) return;
-    const matched = products.find((p) => (p.internalName || p.internal_name) === f.product);
-    const rec = {
-      ...f,
-      id: f.id || Date.now(),
-      influencerId: f.influencerId.trim(),
-      productTitle: matched?.productTitle || f.productTitle || "",
-      date: f.date || new Date().toLocaleDateString("zh-CN"),
-    };
-    onSubmit(withComputedStatus(rec, f.baseStatus));
+  // 新录入时认出已有达人 → 带出她最近一次寄样的属性、别名、达人备注
+  useEffect(() => {
+    if (initial || !resolvedId || resolvedId === prefilledFrom) return;
+    const last = crm.latest.get(resolvedId);
+    if (last) setF((p) => ({ ...p, aliases: last.aliases, creatorNote: last.creatorNote, ...Object.fromEntries(ATTR_KEYS.map((k) => [k, last[k]])) }));
+    setPrefilled(resolvedId);
+  }, [initial, resolvedId, prefilledFrom, crm.latest]);
+
+  const typed = normName(f.influencerId);
+  const who = !typed ? null
+    : initial && typed !== normName(initial.influencerId) ? { text: `将改名：@${initial.influencerId} → @${typed}（旧名自动记为别名）`, color: T.warning }
+    : resolvedId && crm.handleOf(resolvedId) !== typed ? { text: `这是 @${crm.handleOf(resolvedId)} 的别名，会记到她名下`, color: T.accent }
+    : resolvedId ? { text: "已有档案，属性已带出最近一次寄样的值，请按现在的情况核对", color: T.accent }
+    : { text: "新达人，保存后建立档案", color: T.hint };
+  const basicsDone = typed && f.product && f.shipDate && f.staffId;
+
+  async function submit() {
+    setErr("");
+    let identity = initial ? { creatorId: initial.creatorId, oldHandle: initial.influencerId } : null;
+    let chk = crm.check(f, identity);
+    if (!identity && !chk.creatorId && chk.mergeWith.length === 1) {       // 别名是已有达人的现名 → 该达人改名
+      const id = chk.mergeWith[0], old = crm.handleOf(id);
+      if (!confirm(`@${old} 已有档案。确认她改名为 @${typed} 吗？@${old} 会记为别名。`)) return;
+      identity = { creatorId: id, oldHandle: old };
+      chk = crm.check(f, identity);
+    }
+    if (chk.errors.length) { setErr(chk.errors.join("；")); return; }
+    if (!chk.creatorId && chk.mergeWith.length) { setErr("填写的别名分别属于多位已有达人，请先逐个处理"); return; }
+    for (const dropId of chk.mergeWith) {
+      if (!confirm(`@${crm.handleOf(dropId)} 是另一份达人档案。确认是同一个人、合并到 @${crm.handleOf(chk.creatorId)} 名下吗？\n（她的寄样记录会转过来，@${crm.handleOf(dropId)} 变成别名）`)) return;
+    }
+    setBusy(true);
+    try { onSaved?.(await crm.save(f, initial, identity, chk.mergeWith)); }
+    catch (e) { setErr(e.message); setBusy(false); }
   }
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(42,26,34,0.5)", zIndex: 1500,
-      display: "flex", alignItems: "flex-start", justifyContent: "center",
-      padding: "32px 16px", overflowY: "auto",
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 18, padding: "26px 28px", width: "100%", maxWidth: 560,
-        boxShadow: "0 20px 60px rgba(232,75,124,0.2)", border: `1.5px solid ${T.border}`,
-      }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20 }}>
-          {initial ? "编辑达人" : "新增达人"}
-        </div>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(10,22,40,0.5)", zIndex: 1500, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "32px 16px", overflowY: "auto" }}>
+      <div style={{ background: "#fff", borderRadius: 18, padding: "26px 28px", width: "100%", maxWidth: 580, boxShadow: "0 20px 60px rgba(40,90,180,0.2)", border: `1.5px solid ${T.border}` }}>
+        <div style={{ fontSize: FONT.h2, fontWeight: 800, color: T.text, marginBottom: 18 }}>{initial ? "编辑寄样" : "新增寄样"}</div>
 
-        {/* 达人策略提示（来自任务模块，只读） */}
-        {(() => {
-          if (!f.product) return null;
-          const cs = currentCycleStart();
-          const goal = shippingGoals.find(g => g.productInternalName === f.product && g.cycleStart === cs);
-          if (!goal?.influencerStrategy) return null;
-          return (
-            <div style={{
-              background: "rgba(61,127,239,0.07)", border: "1.5px solid rgba(61,127,239,0.25)",
-              borderRadius: 12, padding: "10px 14px", marginBottom: 18,
-              borderLeft: "4px solid #3D7FEF",
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#3D7FEF", marginBottom: 4, letterSpacing: "0.06em" }}>
-                💡 本品达人策略
-              </div>
-              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>{goal.influencerStrategy}</div>
-              {goal.recommendedTags?.length > 0 && (
-                <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-                  {goal.recommendedTags.map(tag => (
-                    <span key={tag} style={{ fontSize: 11, background: "rgba(61,127,239,0.12)", color: "#3D7FEF", borderRadius: 8, padding: "2px 8px" }}>{tag}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        <EntryIdentity f={f} set={set} history={history} who={who} staffName={staffName} />
 
-        {/* 达人ID + 合作产品 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-          <Field label="达人ID *">
-            <Inp value={f.influencerId} onChange={(v) => set("influencerId", v)} placeholder="@username" />
-            {matches.length > 0 && (
-              <div style={{
-                marginTop: 6, background: "rgba(255,255,255,0.6)", border: `1.5px solid ${T.accent}44`,
-                borderRadius: 10, padding: "8px 10px", maxHeight: 130, overflowY: "auto",
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, marginBottom: 5 }}>
-                  ⚡ 已合作过 {matches.length} 次
-                </div>
-                {matches.map((m) => {
-                  const sName = staff.find(s => s.id === m.staffId)?.name || m.staffId || "—";
-                  const cumOrders = (m.videoRecords || []).reduce((sum, v) => sum + (Number(v.orders) || 0), 0);
-                  return (
-                    <div key={m.id} style={{
-                      fontSize: 12, color: T.muted, padding: "5px 0",
-                      borderTop: `1px dashed ${T.border}`,
-                    }}>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                        <span style={{ fontWeight: 700, color: T.text, whiteSpace: "nowrap" }}>{m.product || "—"}</span>
-                        {m.productColor && <span style={{ color: T.hint }}>({m.productColor})</span>}
-                        <span style={{ color: T.hint }}>跟进：{sName}</span>
-                        <span style={{ color: T.hint }}>出单：{cumOrders} 单</span>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-                        <span style={{ color: T.hint }}>{m.shipDate || "—"}</span>
-                        <span style={{ color: T.hint }}>{computeStatus(m) || "—"}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          <Field label="合作产品 *">
+            <ProductSearch value={f.product} products={products} onChange={(v) => set("product", v)} inputStyle={inputStyle} />
+            {repeat && <div style={{ fontSize: FONT.note, color: T.warning, marginTop: 5 }}>她 {repeat.shipDate} 已寄过这个产品，保存即记为复投</div>}
+            <button type="button" onClick={() => setShowShipScore(true)} style={{ marginTop: 6, fontSize: FONT.note, color: T.accent, background: "none", border: `1px dashed ${T.accent}66`, borderRadius: 8, padding: "3px 9px", cursor: "pointer", fontFamily: "inherit" }}>不确定是否可寄？</button>
           </Field>
-
-          <div>
-            <Field label="合作产品 *">
-              <ProductSearch value={f.product} products={products} onChange={(v) => set("product", v)} inputStyle={inputStyle} />
-              <button type="button" onClick={() => setShowShipScore(true)} style={{
-                marginTop: 6, fontSize: 12, color: T.accent, background: "none",
-                border: `1px dashed ${T.accent}66`, borderRadius: 8, padding: "3px 9px",
-                cursor: "pointer", fontFamily: "inherit",
-              }}>不确定是否可寄？</button>
-            </Field>
-            <Field label="颜色">
-              <Inp value={f.productColor || ""} onChange={(v) => set("productColor", v)} placeholder="如：黑色、米白" />
-            </Field>
-          </div>
-        </div>
-
-        {/* 寄样时间 + 跟进人 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-          <Field label="寄样时间 *">
-            <input type="date" value={f.shipDate} onChange={(e) => set("shipDate", e.target.value)} style={inputStyle} />
-          </Field>
+          <Field label="颜色"><Inp value={f.productColor || ""} onChange={(v) => set("productColor", v)} placeholder="如：黑色、米白" /></Field>
+          <Field label="寄样时间 *"><input type="date" value={f.shipDate} onChange={(e) => set("shipDate", e.target.value)} style={inputStyle} /></Field>
           <Field label="跟进人 *">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {staff.length === 0
-                ? <span style={{ fontSize: 12, color: T.hint }}>请先在人员管理添加成员</span>
+              {staff.length === 0 ? <span style={{ fontSize: FONT.note, color: T.hint }}>请先在员工管理添加助理</span>
                 : staff.map((s) => {
-                    const on = f.staffId === String(s.id);
-                    return (
-                      <button key={s.id} type="button" onClick={() => set("staffId", String(s.id))} style={{
-                        fontSize: 13, padding: "5px 12px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit",
-                        border: `1px solid ${on ? T.accent : T.glassStroke}`,
-                        background: on ? `${T.accent}22` : "rgba(255,255,255,0.4)",
-                        color: on ? T.accent : T.muted, fontWeight: on ? 700 : 500, transition: "all .15s",
-                      }}>{s.name}</button>
-                    );
-                  })}
+                  const on = f.staffId === String(s.id);
+                  return <button key={s.id} type="button" onClick={() => set("staffId", String(s.id))} style={{ fontSize: FONT.body, padding: "5px 12px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${on ? T.accent : T.glassStroke}`, background: on ? `${T.accent}22` : "rgba(255,255,255,0.4)", color: on ? T.accent : T.muted, fontWeight: on ? 700 : 500 }}>{s.name}</button>;
+                })}
             </div>
           </Field>
         </div>
 
-        {/* 达人属性（基础填完后解锁） */}
         <div style={{ opacity: basicsDone ? 1 : 0.4, pointerEvents: basicsDone ? "auto" : "none", transition: "opacity .2s" }}>
-          <SectionBar icon="📊" title="客观数据" sub="后台直接可查" />
+          <SectionBar icon="📊" title="客观数据（这次寄样时）" sub="后台直接可查" />
           <AttrSection fields={OBJ_FIELDS} formState={f} set={set} accentColor={T.accent} />
-          <SectionBar icon="👁" title="主观数据" sub="需打开主页判断" />
+          <SectionBar icon="👁" title="主观数据（这次寄样时）" sub="需打开主页判断" />
           <AttrSection fields={SUB_FIELDS} formState={f} set={set} accentColor="#7C3AED" />
         </div>
 
-        {/* 合作进度 */}
         <div style={{ margin: "16px 0 14px" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.muted, marginBottom: 8 }}>合作进度</div>
+          <div style={{ fontSize: FONT.note, fontWeight: 700, color: T.muted, marginBottom: 8 }}>合作进度</div>
           <StatusPicker value={f.crmStatus} onChange={(v) => setF((p) => ({ ...p, crmStatus: v, baseStatus: v }))} />
         </div>
-
-        {/* 备注 */}
-        <Field label="备注">
-          <textarea value={f.note} onChange={(e) => set("note", e.target.value)} rows={2}
-            style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
+        <Field label="合作备注（只属于这次寄样）">
+          <textarea value={f.note} onChange={(e) => set("note", e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} />
         </Field>
 
+        {err && <div style={{ fontSize: FONT.note, color: T.danger, marginTop: 6 }}>{err}</div>}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
           <Btn onClick={onClose}>取消</Btn>
-          <Btn accent disabled={!f.influencerId.trim() || !f.product} onClick={submit}>保存</Btn>
+          <Btn accent disabled={!typed || !f.product || busy} onClick={submit}>{busy ? "保存中…" : "保存"}</Btn>
         </div>
       </div>
       {showShipScore && <ShipScoreModal onClose={() => setShowShipScore(false)} />}
-    </div>);
+    </div>
+  );
 }

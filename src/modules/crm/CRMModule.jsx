@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, Fragment } from "react";
 import { T } from "../../constants/tokens.js";
-import { OFFICIAL_GRADES, CREATOR_FIELDS as INFLUENCER_FIELDS, labelOf } from "../../constants/creatorOptions.js";
+import { OFFICIAL_GRADES } from "../../constants/creatorOptions.js";
 import { CRM_STATUSES, STATUS_COLORS } from "../../constants/crm.js";
 import { cumOrders } from "../../lib/crm/cumOrders.js";
 import { computeStatus } from "../../lib/crm/crmFlow.js";
@@ -11,17 +11,17 @@ import InfluencerEntryPanel from "./InfluencerEntryPanel.jsx";
 import InfluencerDetailRow  from "./InfluencerDetailRow.jsx";
 import CRMImportModal       from "./CRMImportModal.jsx";
 import { useCRM } from "../../hooks/useCRM.js";
-import * as XLSX from "xlsx";
-import { todayPST } from "../../lib/utils.js";
+import { exportCRM } from "../../lib/crm/crmExport.js";
+import { normName } from "../../lib/crm/identity.js";
 
-const COLS = ["达人ID","合作产品","寄样时间","跟进人","官方等级","合作进度","累计出单","备注",""];
+const COLS = ["达人ID","合作产品","寄样时间","跟进人","寄样时等级","合作进度","累计出单","合作备注",""];
 const linkBtn = (c) => ({ border:"none", background:"transparent", color:c, cursor:"pointer", fontSize:13, padding:0 });
 const PAGE_SIZE = 50;
 
 export default function CRMModule({ ctx }) {
   const { storeId, core, products } = ctx;
   const crm = useCRM(storeId, core, products);
-  const { influencers, staff, loading, save, remove, updateStatus, bulkRemove } = crm;
+  const { influencers, staff, loading, remove, updateStatus, bulkRemove } = crm;
 
   const [q,          setQ]          = useState("");
   const [fStatus,    setFStatus]    = useState("");
@@ -35,10 +35,11 @@ export default function CRMModule({ ctx }) {
   const [showImport, setShowImport] = useState(false);
   const [page,       setPage]       = useState(1);
   const [selected,   setSelected]   = useState(() => new Set());
+  const [notice,     setNotice]     = useState("");
   const readonly = ctx.role === "viewer";
   const staffName = (id) => staff.find((s) => String(s.id) === String(id))?.name || "—";
   const rows = useMemo(() => influencers.filter((i) => {
-    if (q        && !(i.influencerId || "").toLowerCase().includes(q.toLowerCase())) return false;
+    if (q        && ![i.influencerId, ...i.aliases].some((n) => n.includes(normName(q)))) return false;
     if (fStatus  && computeStatus(i) !== fStatus)                                   return false;
     if (fGrade   && i.official_grade !== fGrade)                                     return false;
     if (fProduct && i.product !== fProduct)                                          return false;
@@ -64,28 +65,14 @@ export default function CRMModule({ ctx }) {
     bulkRemove(effectiveSelected).catch((e) => alert(`删除失败，已恢复：${e.message}`));
   };
 
-  const saveAndClose = async (inf) => { await save(inf); setEditing(null); };
+  const onSaved = (res) => {
+    setEditing(null);
+    const p = res?.pool;
+    if (p && (p.owned || p.converted)) { setNotice(`📥 该达人在邀约库中：${p.owned} 条已归属给跟进人，${p.converted} 条已标记转化`); setTimeout(() => setNotice(""), 6000); }
+  };
   const changeStatus = (inf, v) => updateStatus(inf, v).catch((e) => alert(`状态保存失败，已恢复：${e.message}`));
   const updateInline = (inf) => changeStatus(inf, inf.baseStatus);
   const del = (id) => { if (confirm("确认删除？关联视频将变为非CRM视频。")) remove(id).catch((e) => alert(`删除失败，已恢复：${e.message}`)); };
-
-  function exportXLSX() {
-    const data = rows.map((i) => {
-      const attrs = Object.fromEntries(INFLUENCER_FIELDS.map((f) => {
-        const v = i[f.key];
-        return [f.label, f.type === "multi" ? (v?.length ? v.map((x) => labelOf(f.key, x)).join("、") : "") : labelOf(f.key, v) || ""];
-      }));
-      return {
-        "达人ID": i.influencerId, "合作产品": i.product, "颜色": i.productColor,
-        "寄样时间": i.shipDate, "跟进人": staffName(i.staffId),
-        "合作进度": computeStatus(i), "累计出单": cumOrders(i),
-        "视频数": (i.videoRecords || []).length, "备注": i.note, ...attrs,
-      };
-    });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "CRM");
-    XLSX.writeFile(wb, `CRM_${todayPST()}.xlsx`);
-  }
 
   const th = { fontSize:12, fontWeight:800, color:"#0A1628", textAlign:"left", padding:"10px 12px", whiteSpace:"nowrap", borderBottom:"2px solid #B8C4D8" };
   const td = { fontSize:13, color:"#0A1628", padding:"9px 12px", borderBottom:"1px solid #D8E0EC", verticalAlign:"middle" };
@@ -93,8 +80,10 @@ export default function CRMModule({ ctx }) {
   return (
     <div>
       <SectionIntro style={{ marginBottom: 14 }}>
-        每行 = 一位达人 × 一个产品的寄样合作。合作进度自动计算：有视频 → 已发布，累计出单 ≥ {REPOST_THRESHOLD_ORDERS} 单 → 待复投；「复投完成 / 不合作」需手动选择，选了之后不再自动变化。点击行可展开视频明细。
+        每行 = 一次寄样（达人 × 产品），同一达人寄同一产品多次即复投，各占一行。等级、体型等属性记录的是<b>寄样当时</b>的情况；别名和达人备注跟着人走，所有寄样共用。
+        合作进度自动计算：有视频 → 已发布，累计出单 ≥ {REPOST_THRESHOLD_ORDERS} 单 → 待复投；「复投完成 / 不合作」需手动选择。点击行展开明细。
       </SectionIntro>
+      {notice && <div style={{ fontSize: 13, color: T.success, background: `${T.success}12`, border: `1px solid ${T.success}40`, borderRadius: 10, padding: "8px 14px", marginBottom: 12 }}>{notice}</div>}
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
         <span style={{ fontSize: 13, fontWeight:700, color:T.muted, whiteSpace:"nowrap" }}>寄样时间</span>
         <input type="date" value={fDateFrom} onChange={(e) => setFDateFrom(e.target.value)} style={{ background:"rgba(255,255,255,0.45)", border:`1.5px solid ${T.border}`, borderRadius:10, fontSize:13, padding:"7px 11px", fontFamily:"inherit", outline:"none" }} />
@@ -103,15 +92,15 @@ export default function CRMModule({ ctx }) {
         <button onClick={() => { setFDateFrom(""); setFDateTo(""); }} style={{ fontSize:12, color:T.muted, background:"none", border:`1px solid ${T.border}`, borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"inherit" }}>清除</button>
       </div>
       <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginBottom:14 }}>
-        <div style={{ width:180 }}><Inp value={q} onChange={setQ} placeholder="搜索达人ID" /></div>
+        <div style={{ width:180 }}><Inp value={q} onChange={setQ} placeholder="搜索达人ID / 别名" /></div>
         <Sel value={fStatus} onChange={setFStatus}><option value="">全部进度</option>{CRM_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</Sel>
         <Sel value={fGrade} onChange={setFGrade}><option value="">全部等级</option>{OFFICIAL_GRADES.map((g) => <option key={g.value} value={g.value}>{g.value}</option>)}</Sel>
         <Sel value={fProduct} onChange={setFProduct}><option value="">全部产品</option>{products.map((p) => <option key={p.id} value={p.internal_name}>{p.internal_name}</option>)}</Sel>
         <Sel value={fStaff} onChange={setFStaff}><option value="">全部跟进人</option>{staff.map((s) => <option key={s.id} value={String(s.id)}>{s.name}</option>)}</Sel>
         <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
           {!readonly && effectiveSelected.size > 0 && <Btn small danger onClick={bulkDelete}>批量删除（{effectiveSelected.size}）</Btn>}
-          <Btn small onClick={exportXLSX}>导出 xlsx</Btn>
-          {!readonly && <Btn small accent onClick={() => setEditing("new")}>+ 新增达人</Btn>}
+          <Btn small onClick={() => exportCRM(rows, staffName)}>导出 xlsx</Btn>
+          {!readonly && <Btn small accent onClick={() => setEditing("new")}>+ 新增寄样</Btn>}
           {!readonly && <Btn small onClick={() => setShowImport(true)}>📥 批量导入</Btn>}
         </div>
       </div>
@@ -140,7 +129,7 @@ export default function CRMModule({ ctx }) {
                   <Fragment key={i.id}>
                     <tr onClick={() => setExpandedId(open ? null : i.id)} style={{ cursor:"pointer", background:open?"rgba(255,255,255,0.45)":"transparent" }}>
                       {!readonly && <td style={td} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={effectiveSelected.has(i.id)} onChange={() => toggleOne(i.id)} style={{ cursor:"pointer" }} /></td>}
-                      <td style={{ ...td, fontWeight:700 }}>{i.influencerId}</td>
+                      <td style={{ ...td, fontWeight:700 }}>{i.influencerId}{i.aliases.length > 0 && <span title={i.aliases.join("、")} style={{ fontSize:11, color:T.hint, fontWeight:400, marginLeft:5 }}>+{i.aliases.length} 别名</span>}</td>
                       <td style={td}>{i.product || "—"}{i.productColor ? <span style={{ fontSize:11, color:T.hint, marginLeft:4 }}>({i.productColor})</span> : null}</td>
                       <td style={td}>{i.shipDate || "—"}</td>
                       <td style={td}>{staffName(i.staffId)}</td>
@@ -180,20 +169,11 @@ export default function CRMModule({ ctx }) {
       )}
 
       {showImport && (
-        <CRMImportModal
-          storeId={storeId}
-          onClose={() => setShowImport(false)}
-          onDone={crm.reload}
-        />
+        <CRMImportModal storeId={storeId} core={core} products={products} onClose={() => setShowImport(false)} onDone={() => crm.reload()} />
       )}
       {editing && (
-        <InfluencerEntryPanel
-          initial={editing === "new" ? null : editing}
-          products={products} staff={staff}
-          influencers={influencers} shippingGoals={[]}
-          onSubmit={saveAndClose}
-          onClose={() => setEditing(null)}
-        />
+        <InfluencerEntryPanel initial={editing === "new" ? null : editing} products={products} staff={staff}
+          crm={crm} onSaved={onSaved} onClose={() => setEditing(null)} />
       )}
     </div>
   );

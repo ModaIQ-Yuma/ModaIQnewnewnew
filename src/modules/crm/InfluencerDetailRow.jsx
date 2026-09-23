@@ -53,8 +53,14 @@ export default function InfluencerDetailRow({ inf, onChange, readonly }) {
           商品名：{inf.productTitle}
         </div>
       )}
+      {(inf.aliases?.length > 0 || inf.creatorNote) && (
+        <div style={{ fontSize: 12, color: T.muted, marginBottom: 10, display: "flex", gap: 18, flexWrap: "wrap" }}>
+          {inf.aliases?.length > 0 && <span>别名：{inf.aliases.map((a) => "@" + a).join("、")}</span>}
+          {inf.creatorNote && <span>达人备注：{inf.creatorNote}</span>}
+        </div>
+      )}
       {/* 属性 */}
-      <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: ".06em", marginBottom: 8 }}>达人属性</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: T.accent, letterSpacing: ".06em", marginBottom: 8 }}>寄样时达人属性（{inf.shipDate}）</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px 18px", marginBottom: 16 }}>
         {CREATOR_FIELDS.map((field) => (
           <div key={field.key} style={cell}>

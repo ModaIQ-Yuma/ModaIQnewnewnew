@@ -8,7 +8,7 @@ const fmt = (n) => Number(n || 0).toLocaleString();
 const defaultFrom = () => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }); };
 const defaultTo = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
 
-export default function VideoTable({ videos, storeId, showMerge = false, onMerged }) {
+export default function VideoTable({ videos, storeId, core, products, showMerge = false, onMerged }) {
   const [dateFrom, setDateFrom] = useState(defaultFrom());
   const [dateTo,   setDateTo]   = useState(defaultTo());
   const [mergeVideo, setMergeVideo] = useState(null);
@@ -94,12 +94,8 @@ export default function VideoTable({ videos, storeId, showMerge = false, onMerge
       }
 
       {mergeVideo && (
-        <MergeModal
-          storeId={storeId}
-          video={mergeVideo}
-          onClose={() => setMergeVideo(null)}
-          onDone={() => { setMergeVideo(null); onMerged?.(); }}
-        />
+        <MergeModal storeId={storeId} video={mergeVideo} core={core} products={products}
+          onClose={() => setMergeVideo(null)} onDone={(res) => { setMergeVideo(null); onMerged?.(res); }} />
       )}
     </div>
   );
