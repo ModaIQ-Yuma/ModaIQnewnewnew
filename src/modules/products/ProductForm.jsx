@@ -52,7 +52,7 @@ export default function ProductForm({ initial, products, onSubmit, onCancel }) {
 function Field({ label, span, children }) {
   return (
     <div style={{ gridColumn: span ? "1 / -1" : "auto" }}>
-      <div style={{ fontSize: 11.5, color: T.hint, fontWeight: 600, marginBottom: 5 }}>{label}</div>
+      <div style={{ fontSize: 12, color: T.hint, fontWeight: 600, marginBottom: 5 }}>{label}</div>
       {children}
     </div>
   );

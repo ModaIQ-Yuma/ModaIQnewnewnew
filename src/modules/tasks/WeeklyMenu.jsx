@@ -153,7 +153,7 @@ export default function WeeklyMenu({ storeId, menus=[], products=[], isAdmin, on
         </div>
       </div>
 
-      <TodayInviteList todayWd={todayWd} todayProductIds={todayProductIds} pendingInvites={pendingInvites} />
+      <TodayInviteList todayWd={todayWd} todayProductIds={todayProductIds} pendingInvites={pendingInvites} products={products} />
     </div>
   );
 }

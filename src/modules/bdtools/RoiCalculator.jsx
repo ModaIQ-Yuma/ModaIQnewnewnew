@@ -58,7 +58,7 @@ export default function RoiCalculator({ products = [] }) {
       <Card style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 14, display: "flex", alignItems: "center" }}>
           {chip(T.warning, "板块二")}单件产品固定成本项
-          <span style={{ fontSize: 11.5, color: T.hint, fontWeight: 400, marginLeft: 8 }}>每卖出一件都要承担的货物本体成本</span>
+          <span style={{ fontSize: 12, color: T.hint, fontWeight: 400, marginLeft: 8 }}>每卖出一件都要承担的货物本体成本</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "start" }}>
           <div>
@@ -77,14 +77,14 @@ export default function RoiCalculator({ products = [] }) {
           </div>
           <div style={{ background: `${T.info}10`, border: `1.5px solid ${T.info}33`, borderRadius: 10, padding: "12px 14px", minWidth: 120 }}>
             <div style={{ fontSize: 11, color: T.info, fontWeight: 700, marginBottom: 4 }}>固定成本小计</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.info }}>{fixedCost > 0 ? `$${fixedCost.toFixed(2)}` : "—"}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: T.info }}>{fixedCost > 0 ? `$${fixedCost.toFixed(2)}` : "—"}</div>
             <div style={{ fontSize: 11, color: T.hint, marginTop: 2 }}>物料 + 头程 + 尾程</div>
           </div>
         </div>
 
         {/* 各方抽佣 */}
         <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 16, paddingTop: 14 }}>
-          <div style={{ fontSize: 12.5, color: T.muted, fontWeight: 700, marginBottom: 10 }}>各方抽佣比例（按售价计算）</div>
+          <div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 10 }}>各方抽佣比例（按售价计算）</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, alignItems: "start" }}>
             <div>
               <div style={lbl}>平台抽佣 (%)</div>
@@ -106,7 +106,7 @@ export default function RoiCalculator({ products = [] }) {
             </div>
           </div>
           {sp > 0 && rateSum > 0 && (
-            <div style={{ marginTop: 10, padding: "8px 12px", background: `${T.warning}10`, borderRadius: 8, fontSize: 12.5, color: T.muted }}>
+            <div style={{ marginTop: 10, padding: "8px 12px", background: `${T.warning}10`, borderRadius: 8, fontSize: 13, color: T.muted }}>
               抽佣合计：<b style={{ color: T.warning }}>${rateTotal.toFixed(2)}</b>（{(rateSum * 100).toFixed(1)}% × ${sp}）
             </div>
           )}
@@ -117,7 +117,7 @@ export default function RoiCalculator({ products = [] }) {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 14, display: "flex", alignItems: "center" }}>
           {chip(T.danger, "板块三")}坑位费（推广固定成本）
-          <span style={{ fontSize: 11.5, color: T.hint, fontWeight: 400, marginLeft: 8 }}>不随出单量变化的固定推广支出</span>
+          <span style={{ fontSize: 12, color: T.hint, fontWeight: 400, marginLeft: 8 }}>不随出单量变化的固定推广支出</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "start", maxWidth: 420 }}>
           <div>
@@ -126,7 +126,7 @@ export default function RoiCalculator({ products = [] }) {
           </div>
           <div style={{ background: `${T.danger}10`, border: `1.5px solid ${T.danger}33`, borderRadius: 10, padding: "12px 14px", minWidth: 150 }}>
             <div style={{ fontSize: 11, color: T.danger, fontWeight: 700, marginBottom: 4 }}>坑位费总成本</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.danger }}>{(pit + fixedCost) > 0 ? `$${(pit + fixedCost).toFixed(2)}` : "—"}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: T.danger }}>{(pit + fixedCost) > 0 ? `$${(pit + fixedCost).toFixed(2)}` : "—"}</div>
             <div style={{ fontSize: 11, color: T.hint, marginTop: 2 }}>坑位费 + 物料 + 头程 + 尾程</div>
           </div>
         </div>
@@ -165,5 +165,5 @@ export default function RoiCalculator({ products = [] }) {
   );
 }
 
-const lbl = { fontSize: 12.5, fontWeight: 600, color: T.muted, marginBottom: 5 };
+const lbl = { fontSize: 13, fontWeight: 600, color: T.muted, marginBottom: 5 };
 const hint = { fontSize: 11, color: T.hint, marginTop: 4 };

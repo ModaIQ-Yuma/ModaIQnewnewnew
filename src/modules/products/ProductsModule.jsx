@@ -39,7 +39,7 @@ export default function ProductsModule({ ctx }) {
             ...glassStyle(10), padding: "8px 14px", minWidth: 72, textAlign: "center", cursor: "pointer",
             border: `1.5px solid ${status === s ? PS_COLORS[s] : PS_COLORS[s] + "44"}`,
           }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: PS_COLORS[s] }}>{counts[s]}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.2, color: PS_COLORS[s] }}>{counts[s]}</div>
             <div style={{ fontSize: 11, color: T.muted }}>{s}</div>
           </div>
         ))}
@@ -55,12 +55,15 @@ export default function ProductsModule({ ctx }) {
         <Inp value={search} onChange={setSearch} placeholder="搜索简称 / 标题 / 商品ID…" />
       </div>
 
-      {form && <ProductForm initial={form === "new" ? null : form} products={products} onSubmit={submit} onCancel={() => setForm(null)} />}
+      {form === "new" && <ProductForm initial={null} products={products} onSubmit={submit} onCancel={() => setForm(null)} />}
 
-      {error && <div style={{ color: T.danger, fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
+      {error && <div style={{ color: T.danger, fontSize: 13, marginBottom: 10 }}>{error}</div>}
       {loading ? <div style={{ color: T.hint, fontSize: 13 }}>加载中…</div>
         : list.length === 0 ? <div style={{ color: T.hint, fontSize: 13, textAlign: "center", padding: 40 }}>暂无产品</div>
-        : list.map((p) => (
+        : list.map((p) => form?.id === p.id ? (
+          // 编辑：表单在该产品原位置展开，存完/取消后收回成卡片
+          <ProductForm key={p.id} initial={p} products={products} onSubmit={submit} onCancel={() => setForm(null)} />
+        ) : (
           <ProductCard key={p.id} p={p} readonly={readonly}
             expanded={expanded === p.id} onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
             onUpdate={(patch) => update(p.id, patch).catch((e) => alert(e.message))}

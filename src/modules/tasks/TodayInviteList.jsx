@@ -1,12 +1,13 @@
 // modules/tasks/TodayInviteList.jsx — 今日邀约名单
 import { T, FONT } from "../../constants/tokens.js";
+import { byProductOrder } from "../../lib/products/productOrder.js";
 
 const WEEK_LABEL = { 1:"周一", 2:"周二", 3:"周三", 4:"周四", 5:"周五", 6:"周六", 7:"周日" };
 
-export default function TodayInviteList({ todayWd, todayProductIds, pendingInvites }) {
-  // 按产品分组
+export default function TodayInviteList({ todayWd, todayProductIds, pendingInvites, products = [] }) {
+  // 按产品分组；分组顺序按产品状态（爆款 → 合格款 → 可卖款 → 撤退款 → 测款）
   const byProduct = {};
-  pendingInvites.forEach((inv) => {
+  [...pendingInvites].sort(byProductOrder(products)).forEach((inv) => {
     const name = inv.products?.internal_name || inv.product_id;
     if (!byProduct[name]) byProduct[name] = [];
     byProduct[name].push(inv);

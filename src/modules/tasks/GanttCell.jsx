@@ -115,7 +115,7 @@ function StrategyBandCell({ seg, si, columns, product, batchMode, batchSelected,
           transition: 'all .2s cubic-bezier(.2,.8,.2,1)', minHeight: 34, position: 'relative',
         }}
       >
-        <span style={{ fontSize: 12.5, fontWeight: 800, color: '#fff', letterSpacing: '0.02em', textShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '0.02em', textShadow: '0 1px 3px rgba(0,0,0,0.18)' }}>
           {seg.strategy}
         </span>
         {seg.span > 1 && (

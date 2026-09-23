@@ -62,7 +62,7 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
         background: "#fff", borderRadius: 18, padding: "26px 28px", width: "100%", maxWidth: 560,
         boxShadow: "0 20px 60px rgba(232,75,124,0.2)", border: `1.5px solid ${T.border}`,
       }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 20 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 20 }}>
           {initial ? "编辑达人" : "新增达人"}
         </div>
 
@@ -110,7 +110,7 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
                   const cumOrders = (m.videoRecords || []).reduce((sum, v) => sum + (Number(v.orders) || 0), 0);
                   return (
                     <div key={m.id} style={{
-                      fontSize: 11.5, color: T.muted, padding: "5px 0",
+                      fontSize: 12, color: T.muted, padding: "5px 0",
                       borderTop: `1px dashed ${T.border}`,
                     }}>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -134,7 +134,7 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
             <Field label="合作产品 *">
               <ProductSearch value={f.product} products={products} onChange={(v) => set("product", v)} inputStyle={inputStyle} />
               <button type="button" onClick={() => setShowShipScore(true)} style={{
-                marginTop: 6, fontSize: 11.5, color: T.accent, background: "none",
+                marginTop: 6, fontSize: 12, color: T.accent, background: "none",
                 border: `1px dashed ${T.accent}66`, borderRadius: 8, padding: "3px 9px",
                 cursor: "pointer", fontFamily: "inherit",
               }}>不确定是否可寄？</button>
@@ -158,7 +158,7 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
                     const on = f.staffId === String(s.id);
                     return (
                       <button key={s.id} type="button" onClick={() => set("staffId", String(s.id))} style={{
-                        fontSize: 12.5, padding: "5px 12px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit",
+                        fontSize: 13, padding: "5px 12px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit",
                         border: `1px solid ${on ? T.accent : T.glassStroke}`,
                         background: on ? `${T.accent}22` : "rgba(255,255,255,0.4)",
                         color: on ? T.accent : T.muted, fontWeight: on ? 700 : 500, transition: "all .15s",

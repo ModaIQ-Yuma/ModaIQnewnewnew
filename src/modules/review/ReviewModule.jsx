@@ -99,7 +99,7 @@ export default function ReviewModule({ ctx }) {
       {tab==="grade"     && <GradeReview    {...common} onSnapshotSaved={reloadReview} />}
       {tab==="product"   && <ProductReview  {...common} />}
       {tab==="dashboard" && <Dashboard      gradeSnapshots={gradeSnapshots} collabs={collabs} videos={videos} products={products} />}
-      {tab==="archive"   && <SnapshotArchive gradeSnapshots={gradeSnapshots} onDeleted={reloadReview} />}
+      {tab==="archive"   && <SnapshotArchive gradeSnapshots={gradeSnapshots} products={products} onDeleted={reloadReview} />}
       {tab==="staff"     && <StaffReview    {...common} invites={invites} staff={staff} />}
       {tab==="burst"     && <BurstWall      videos={videos} products={products} burstThreshold={burstThreshold} onThresholdChange={setBurstThreshold} />}
     </div>

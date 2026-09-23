@@ -46,6 +46,6 @@ export default function ChangeLogModal({ logs = [], onClose, onDelete }) {
 function StratBadge({ s }) {
   const c = STRATEGY_COLORS[s] || T.hint;
   return (
-    <span style={{ fontSize: 11.5, fontWeight: 700, background: `${c}1E`, color: c, border: `1px solid ${c}44`, borderRadius: 8, padding: '2px 8px' }}>{s || '—'}</span>
+    <span style={{ fontSize: 12, fontWeight: 700, background: `${c}1E`, color: c, border: `1px solid ${c}44`, borderRadius: 8, padding: '2px 8px' }}>{s || '—'}</span>
   );
 }

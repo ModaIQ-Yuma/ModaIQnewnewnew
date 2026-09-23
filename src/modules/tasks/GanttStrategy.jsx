@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { T, FONT, glassStyle } from '../../constants/tokens.js';
 import { GANTT_MONTHS_PER_VIEW, GANTT_COL_PRODUCT_WIDTH } from '../../constants/config.js';
 import { normalizeStatus } from '../../constants/crm.js';
+import { PRODUCT_STATUSES } from '../../constants/products.js';
 import { currentYearMonth, currentHalfKey, halfMonthColumns, shiftMonth, currentCycleStart, halfKeyToCycleStart } from './utils.js';
 import StrategyChangeConfirm from './StrategyChangeConfirm.jsx';
 import GanttBatchBar from './GanttBatchBar.jsx';
@@ -12,7 +13,7 @@ import { GanttRowCells } from './GanttCell.jsx';
 import { GanttHeaderRow, GanttCategoryTitle, GanttLegend } from './GanttParts.jsx';
 import { upsertGanttStrategy, deleteGanttStrategy, upsertShippingGoal } from '../../lib/supabase/taskData.js';
 
-const CAT_ORDER = ['爆款','合格款','可卖款','撤退款','测款'];
+const CAT_ORDER = PRODUCT_STATUSES;   // 分组顺序与全站产品排序口径同源
 const toolbarBtn = (active) => ({ ...glassStyle(12), border:`1px solid ${active ? T.accent : T.glassStroke}`, padding:'8px 16px', fontSize:FONT.lg2, fontWeight:600, color:active ? T.accent : T.muted, cursor:'pointer', fontFamily:'inherit', background:active ? 'rgba(61,127,239,0.10)' : undefined });
 const arrowBtn = { border:'none', background:'transparent', cursor:'pointer', fontSize:20, color:T.muted, padding:'6px 14px', fontFamily:'inherit', lineHeight:1 };
 

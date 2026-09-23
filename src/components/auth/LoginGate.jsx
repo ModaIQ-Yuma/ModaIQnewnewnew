@@ -42,11 +42,11 @@ export default function LoginGate() {
         <input style={input} placeholder="邮箱" value={email} onChange={(e) => setEmail(e.target.value)} />
         <div style={{ height: 12 }} />
         <input style={input} type="password" placeholder="密码" value={pwd} onChange={(e) => setPwd(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
-        {msg && <div style={{ fontSize: 12.5, color: msg.includes("成功") ? T.success : T.danger, marginTop: 12 }}>{msg}</div>}
+        {msg && <div style={{ fontSize: 13, color: msg.includes("成功") ? T.success : T.danger, marginTop: 12 }}>{msg}</div>}
         <button onClick={submit} disabled={busy} style={{ width: "100%", marginTop: 20, padding: "12px 0", borderRadius: 12, border: "none", background: T.grad, color: "#fff", fontSize: 15, fontWeight: 700, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}>
           {busy ? "请稍候…" : mode === "login" ? "登录" : "注册"}
         </button>
-        <div style={{ textAlign: "center", marginTop: 16, fontSize: 12.5, color: T.hint }}>
+        <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: T.hint }}>
           {mode === "login" ? "没有账号？" : "已有账号？"}
           <span onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMsg(""); }} style={{ color: T.accent, cursor: "pointer", fontWeight: 600, marginLeft: 6 }}>
             {mode === "login" ? "注册" : "登录"}

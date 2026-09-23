@@ -1,7 +1,7 @@
 // modules/staff/StaffModule.jsx
 import { useState, useEffect } from "react";
 import { T, FONT, glassStyle } from "../../constants/tokens.js";
-import { sb } from "../../lib/supabase/client.js";
+import { fetchMembers, fetchInviteCodes, createInviteCode, deleteInviteCode, updateMemberRole, removeMember } from "../../lib/supabase/members.js";
 import StaffRoster from "./StaffRoster.jsx";
 import SubNav from "../../components/layout/SubNav.jsx";
 
@@ -26,50 +26,45 @@ export default function StaffModule({ ctx }) {
   async function load() {
     if (!storeId) return;
     setLoading(true);
-    const [{ data: roles }, { data: inv }] = await Promise.all([
-      sb.from("user_store_roles").select("user_id, role").eq("store_id", storeId),
-      sb.from("invite_codes").select("id, code, used_by, used_at, expires_at, created_at").eq("store_id", storeId).order("created_at", { ascending: false }),
-    ]);
-    setMembers(roles || []);
-    setCodes(inv || []);
-    setLoading(false);
+    try {
+      const [roles, inv] = await Promise.all([fetchMembers(storeId), fetchInviteCodes(storeId)]);
+      setMembers(roles); setCodes(inv);
+    } catch (e) { toast("加载失败：" + e.message, "err"); }
+    finally { setLoading(false); }
   }
 
   function toast(text, type = "ok") { setMsg(text); setMsgType(type); setTimeout(() => setMsg(""), 4000); }
 
-  async function createCode() {
-    if (!newCode.trim()) { toast("请输入邀请码内容", "err"); return; }
-    const row = { code: newCode.trim(), store_id: storeId, role: newRole };
-    if (isTrial) {
-      const exp = new Date(); exp.setDate(exp.getDate() + TRIAL_DAYS);
-      row.expires_at = exp.toISOString();
-    }
-    const { error } = await sb.from("invite_codes").insert(row);
-    if (error) { toast("创建失败：" + error.message, "err"); return; }
-    toast("邀请码创建成功！把它发给新成员，她用这个码登录后自动加入本店铺。");
-    setNewCode(""); load();
+  /** 统一执行写操作：成功提示 + 刷新，失败提示原因 */
+  async function run(action, okText, errPrefix) {
+    try { await action(); toast(okText); load(); }
+    catch (e) { toast(`${errPrefix}：${e.message}`, "err"); }
   }
 
-  async function deleteCode(id) {
+  async function createCode() {
+    if (!newCode.trim()) { toast("请输入邀请码内容", "err"); return; }
+    let expiresAt = null;
+    if (isTrial) { const exp = new Date(); exp.setDate(exp.getDate() + TRIAL_DAYS); expiresAt = exp.toISOString(); }
+    await run(() => createInviteCode(storeId, { code: newCode.trim(), role: newRole, expiresAt }),
+      "邀请码创建成功！把它发给新成员，她用这个码登录后自动加入本店铺。", "创建失败");
+    setNewCode("");
+  }
+
+  async function deleteCode(code) {
     if (!window.confirm("删除这个邀请码？已使用该码的成员不受影响。")) return;
-    await sb.from("invite_codes").delete().eq("id", id);
-    load();
+    await run(() => deleteInviteCode(storeId, code), "邀请码已删除", "删除失败");
   }
 
   async function changeRole(memberId, role) {
     if (memberId === userId) { toast("不能修改自己的角色", "err"); return; }
     if (!window.confirm(`将该成员角色改为「${role === "admin" ? "管理员" : "成员"}」？`)) return;
-    const { error } = await sb.from("user_store_roles").update({ role }).eq("user_id", memberId).eq("store_id", storeId);
-    if (error) { toast("修改失败：" + error.message, "err"); return; }
-    toast("角色已更新"); load();
+    await run(() => updateMemberRole(storeId, memberId, role), "角色已更新", "修改失败");
   }
 
-  async function removeMember(memberId) {
+  async function kickMember(memberId) {
     if (memberId === userId) { toast("不能移除自己", "err"); return; }
     if (!window.confirm("将该成员从本店铺移除？")) return;
-    const { error } = await sb.from("user_store_roles").delete().eq("user_id", memberId).eq("store_id", storeId);
-    if (error) { toast("移除失败：" + error.message, "err"); return; }
-    toast("已移除"); load();
+    await run(() => removeMember(storeId, memberId), "已移除", "移除失败");
   }
 
   const TABS = [
@@ -117,7 +112,7 @@ export default function StaffModule({ ctx }) {
                           <button onClick={() => changeRole(m.user_id, m.role === "admin" ? "staff" : "admin")} style={smallBtn(T.accent)}>
                             改为{m.role === "admin" ? "成员" : "管理员"}
                           </button>
-                          <button onClick={() => removeMember(m.user_id)} style={smallBtn(T.danger)}>移除</button>
+                          <button onClick={() => kickMember(m.user_id)} style={smallBtn(T.danger)}>移除</button>
                         </div>
                       )}
                     </div>
@@ -164,7 +159,7 @@ export default function StaffModule({ ctx }) {
                     const expiryColor    = isExpired ? T.danger : daysLeft ? T.warning : T.success;
                     const usedLabel      = c.used_at ? `已被使用 · ${new Date(c.used_at).toLocaleDateString("zh-CN")}` : "尚未使用";
                     return (
-                      <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:isExpired ? `${T.danger}05` : "rgba(255,255,255,0.5)", opacity:isExpired ? 0.7 : 1 }}>
+                      <div key={c.code} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:isExpired ? `${T.danger}05` : "rgba(255,255,255,0.5)", opacity:isExpired ? 0.7 : 1 }}>
                         <div style={{ flex:1 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
                             <span style={{ fontSize:FONT.xl2, fontWeight:800, color:T.text, letterSpacing:"0.05em" }}>{c.code}</span>
@@ -172,7 +167,7 @@ export default function StaffModule({ ctx }) {
                           </div>
                           <div style={{ fontSize:FONT.sm2, color:T.hint }}>{usedLabel}</div>
                         </div>
-                        <button onClick={() => deleteCode(c.id)} style={smallBtn(T.danger)}>删除</button>
+                        <button onClick={() => deleteCode(c.code)} style={smallBtn(T.danger)}>删除</button>
                       </div>
                     );
                   })}

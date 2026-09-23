@@ -25,10 +25,10 @@ export default function ShipScoreModal({ onClose }) {
         boxShadow: "0 20px 60px rgba(20,50,100,0.25)", border: `1.5px solid ${T.border}`,
       }}>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: T.text, flex: 1 }}>寄样评分助手</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: T.text, flex: 1 }}>寄样评分助手</span>
           <button onClick={onClose} style={{ fontSize: 20, background: "none", border: "none", cursor: "pointer", color: T.hint, lineHeight: 1 }}>×</button>
         </div>
-        <div style={{ fontSize: 12.5, color: T.hint, marginBottom: 18, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 13, color: T.hint, marginBottom: 18, lineHeight: 1.6 }}>
           仅一次性辅助判断，关闭即不留痕迹——不会保存、不进 CRM、不影响任何复盘数据。
         </div>
 

@@ -4,6 +4,7 @@ import { T, glassStyle, FONT } from '../../constants/tokens.js';
 import { PRIORITIES, PRIORITY_COLORS, STRATEGY_COLORS, STRATEGY_SUGGESTED_GOAL } from './constants.js';
 import { currentCycleStart, cycleEnd, prevCycleStart, nextCycleStart, timePct, daysRemaining, formatDate, uid } from './utils.js';
 import { upsertShippingGoal, deleteShippingGoal } from '../../lib/supabase/taskData.js';
+import { byProductOrder } from '../../lib/products/productOrder.js';
 
 const PRIORITY_EMOJI = { 测款最优:'🟣', 一级:'🔴', 二级:'🟠', 三级:'🔵', 不动:'⛔' };
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRadius:12, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.4)', color:T.muted, cursor:'pointer', fontFamily:'inherit' };
@@ -24,8 +25,9 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
     const map = {};
     PRIORITIES.forEach(p => { map[p] = []; });
     goals.forEach(g => { (map[g.priority] || (map['三级'] = [])) && map[g.priority]?.push(g); });
-    return PRIORITIES.map(p => ({ priority: p, items: map[p] || [] })).filter(g => g.items.length > 0);
-  }, [goals]);
+    const byProduct = byProductOrder(products);   // 组内按产品状态排
+    return PRIORITIES.map(p => ({ priority: p, items: (map[p] || []).sort(byProduct) })).filter(g => g.items.length > 0);
+  }, [goals, products]);
 
   function openNew() { setForm({ product_id:'', target_qty:50, priority:'二级', strategy:'精选' }); setEditing('new'); }
   function openEdit(g) { setForm({ ...g }); setEditing(g.id); }
@@ -85,7 +87,7 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
           ].map(({ label, value, sub, color }) => (
             <div key={label} style={{ background:'rgba(255,255,255,0.55)', border:`1px solid ${T.border}`, borderRadius:12, padding:'12px 16px' }}>
               <div style={{ fontSize:FONT.xs, fontWeight:600, color:T.muted, marginBottom:4 }}>{label}</div>
-              <div style={{ fontSize:20, fontWeight:800, color:color||T.text }}>{value}</div>
+              <div style={{ fontSize:22, fontWeight:800, color:color||T.text }}>{value}</div>
               <div style={{ fontSize:FONT.xs, color:T.hint, marginTop:3 }}>{sub}</div>
             </div>
           ))}

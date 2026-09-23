@@ -96,7 +96,7 @@ export default function CRMModule({ ctx }) {
         每行 = 一位达人 × 一个产品的寄样合作。合作进度自动计算：有视频 → 已发布，累计出单 ≥ {REPOST_THRESHOLD_ORDERS} 单 → 待复投；「复投完成 / 不合作」需手动选择，选了之后不再自动变化。点击行可展开视频明细。
       </SectionIntro>
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" }}>
-        <span style={{ fontSize:12.5, fontWeight:700, color:T.muted, whiteSpace:"nowrap" }}>寄样时间</span>
+        <span style={{ fontSize: 13, fontWeight:700, color:T.muted, whiteSpace:"nowrap" }}>寄样时间</span>
         <input type="date" value={fDateFrom} onChange={(e) => setFDateFrom(e.target.value)} style={{ background:"rgba(255,255,255,0.45)", border:`1.5px solid ${T.border}`, borderRadius:10, fontSize:13, padding:"7px 11px", fontFamily:"inherit", outline:"none" }} />
         <span style={{ color:T.hint }}>—</span>
         <input type="date" value={fDateTo} onChange={(e) => setFDateTo(e.target.value)} style={{ background:"rgba(255,255,255,0.45)", border:`1.5px solid ${T.border}`, borderRadius:10, fontSize:13, padding:"7px 11px", fontFamily:"inherit", outline:"none" }} />
@@ -118,7 +118,7 @@ export default function CRMModule({ ctx }) {
 
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
         <div style={{ fontSize:12, color:T.hint }}>共 {rows.length} 条{rows.length > 0 && ` · 第 ${page}/${totalPages} 页`}</div>
-        {loading && <span style={{ fontSize:11.5, color:T.accent, background:`${T.accent}12`, border:`1px solid ${T.accent}35`, borderRadius:20, padding:"3px 11px", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
+        {loading && <span style={{ fontSize: 12, color:T.accent, background:`${T.accent}12`, border:`1px solid ${T.accent}35`, borderRadius:20, padding:"3px 11px", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
           <span style={{ width:6, height:6, borderRadius:"50%", background:T.accent, display:"inline-block", opacity:0.85 }} />数据同步中…
         </span>}
       </div>

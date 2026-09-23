@@ -208,7 +208,6 @@ CREATE TABLE grade_snapshots (
   store_id       uuid NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
   product_id     uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   month          date NOT NULL,
-  grade          text NOT NULL,
   status_at_time text,
   ship_count     int NOT NULL DEFAULT 0,
   video_count    int NOT NULL DEFAULT 0,
@@ -217,6 +216,9 @@ CREATE TABLE grade_snapshots (
   gmv            numeric(12,2) NOT NULL DEFAULT 0,
   vv             bigint NOT NULL DEFAULT 0,
   clicks         int NOT NULL DEFAULT 0,
+  cooperate_count  int NOT NULL DEFAULT 0,   -- 合作达人数（= 当月账期寄样数）
+  fulfill_count    int NOT NULL DEFAULT 0,   -- 履约达人数（有视频的寄样）
+  video_with_sales int NOT NULL DEFAULT 0,   -- 出单视频数
   note           text,
   created_by     uuid,
   created_at     timestamptz NOT NULL DEFAULT now(),

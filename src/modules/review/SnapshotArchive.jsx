@@ -2,11 +2,17 @@
 import { glassStyle, T } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
 import { deleteProductSnapshot } from "../../lib/supabase/reviewWrite.js";
+import { byProductOrder } from "../../lib/products/productOrder.js";
 
-export default function SnapshotArchive({ gradeSnapshots, onDeleted }) {
+export default function SnapshotArchive({ gradeSnapshots, products, onDeleted }) {
   if (!gradeSnapshots.length) {
     return <div style={rs.empty}>暂无快照记录。在「等级复盘」保存快照后此处显示。</div>;
   }
+
+  // 月份从新到旧；同月内按产品状态（爆款 → 合格款 → 可卖款 → 撤退款 → 测款）
+  const byProduct = byProductOrder(products);
+  const rows = [...gradeSnapshots].sort((a, b) =>
+    String(b.month || "").localeCompare(String(a.month || "")) || byProduct(a, b));
 
   async function handleDelete(id) {
     if (!window.confirm("确认删除此快照？")) return;
@@ -28,7 +34,7 @@ export default function SnapshotArchive({ gradeSnapshots, onDeleted }) {
           <th style={rs.th}>操作</th>
         </tr></thead>
         <tbody>
-          {gradeSnapshots.map((s) => (
+          {rows.map((s) => (
             <tr key={s.id}>
               <td style={{ ...rs.td, fontWeight: 700 }}>{s.month?.slice(0, 7)}</td>
               <td style={rs.td}>{s.products?.internal_name || "-"}</td>

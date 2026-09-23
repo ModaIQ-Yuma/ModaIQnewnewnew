@@ -36,7 +36,7 @@ export default function StrategyChangeConfirm({
 
         {/* 优先级 */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: T.muted, marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.muted, marginBottom: 8 }}>
             产品优先级{currentPriority ? `（当前：${currentPriority}）` : '（未设置）'}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -46,7 +46,7 @@ export default function StrategyChangeConfirm({
               return (
                 <button key={p} onClick={() => setPriority(active ? '' : p)} style={{
                   padding: '6px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
-                  fontSize: 12.5, fontWeight: active ? 800 : 600,
+                  fontSize: 13, fontWeight: active ? 800 : 600,
                   border: `1.5px solid ${active ? c : c + '55'}`,
                   background: active ? `${c}22` : 'transparent',
                   color: active ? c : T.hint,
@@ -56,7 +56,7 @@ export default function StrategyChangeConfirm({
             })}
           </div>
           {priority && (
-            <div style={{ marginTop: 6, fontSize: 11.5, color: T.hint }}>
+            <div style={{ marginTop: 6, fontSize: 12, color: T.hint }}>
               ✓ 将同步更新本周期目标的优先级为「{priority}」
             </div>
           )}
@@ -79,7 +79,7 @@ export default function StrategyChangeConfirm({
 
         {/* 变更原因 */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: T.muted, marginBottom: 6 }}>变更原因（可选）</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.muted, marginBottom: 6 }}>变更原因（可选）</div>
           <textarea value={reason} onChange={e => setReason(e.target.value)}
             placeholder="如：2A24 起量明显，提升策略" rows={2}
             style={{ width: '100%', borderRadius: 10, border: `1.5px solid ${T.border}`, padding: '9px 12px', fontSize: 13, color: T.text, fontFamily: 'inherit', background: 'rgba(255,255,255,0.5)', resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}

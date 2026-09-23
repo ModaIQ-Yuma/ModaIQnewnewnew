@@ -16,7 +16,7 @@ export function StrategySelector({ product, label, current, onSelect, onCancel }
           fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px', marginBottom: 2,
           background: T.grad, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
         }}>设置策略</div>
-        <div style={{ fontSize: 12.5, color: T.hint, marginBottom: 20 }}>
+        <div style={{ fontSize: 13, color: T.hint, marginBottom: 20 }}>
           <strong style={{ color: T.muted }}>{product.internalName}</strong> · {label}
         </div>
 
@@ -92,7 +92,7 @@ export function DebugPanel({ ganttStrategies, changeLogs, columns, onDeleteEntry
               return (
                 <div key={g.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px',
-                  borderBottom: `1px solid ${T.border}`, fontSize: 12.5,
+                  borderBottom: `1px solid ${T.border}`, fontSize: 13,
                   background: inView ? 'transparent' : 'rgba(232,146,59,0.08)',
                 }}>
                   <span style={{ fontWeight: 700, color: T.text, minWidth: 60 }}>{g.productInternalName}</span>

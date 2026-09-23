@@ -41,7 +41,7 @@ export function SectionBar({ icon, title, sub }) {
     }}>
       <span style={{ fontSize: 15 }}>{icon}</span>
       <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{title}</span>
-      {sub && <span style={{ fontSize: 11.5, color: T.hint }}>{sub}</span>}
+      {sub && <span style={{ fontSize: 12, color: T.hint }}>{sub}</span>}
     </div>
   );
 }
@@ -86,7 +86,7 @@ export function ProductSearch({ value, products, onChange, inputStyle }) {
             const name = p.internalName || p.internal_name;
             return (
               <div key={p.id || name} onMouseDown={() => select(p)} style={{
-                padding: "9px 13px", fontSize: 13.5, cursor: "pointer", color: T.text,
+                padding: "9px 13px", fontSize: 14, cursor: "pointer", color: T.text,
                 borderBottom: `1px solid ${T.border}`,
               }}
                 onMouseEnter={(e) => e.currentTarget.style.background = `${T.accent}11`}

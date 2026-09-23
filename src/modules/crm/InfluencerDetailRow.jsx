@@ -38,7 +38,7 @@ export default function InfluencerDetailRow({ inf, onChange, readonly }) {
     commitVideos(videos.filter((v) => v.videoId !== videoId));
   }
 
-  const cell = { fontSize: 12.5, color: T.muted, padding: "3px 0" };
+  const cell = { fontSize: 13, color: T.muted, padding: "3px 0" };
   const dInput = {
     background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`, borderRadius: 8,
     fontSize: 13, padding: "6px 10px", fontFamily: "inherit", outline: "none",
@@ -79,7 +79,7 @@ export default function InfluencerDetailRow({ inf, onChange, readonly }) {
       )}
 
       {videos.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: T.hint }}>暂无视频记录（视频回收导入或手动添加）</div>
+        <div style={{ fontSize: 13, color: T.hint }}>暂无视频记录（视频回收导入或手动添加）</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {videos.map((v) => (

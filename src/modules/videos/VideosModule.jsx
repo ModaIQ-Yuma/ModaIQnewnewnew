@@ -131,7 +131,7 @@ function ImportModal({ modal, onClose }) {
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
       <div style={{ ...glassStyle(18, true), padding: "32px 36px", minWidth: 340, maxWidth: 440 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 6 }}>导入完成 ✅</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 6 }}>导入完成 ✅</div>
         <div style={{ fontSize: 13, color: T.muted, marginBottom: 24 }}>{modal.fileName}</div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -158,7 +158,7 @@ function Row({ label, value, color }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <span style={{ fontSize: 14, color: T.muted }}>{label}</span>
-      <span style={{ fontSize: 20, fontWeight: 700, color }}>{value}</span>
+      <span style={{ fontSize: 22, fontWeight: 700, color }}>{value}</span>
     </div>
   );
 }

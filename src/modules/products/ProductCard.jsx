@@ -17,7 +17,7 @@ export default function ProductCard({ p, expanded, onToggle, onUpdate, onEdit, o
 
       {expanded && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.glassStroke}` }}>
-          {p.key_points && <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 12 }}>卖点：{p.key_points}</div>}
+          {p.key_points && <div style={{ fontSize: 13, color: T.muted, marginBottom: 12 }}>卖点：{p.key_points}</div>}
           {!readonly && (
             <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ display: "flex", gap: 5 }}>
