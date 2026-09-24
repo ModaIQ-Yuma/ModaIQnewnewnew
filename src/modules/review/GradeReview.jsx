@@ -12,7 +12,7 @@ import { confirmIncomplete, describeSave } from "./snapshotUi.js";
 const defFrom = () => { const d=new Date(); d.setMonth(d.getMonth()-5); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
 const thisMonth = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
 
-export default function GradeReview({ collabs, videos, products, burstThreshold, onSnapshotSaved, saver }) {
+export default function GradeReview({ collabs, videos, products, burstThreshold, onSnapshotSaved, saver, canSnapshot }) {
   const [view,      setView]      = useState("single");
   const [ym,        setYm]        = useState(thisMonth);
   const [fromYm,    setFromYm]    = useState(defFrom);
@@ -60,7 +60,7 @@ export default function GradeReview({ collabs, videos, products, burstThreshold,
             <span style={rs.label}>统计月份</span>
             <input type="month" style={rs.monthInp} value={ym} onChange={e=>setYm(e.target.value)} />
             <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
-            <button style={rs.btn} onClick={handleSave} disabled={saving}>{saving?"保存中…":"📸 一键保存快照"}</button>
+            {canSnapshot && <button style={rs.btn} onClick={handleSave} disabled={saving}>{saving?"保存中…":"📸 一键保存快照"}</button>}
             {saveMsg && <span style={{ fontSize:FONT.sm2, color:saveMsg.startsWith("✅")?T.success:T.danger }}>{saveMsg}</span>}
             <ScopeHint />
           </div>

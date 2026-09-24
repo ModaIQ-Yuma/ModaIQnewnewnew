@@ -1,8 +1,10 @@
 // ─── 店铺上下文：用户可访问的店铺、当前激活店铺、角色 ────────────────────────
-// 输出给 App 与所有模块：{ stores, activeStore, role, isAdmin, switchStore, reload, checked }
+// 输出给 App 与所有模块：{ stores, activeStore, role, isSuperAdmin, can, switchStore, reload, checked }
+// 权限一律用 can("动作")，动作定义在 constants/permissions.js
 import { useCallback, useEffect, useState } from "react";
 import { fetchUserStores } from "../lib/supabase/auth.js";
 import { LS } from "../constants/config.js";
+import { can as canDo } from "../constants/permissions.js";
 
 export function useStoreContext(userId) {
   const [stores, setStores]   = useState([]);
@@ -34,9 +36,12 @@ export function useStoreContext(userId) {
   const activeStore = stores.find((s) => s.store_id === activeId) || null;
   const role = activeStore?.role || null;
 
+  const isSuperAdmin = !!activeStore?.superAdmin;
+  const can = useCallback((action) => canDo(role, isSuperAdmin, action), [role, isSuperAdmin]);
+
   return {
     stores, activeStore, activeStoreId: activeId, role,
-    isAdmin: role === "admin", isSuperAdmin: !!activeStore?.superAdmin,
+    isSuperAdmin, can,
     switchStore, reload, checked,
   };
 }

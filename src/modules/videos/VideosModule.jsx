@@ -23,6 +23,7 @@ const LINKED = ["videos", "collabs", "creators", "aliases"];
 export default function VideosModule({ ctx }) {
   const { storeId, userId, core, products, dataLoading, dataError } = ctx;
   const { batches, reload: reloadBatches } = useVideoBatches(storeId);
+  const canImport = ctx.can("video.import"), canRevert = ctx.can("video.revert");
   const reload = () => { core.refresh(LINKED); reloadBatches(); };
   // 视频行附上产品简称（表格按 v.products.internal_name 显示）
   const videos = useMemo(() => {
@@ -88,7 +89,7 @@ export default function VideosModule({ ctx }) {
         <>
           <div style={vs.toolbar}>
             <input ref={fileRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleFile} />
-            <div>
+            {canImport && <div>
               <button style={vs.uploadBtn} disabled={importing} onClick={() => fileRef.current?.click()}>
                 {importing ? "导入中…" : "📥 上传 xlsx"}
               </button>
@@ -96,7 +97,7 @@ export default function VideosModule({ ctx }) {
                 数据获取路径：联盟重心 → 数据分析 → 所有视频<br />
                 文件名必须写数据区间，如「20260906到20260912所有视频」；每月 5 号那周要在 5 号截断、6 号重新开始。系统会拦下跨 5 号或与已导入重叠的文件
               </Hint>
-            </div>
+            </div>}
             {errMsg && <span style={{ fontSize: 13, color: errMsg.startsWith("✅") ? T.success : T.danger, fontWeight: 600 }}>{errMsg}</span>}
             <span style={vs.summary}>共 <span style={vs.num}>{crmVideos.length}</span> 条</span>
           </div>
@@ -116,7 +117,7 @@ export default function VideosModule({ ctx }) {
                   <span style={{ color: T.muted, flex: 1 }}>{b.file_name}</span>
                   <span style={{ color: T.hint }}>{b.created_at?.slice(0, 10)}</span>
                   <span style={{ color: T.muted }}>{b.row_count} 条</span>
-                  <button style={vs.btnDanger} disabled={!!reverting} onClick={() => handleRevert(b.id, b.file_name)}>{reverting === b.id ? "撤销中…" : "撤销"}</button>
+                  {canRevert && <button style={vs.btnDanger} disabled={!!reverting} onClick={() => handleRevert(b.id, b.file_name)}>{reverting === b.id ? "撤销中…" : "撤销"}</button>}
                 </div>
               ))}
               {batchOpen && batches.length > 10 && (
@@ -138,7 +139,7 @@ export default function VideosModule({ ctx }) {
             {mergeMsg && <span style={{ fontSize: 13, color: T.success, fontWeight: 600 }}>{mergeMsg}</span>}
           </div>
           <div style={glassStyle(14)}>
-            <VideoTable videos={nonCrmVideos} storeId={storeId} core={core} products={products} showMerge onMerged={(res) => { reload(); setMergeMsg(`✅ 已挂上 ${res.attached} 条视频${res.unmatched ? `，${res.unmatched} 条商品对不上仍为非CRM` : ""}`); }} />
+            <VideoTable videos={nonCrmVideos} storeId={storeId} core={core} products={products} showMerge={ctx.can("crm.edit")} onMerged={(res) => { reload(); setMergeMsg(`✅ 已挂上 ${res.attached} 条视频${res.unmatched ? `，${res.unmatched} 条商品对不上仍为非CRM` : ""}`); }} />
           </div>
         </>
       )}

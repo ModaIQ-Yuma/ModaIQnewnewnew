@@ -16,7 +16,7 @@ import { confirmIncomplete, describeSave } from "./snapshotUi.js";
 const thisMonth = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }).slice(0, 7);
 const spanLabel = (r) => (r.from || r.to ? `${r.from || "最早"} ~ ${r.to || "最新"}` : "全部");
 
-export default function ProductReview({ storeId, collabs, videos, products, burstThreshold, saver }) {
+export default function ProductReview({ storeId, collabs, videos, products, burstThreshold, saver, canSnapshot }) {
   const range = useReviewRange(thisMonth());
   const [productId, setProductId] = useState("");                  // "" = 全部产品
   const [manual, setManual] = useState({ total: "", organic: "" });
@@ -87,13 +87,13 @@ export default function ProductReview({ storeId, collabs, videos, products, burs
 
       <OrdersPanel fs={fs} manual={manual} setManual={setManual} window={fsWindow} videoOrders={m.videoOrders} />
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+      {canSnapshot && <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
         <button onClick={handleSave} disabled={saver.busy} style={{ ...rs.btn, opacity: saver.busy ? 0.6 : 1 }}>
           {saver.busy ? "保存中…" : `💾 保存 ${range.ym} 快照（${product ? product.internal_name : "全部产品"}）`}
         </button>
         <span style={{ fontSize: FONT.note, color: T.hint }}>快照一律按统一口径计算（寄样账期、视频截止次月 5 日），不受上面手动改的区间影响；手填的总出单/自然单会一并存入。</span>
         {saveMsg && <span style={{ fontSize: FONT.body, color: saveMsg.startsWith("❌") ? T.danger : T.success, fontWeight: 600 }}>{saveMsg}</span>}
-      </div>
+      </div>}
     </div>
   );
 }

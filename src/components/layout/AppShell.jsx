@@ -7,8 +7,8 @@ import WaterBackground from "./WaterBackground.jsx";
  * 应用外壳：顶栏（Logo / 店铺切换 / 用户）+ 导航 + 内容区。
  * 只负责布局与导航，不持有任何业务数据。
  */
-export default function AppShell({ store, stores, isAdmin, onSwitchStore, tab, onTab, userEmail, children }) {
-  const visibleTabs = TABS.filter((t) => !t.adminOnly || isAdmin);
+export default function AppShell({ store, stores, can, onSwitchStore, tab, onTab, userEmail, children }) {
+  const visibleTabs = TABS.filter((t) => !t.perm || can(t.perm));
   const pill = { fontSize: FONT.note, fontWeight: 600, color: T.text, fontFamily: "inherit", background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`, borderRadius: 20, padding: "5px 12px", whiteSpace: "nowrap" };
 
   return (

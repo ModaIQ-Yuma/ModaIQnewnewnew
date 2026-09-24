@@ -24,16 +24,16 @@ export async function removeMember(storeId, userId) {
 export async function fetchInviteCodes(storeId) {
   return unwrap(
     await sb.from("invite_codes")
-      .select("code, role, used_by, used_at, expires_at, created_at")
+      .select("code, role, staff_id, used_by, used_at, expires_at, created_at")
       .eq("store_id", storeId)
       .order("created_at", { ascending: false }),
     "invite_codes"
   ) || [];
 }
 
-/** 新建邀请码；expiresAt 可选（试用码） */
-export async function createInviteCode(storeId, { code, role, expiresAt = null }) {
-  const row = { code, store_id: storeId, role };
+/** 新建邀请码；expiresAt 可选（试用码）；staffId 可选：兑换时自动把账号绑定到这个助理 */
+export async function createInviteCode(storeId, { code, role, expiresAt = null, staffId = null }) {
+  const row = { code, store_id: storeId, role, staff_id: staffId };
   if (expiresAt) row.expires_at = expiresAt;
   unwrap(await sb.from("invite_codes").insert(row), "invite_codes");
 }

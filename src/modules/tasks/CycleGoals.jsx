@@ -11,7 +11,7 @@ import { byProductOrder } from '../../lib/products/productOrder.js';
 const PRIORITY_EMOJI = { 测款最优:'🟣', 一级:'🔴', 二级:'🟠', 三级:'🔵', 不动:'⛔' };
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRadius:12, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.4)', color:T.muted, cursor:'pointer', fontFamily:'inherit' };
 
-export default function CycleGoals({ storeId, products=[], shippingGoals=[], ganttStrategies=[], collabs=[], staff=[], isAdmin, onReload }) {
+export default function CycleGoals({ storeId, products=[], shippingGoals=[], ganttStrategies=[], collabs=[], staff=[], canEdit, onReload }) {
   const now = new Date();
   const [cycleStart, setCycleStart] = useState(() => currentCycleStart(now));
   const [editing, setEditing] = useState(null);       // null | 'new' | goal
@@ -64,7 +64,7 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
         </div>
         <button onClick={() => setCycleStart(nextCycleStart(cycleStart))} style={navBtn}>下周期 ›</button>
         <div style={{ flex:1 }} />
-        {isAdmin && <button onClick={() => setEditing('new')} style={{ ...navBtn, border:`1.5px solid ${T.accent}`, color:T.accent }}>+ 新增目标</button>}
+        {canEdit && <button onClick={() => setEditing('new')} style={{ ...navBtn, border:`1.5px solid ${T.accent}`, color:T.accent }}>+ 新增目标</button>}
       </div>
 
       {/* 时间进度条 */}
@@ -96,7 +96,7 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
       )}
 
       {goals.length === 0
-        ? <div style={{ ...glassStyle(16, true), padding:'48px 24px', textAlign:'center', color:T.hint }}>本周期暂无寄样目标。{isAdmin && '点击「+ 新增目标」创建。'}</div>
+        ? <div style={{ ...glassStyle(16, true), padding:'48px 24px', textAlign:'center', color:T.hint }}>本周期暂无寄样目标。{canEdit && '点击「+ 新增目标」创建。'}</div>
         : grouped.map(({ priority, items }) => (
           <div key={priority} style={{ marginBottom:28 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
@@ -107,7 +107,7 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:14 }}>
               {items.map(g => (
                 <GoalCard key={g.id} goal={g} product={products.find(p => p.id === g.product_id)} done={doneQty(g)} tp={tp}
-                  staff={staff} doneByStaff={(sid) => doneByStaff(g, sid)} isAdmin={isAdmin}
+                  staff={staff} doneByStaff={(sid) => doneByStaff(g, sid)} canEdit={canEdit}
                   onEdit={() => setEditing(g)} onDelete={() => del(g.id)} onAllocate={() => setAllocating(g)} />
               ))}
             </div>

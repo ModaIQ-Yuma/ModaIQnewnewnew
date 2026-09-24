@@ -34,7 +34,7 @@ function weekDates(monday) {
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:"7px 14px", borderRadius:12, border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.4)", color:T.muted, cursor:"pointer", fontFamily:"inherit" };
 const thCell = { padding:"10px 8px", textAlign:"center", fontSize:FONT.sm2, fontWeight:700, color:T.muted, background:"rgba(235,242,255,0.7)" };
 
-export default function WeeklyMenu({ storeId, menus=[], products=[], isAdmin, onReload }) {
+export default function WeeklyMenu({ storeId, menus=[], products=[], canEdit, onReload }) {
   const [weekStart,      setWeekStart]      = useState(thisWeekMonday);
   const [saving,         setSaving]         = useState(false);
   const [pendingInvites, setPendingInvites] = useState([]);
@@ -105,7 +105,7 @@ export default function WeeklyMenu({ storeId, menus=[], products=[], isAdmin, on
         <button onClick={() => setWeekStart((w) => shiftWeek(w, 1))} style={navBtn}>下周 ›</button>
         <span style={{ fontSize:FONT.sm2, fontWeight:700, background:`${statusColor}18`, color:statusColor, border:`1px solid ${statusColor}44`, borderRadius:10, padding:"4px 12px" }}>{statusLabel}</span>
         <div style={{ flex:1 }} />
-        {isAdmin && (
+        {canEdit && (
           <div style={{ display:"flex", gap:8 }}>
             <button onClick={togglePublish} disabled={saving || !menu} style={{ ...navBtn, border:`1.5px solid ${menu?.status === "published" ? T.warning : T.success}`, color:menu?.status === "published" ? T.warning : T.success }}>
               {menu?.status === "published" ? "↩️ 撤回" : "📢 发布"}
@@ -134,7 +134,7 @@ export default function WeeklyMenu({ storeId, menus=[], products=[], isAdmin, on
                 const pid = slotMap[wd]?.[si] || "";
                 return (
                   <div key={wd} style={{ padding:"6px 8px", borderLeft:`1px solid ${T.glassStroke}`, background:wd===todayWd ? `${T.accent}05` : undefined }}>
-                    {isAdmin ? (
+                    {canEdit ? (
                       <select value={pid} onChange={(e) => handleSlotChange(wd, si, e.target.value)} disabled={saving}
                         style={{ width:"100%", fontSize:FONT.sm2, padding:"5px 6px", borderRadius:8, border:`1.5px solid ${pid ? T.accent : T.border}`, background:pid ? `${T.accent}08` : "rgba(255,255,255,0.5)", color:pid ? T.accent : T.hint, fontFamily:"inherit", cursor:"pointer" }}>
                         <option value="">— 空 —</option>

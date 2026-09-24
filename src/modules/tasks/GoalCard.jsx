@@ -5,7 +5,7 @@ function Bar({ pct, color, h = 8 }) {
   return <div style={{ height:h, borderRadius:h, background:`${color}20`, overflow:'hidden' }}><div style={{ height:'100%', width:`${Math.min(100, pct * 100)}%`, background:color, borderRadius:h, transition:'width .4s' }} /></div>;
 }
 
-export default function GoalCard({ goal, product, done, tp, staff, doneByStaff, isAdmin, onEdit, onDelete, onAllocate }) {
+export default function GoalCard({ goal, product, done, tp, staff, doneByStaff, canEdit, onEdit, onDelete, onAllocate }) {
   const pct = goal.target_qty > 0 ? Math.min(1, done / goal.target_qty) : 0;
   const ahead = pct > tp + 0.1, behind = pct < tp - 0.1;
   const sc = ahead ? T.success : behind ? T.danger : T.accent;
@@ -18,7 +18,7 @@ export default function GoalCard({ goal, product, done, tp, staff, doneByStaff, 
           <div style={{ fontWeight:800, fontSize:FONT.h3, color:T.text }}>{product?.internal_name || goal.product_id}</div>
           <div style={{ fontSize:FONT.tiny, color:T.hint, marginTop:2 }}>{product?.product_title || ''}</div>
         </div>
-        {isAdmin && <div style={{ display:'flex', gap:8 }}>
+        {canEdit && <div style={{ display:'flex', gap:8 }}>
           <button onClick={onEdit} style={{ ...link, color:T.accent }}>编辑</button>
           <button onClick={onDelete} style={{ ...link, color:T.danger }}>删除</button>
         </div>}
@@ -34,7 +34,7 @@ export default function GoalCard({ goal, product, done, tp, staff, doneByStaff, 
         <div style={{ marginTop:10, borderTop:`1px solid ${T.border}`, paddingTop:10 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
             <span style={{ fontSize:FONT.note, fontWeight:700, color:T.muted }}>助理任务分配</span>
-            {isAdmin && <button onClick={onAllocate} style={{ ...link, color:T.accent, border:`1px solid ${T.accent}`, borderRadius:8, padding:'3px 10px', fontWeight:700 }}>✏️ 分配</button>}
+            {canEdit && <button onClick={onAllocate} style={{ ...link, color:T.accent, border:`1px solid ${T.accent}`, borderRadius:8, padding:'3px 10px', fontWeight:700 }}>✏️ 分配</button>}
           </div>
           {staff.map((s) => {
             const assigned = allocOf(s.id), d = doneByStaff(s.id);

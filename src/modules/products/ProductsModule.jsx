@@ -14,7 +14,8 @@ export default function ProductsModule({ ctx }) {
   const [search, setSearch]     = useState("");
   const [status, setStatus]     = useState("");
   const [isNew, setIsNew]       = useState(null);
-  const readonly = ctx.role === "viewer";
+  const readonly = !ctx.can("product.edit");
+  const canDelete = ctx.can("product.delete");
 
   const list   = filterProducts(products, { search, status, isNew });
   const counts = countByStatus(products, PRODUCT_STATUSES);
@@ -64,7 +65,7 @@ export default function ProductsModule({ ctx }) {
           // 编辑：表单在该产品原位置展开，存完/取消后收回成卡片
           <ProductForm key={p.id} initial={p} products={products} onSubmit={submit} onCancel={() => setForm(null)} />
         ) : (
-          <ProductCard key={p.id} p={p} readonly={readonly}
+          <ProductCard key={p.id} p={p} readonly={readonly} canDelete={canDelete}
             expanded={expanded === p.id} onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
             onUpdate={(patch) => update(p.id, patch).catch((e) => alert(e.message))}
             onEdit={() => setForm(p)} onDelete={() => del(p)} />

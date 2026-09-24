@@ -42,7 +42,8 @@ export default function ReviewModule({ ctx }) {
   const [saveMsg,        setSaveMsg]        = useState("");
 
   const today = new Date().getDate();
-  const showReminder = today >= 6 && today <= 10;
+  const canSnapshot = ctx.can("snapshot.write");
+  const showReminder = canSnapshot && today >= 6 && today <= 10;
   const ym = prevMonth();
 
   const saver = useSnapshotSaver({ storeId, userId, products, collabs, videos, onSaved: reloadReview });
@@ -58,7 +59,7 @@ export default function ReviewModule({ ctx }) {
   if (dataLoading) return <div style={rs.center}>加载中…</div>;
   if (dataError && !collabs.length) return <div style={rs.center}>错误：{dataError}</div>;
 
-  const common = { collabs, videos, products, storeId, userId, burstThreshold, reloadReview, saver };
+  const common = { collabs, videos, products, storeId, userId, burstThreshold, reloadReview, saver, canSnapshot };
 
   return (
     <div>
@@ -87,7 +88,7 @@ export default function ReviewModule({ ctx }) {
       {tab==="grade"     && <GradeReview    {...common} onSnapshotSaved={reloadReview} />}
       {tab==="product"   && <ProductReview  {...common} />}
       {tab==="dashboard" && <Dashboard      gradeSnapshots={gradeSnapshots} collabs={collabs} videos={videos} products={products} />}
-      {tab==="archive"   && <SnapshotArchive gradeSnapshots={gradeSnapshots} products={products} onDeleted={reloadReview} saver={saver} />}
+      {tab==="archive"   && <SnapshotArchive gradeSnapshots={gradeSnapshots} products={products} onDeleted={reloadReview} saver={saver} canSnapshot={canSnapshot} />}
       {tab==="staff"     && <StaffReview    {...common} invites={invites} staff={staff} />}
       {tab==="burst"     && <BurstWall      videos={videos} products={products} burstThreshold={burstThreshold} onThresholdChange={setBurstThreshold} />}
     </div>

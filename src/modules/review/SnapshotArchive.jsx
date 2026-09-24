@@ -13,7 +13,7 @@ const NUM_COLS = [["寄样数", "ship_count"], ["视频数", "video_count"], ["�
 const isEmpty = (s) => !s.ship_count && !s.video_count && !s.orders;
 const sel = { ...rs.monthInp, cursor: "pointer", minWidth: 120 };
 
-export default function SnapshotArchive({ gradeSnapshots, products, onDeleted, saver }) {
+export default function SnapshotArchive({ gradeSnapshots, products, onDeleted, saver, canSnapshot }) {
   const months = useMemo(() => [...new Set(gradeSnapshots.map((s) => s.month?.slice(0, 7)))].sort().reverse(), [gradeSnapshots]);
   const [month, setMonth]         = useState("");            // "" = 最近一个月；"all" = 全部月份
   const [productId, setProductId] = useState("");
@@ -42,7 +42,7 @@ export default function SnapshotArchive({ gradeSnapshots, products, onDeleted, s
 
   return (
     <div>
-      <SnapshotBackfill saver={saver} />
+      {canSnapshot && <SnapshotBackfill saver={saver} />}
       <div style={{ ...rs.toolbar, marginBottom: 12 }}>
         <span style={rs.label}>月份</span>
         <select style={sel} value={curMonth} onChange={(e) => setMonth(e.target.value)}>
@@ -92,7 +92,7 @@ export default function SnapshotArchive({ gradeSnapshots, products, onDeleted, s
                       <td key={k} style={{ ...rs.tdR, fontWeight: k === "orders" ? 700 : 400, color: k === "burst_count" && s[k] > 0 ? T.success : undefined }}>{s[k] ?? "—"}</td>
                     ))}
                     <td style={{ ...rs.td, color: T.muted, fontSize: FONT.note }}>{s.created_at?.slice(0, 16).replace("T", " ")}</td>
-                    <td style={rs.td}><button style={rs.btnDanger} onClick={() => handleDelete(s.id)}>删除</button></td>
+                    <td style={rs.td}>{canSnapshot && <button style={rs.btnDanger} onClick={() => handleDelete(s.id)}>删除</button>}</td>
                   </tr>,
                 ];
               })}

@@ -6,13 +6,13 @@ import { createTask, updateTask, deleteTask } from '../../lib/supabase/tasks.js'
 
 const FILTERS = [['all','全部'],['open','待办'],['done','已完成'],['催发','📣 催发'],['复投','🔁 复投'],['激活','⚡ 激活']];
 
-export default function ActionList({ storeId, tasks=[], products=[], staff=[], currentStaffId, isAdmin, onReload }) {
+export default function ActionList({ storeId, tasks=[], products=[], staff=[], currentStaffId, canEdit, canToggle, onReload }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [filter, setFilter] = useState('all');
 
   const visible = useMemo(() => tasks.filter(t => {
-    if (!isAdmin && t.staff_id && t.staff_id !== currentStaffId) return false;
+    if (!canEdit && t.staff_id && t.staff_id !== currentStaffId) return false;
     if (filter === 'open' && t.status !== 'open') return false;
     if (filter === 'done' && t.status !== 'done') return false;
     if (['催发','复投','激活'].includes(filter) && t.kind !== filter) return false;
@@ -20,7 +20,7 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
   }).sort((a, b) => {
     if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
     return (a.due_date||'') < (b.due_date||'') ? -1 : 1;
-  }), [tasks, filter, isAdmin, currentStaffId]);
+  }), [tasks, filter, canEdit, currentStaffId]);
 
   function openNew() { setForm({ title:'', kind:'手动', product_id:'', staff_id:'', due_date:'' }); setEditing('new'); }
   function openEdit(t) { setForm({ ...t }); setEditing(t.id); }
@@ -56,14 +56,14 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
           <button key={f} onClick={() => setFilter(f)} style={{ fontSize:FONT.lg2, padding:'6px 14px', borderRadius:12, border:`1.5px solid ${filter===f ? T.accent : T.border}`, background:filter===f ? T.accent : 'transparent', color:filter===f ? '#fff' : T.muted, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>{label}</button>
         ))}
         <div style={{ flex:1 }} />
-        {isAdmin && <button onClick={openNew} style={{ padding:'7px 16px', borderRadius:10, border:'none', cursor:'pointer', background:T.grad, color:'#fff', fontWeight:700, fontSize:FONT.lg2, fontFamily:'inherit' }}>+ 新建任务</button>}
+        {canEdit && <button onClick={openNew} style={{ padding:'7px 16px', borderRadius:10, border:'none', cursor:'pointer', background:T.grad, color:'#fff', fontWeight:700, fontSize:FONT.lg2, fontFamily:'inherit' }}>+ 新建任务</button>}
       </div>
 
       {todo.length > 0 && (
         <div style={{ marginBottom:24 }}>
           <div style={{ fontSize:FONT.sm, fontWeight:800, color:T.muted, letterSpacing:'0.08em', marginBottom:10 }}>待办 ({todo.length})</div>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {todo.map(t => <TaskCard key={t.id} task={t} products={products} staff={staff} today={today} isAdmin={isAdmin} onToggle={toggleDone} onEdit={openEdit} onDelete={del} />)}
+            {todo.map(t => <TaskCard key={t.id} task={t} products={products} staff={staff} today={today} canEdit={canEdit} onToggle={canToggle ? toggleDone : null} onEdit={openEdit} onDelete={del} />)}
           </div>
         </div>
       )}
@@ -71,11 +71,11 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
         <div>
           <div style={{ fontSize:FONT.sm, fontWeight:800, color:T.muted, letterSpacing:'0.08em', marginBottom:10 }}>已完成 ({done.length})</div>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {done.map(t => <TaskCard key={t.id} task={t} products={products} staff={staff} today={today} isAdmin={isAdmin} onToggle={toggleDone} onEdit={openEdit} onDelete={del} />)}
+            {done.map(t => <TaskCard key={t.id} task={t} products={products} staff={staff} today={today} canEdit={canEdit} onToggle={canToggle ? toggleDone : null} onEdit={openEdit} onDelete={del} />)}
           </div>
         </div>
       )}
-      {visible.length === 0 && <div style={{ ...glassStyle(16, true), padding:'48px 24px', textAlign:'center', color:T.hint }}>暂无任务{isAdmin ? '，点击「+ 新建任务」添加' : ''}</div>}
+      {visible.length === 0 && <div style={{ ...glassStyle(16, true), padding:'48px 24px', textAlign:'center', color:T.hint }}>暂无任务{canEdit ? '，点击「+ 新建任务」添加' : ''}</div>}
 
       {editing && (
         <div style={{ position:'fixed', inset:0, background:'rgba(10,22,40,0.55)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
@@ -101,7 +101,7 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
   );
 }
 
-function TaskCard({ task, products, staff, today, isAdmin, onToggle, onEdit, onDelete }) {
+function TaskCard({ task, products, staff, today, canEdit, onToggle, onEdit, onDelete }) {
   const done = task.status === 'done';
   const product = products.find(p => p.id === task.product_id);
   const assignee = staff.find(s => s.id === task.staff_id);
@@ -109,7 +109,7 @@ function TaskCard({ task, products, staff, today, isAdmin, onToggle, onEdit, onD
   return (
     <div style={{ ...glassStyle(14, true), padding:'14px 16px', opacity:done ? 0.65 : 1, borderLeft:`4px solid ${done ? T.success : overdue ? T.danger : T.accent}` }}>
       <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
-        <button onClick={() => onToggle(task)} style={{ width:22, height:22, borderRadius:'50%', flexShrink:0, marginTop:1, cursor:'pointer', border:`2px solid ${done ? T.success : T.border}`, background:done ? T.success : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:12 }}>{done ? '✓' : ''}</button>
+        <button disabled={!onToggle} onClick={() => onToggle?.(task)} style={{ width:22, height:22, borderRadius:'50%', flexShrink:0, marginTop:1, cursor:onToggle ? 'pointer' : 'default', border:`2px solid ${done ? T.success : T.border}`, background:done ? T.success : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:12 }}>{done ? '✓' : ''}</button>
         <div style={{ flex:1 }}>
           <div style={{ fontWeight:700, fontSize:FONT.xl2, color:T.text, textDecoration:done ? 'line-through' : 'none' }}>{task.title}</div>
           <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap', alignItems:'center' }}>
@@ -120,7 +120,7 @@ function TaskCard({ task, products, staff, today, isAdmin, onToggle, onEdit, onD
             {task.due_date && <span style={{ fontSize:FONT.sm2, color:overdue ? T.danger : T.hint }}>{overdue ? '⚠️ ' : '📅 '}{task.due_date}</span>}
           </div>
         </div>
-        {isAdmin && (
+        {canEdit && (
           <div style={{ display:'flex', gap:8, flexShrink:0 }}>
             <button onClick={() => onEdit(task)} style={{ border:'none', background:'none', color:T.accent, cursor:'pointer', fontSize:FONT.sm2, padding:0 }}>编辑</button>
             <button onClick={() => onDelete(task.id)} style={{ border:'none', background:'none', color:T.danger, cursor:'pointer', fontSize:FONT.sm2, padding:0 }}>删除</button>

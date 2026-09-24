@@ -22,6 +22,7 @@ import TasksModule       from "./tasks/TasksModule.jsx";
 import BDToolsModule     from "./bdtools/BDToolsModule.jsx";
 import StaffModule       from "./staff/StaffModule.jsx";
 import PerformanceModule from "./tasks/PerformanceModule.jsx";
+import PlatformModule    from "./platform/PlatformModule.jsx";
 
 const MODULES = {
   products:    ProductsModule,
@@ -35,6 +36,7 @@ const MODULES = {
   bdtools:     BDToolsModule,
   performance: PerformanceModule,
   staff:       StaffModule,
+  platform:    PlatformModule,
 };
 
 export default function ModuleRouter({ tab, ctx }) {
@@ -55,6 +57,8 @@ export default function ModuleRouter({ tab, ctx }) {
     creators:        core.creators,
     invites:         core.invites,
     staff:           core.staff,
+    // 当前登录账号在助理名册里对应的助理（人员管理里绑定登录账号后才有）
+    myStaffId:       core.staff.find((s) => s.auth_user_id === ctx.userId)?.id || null,
     dataLoading:     core.loading,
     dataError:       core.error,
     gradeSnapshots:  snapshots.gradeSnapshots,

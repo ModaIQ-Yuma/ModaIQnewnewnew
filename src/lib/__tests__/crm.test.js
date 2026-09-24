@@ -239,3 +239,14 @@ test("视频产出分配：助理预估 = 预估 ÷ 目标 × 分配（每品四
   expect(all.estimatedVideos).toBe(120);
   expect(all.actualVideos).toBe(4);
 });
+
+import { can } from "../../constants/permissions.js";
+test("权限表：超管全开；管理员除平台管理外全开；成员能录入不能删除；只读全关", () => {
+  expect(can("viewer", true, "store.manage")).toBe(true);
+  expect(can("admin", false, "store.manage")).toBe(false);
+  expect(["staff.manage", "crm.delete", "crm.import", "video.revert", "snapshot.write", "task.plan", "perf.viewAll"].every((a) => can("admin", false, a))).toBe(true);
+  expect(["product.edit", "crm.edit", "pool.edit", "video.import", "task.do", "perf.viewSelf"].every((a) => can("staff", false, a))).toBe(true);
+  expect(["product.delete", "crm.delete", "crm.import", "video.revert", "snapshot.write", "task.plan", "perf.viewAll", "staff.manage"].some((a) => can("staff", false, a))).toBe(false);
+  expect(["product.edit", "crm.edit", "pool.edit", "video.import", "task.do", "perf.viewSelf"].some((a) => can("viewer", false, a))).toBe(false);
+  expect(can("admin", false, "不存在的动作")).toBe(false);
+});

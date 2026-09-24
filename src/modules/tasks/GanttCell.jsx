@@ -9,14 +9,14 @@ const stratGrad = (c) => `linear-gradient(135deg, ${c}D9 0%, ${c}99 100%)`;
 // batchCtx:  { batchMode, batchSelected }
 // handlers:  { handleCellClick, setHoverKey }  — 用 useCallback 稳定，不含 hoverKey
 // hoverKey:  string | null  — 单独传，避免 hover 变化时重建 handlers 对象
-// meta:      { product, isAdmin, nowHalf }
+// meta:      { product, canEdit, nowHalf }
 
 // ── 单行所有半月格 ─────────────────────────────────────────────────────────────
 export function GanttRowCells({ segData, batchCtx, handlers, hoverKey, meta }) {
   const { segments, columns } = segData;
   const { batchMode, batchSelected } = batchCtx;
   const { handleCellClick, setHoverKey } = handlers;
-  const { product, isAdmin, nowHalf } = meta;
+  const { product, canEdit, nowHalf } = meta;
 
   return (
     <div style={{ flex: 1, display: 'flex', position: 'relative', padding: '8px 4px' }}>
@@ -34,14 +34,14 @@ export function GanttRowCells({ segData, batchCtx, handlers, hoverKey, meta }) {
           return (
             <EmptyCells key={si} seg={seg} columns={columns} product={product}
               batchMode={batchMode} batchSelected={batchSelected}
-              isAdmin={isAdmin} hoverKey={hoverKey}
+              canEdit={canEdit} hoverKey={hoverKey}
               onCellClick={handleCellClick} onHover={setHoverKey} />
           );
         }
         return (
           <StrategyBandCell key={si} seg={seg} si={si} columns={columns} product={product}
             batchMode={batchMode} batchSelected={batchSelected}
-            isAdmin={isAdmin} hoverKey={hoverKey}
+            canEdit={canEdit} hoverKey={hoverKey}
             onCellClick={handleCellClick} onHover={setHoverKey} />
         );
       })}
@@ -50,7 +50,7 @@ export function GanttRowCells({ segData, batchCtx, handlers, hoverKey, meta }) {
 }
 
 // ── 空白格组（无策略段）────────────────────────────────────────────────────────
-function EmptyCells({ seg, columns, product, batchMode, batchSelected, isAdmin, hoverKey, onCellClick, onHover }) {
+function EmptyCells({ seg, columns, product, batchMode, batchSelected, canEdit, hoverKey, onCellClick, onHover }) {
   const width = `${(seg.span / columns.length) * 100}%`;
   return (
     <div style={{ width, display: 'flex', gap: 4, padding: '0 3px' }}>
@@ -66,12 +66,12 @@ function EmptyCells({ seg, columns, product, batchMode, batchSelected, isAdmin, 
             onMouseLeave={() => onHover(null)}
             style={{
               flex: 1, borderRadius: 10,
-              border: isChecked ? `2px solid ${T.accent}` : `1.5px dashed ${hovered && isAdmin ? T.accent + '88' : T.glassStroke}`,
-              background: isChecked ? 'rgba(61,127,239,0.22)' : (hovered && isAdmin ? 'rgba(61,127,239,0.08)' : 'transparent'),
-              cursor: isAdmin ? 'pointer' : 'default',
+              border: isChecked ? `2px solid ${T.accent}` : `1.5px dashed ${hovered && canEdit ? T.accent + '88' : T.glassStroke}`,
+              background: isChecked ? 'rgba(61,127,239,0.22)' : (hovered && canEdit ? 'rgba(61,127,239,0.08)' : 'transparent'),
+              cursor: canEdit ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: batchMode ? 14 : 16, transition: 'all .18s ease',
-              color: isChecked ? T.accent : (hovered && isAdmin ? T.accent : batchMode ? T.hint : 'transparent'),
+              color: isChecked ? T.accent : (hovered && canEdit ? T.accent : batchMode ? T.hint : 'transparent'),
             }}
           >{batchMode ? (isChecked ? '☑' : '☐') : '＋'}</div>
         );
@@ -81,7 +81,7 @@ function EmptyCells({ seg, columns, product, batchMode, batchSelected, isAdmin, 
 }
 
 // ── 策略色带格 ────────────────────────────────────────────────────────────────
-function StrategyBandCell({ seg, si, columns, product, batchMode, batchSelected, isAdmin, hoverKey, onCellClick, onHover }) {
+function StrategyBandCell({ seg, si, columns, product, batchMode, batchSelected, canEdit, hoverKey, onCellClick, onHover }) {
   const width = `${(seg.span / columns.length) * 100}%`;
   const c = STRATEGY_COLORS[seg.strategy] || T.hint;
   const hk = cellKey(product.id, `seg${si}`);
@@ -104,15 +104,15 @@ function StrategyBandCell({ seg, si, columns, product, batchMode, batchSelected,
         onMouseLeave={() => onHover(null)}
         title={batchMode
           ? `${seg.strategy} · 点击选中对应半月格`
-          : `${seg.strategy} · ${columns[seg.startIdx].label} 起 ${seg.span} 个半月${isAdmin ? '（点击色带对应位置修改）' : ''}`}
+          : `${seg.strategy} · ${columns[seg.startIdx].label} 起 ${seg.span} 个半月${canEdit ? '（点击色带对应位置修改）' : ''}`}
         style={{
           flex: 1, borderRadius: 12,
           background: stratGrad(c),
           border: segAllChecked ? `2.5px solid #fff` : segCheckedCount > 0 ? `2px dashed rgba(255,255,255,0.8)` : `1px solid ${c}66`,
           boxShadow: hovered ? `0 6px 20px ${c}55, inset 0 1px 0 rgba(255,255,255,0.55)` : `0 3px 12px ${c}33, inset 0 1px 0 rgba(255,255,255,0.4)`,
-          cursor: isAdmin ? 'pointer' : 'default',
+          cursor: canEdit ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          transform: hovered && isAdmin ? 'translateY(-1.5px)' : 'none',
+          transform: hovered && canEdit ? 'translateY(-1.5px)' : 'none',
           transition: 'all .2s cubic-bezier(.2,.8,.2,1)', minHeight: 34, position: 'relative',
         }}
       >

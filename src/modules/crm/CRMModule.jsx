@@ -38,7 +38,8 @@ export default function CRMModule({ ctx }) {
   const [showImport, setShowImport] = useState(false);
   const [selected,   setSelected]   = useState(() => new Set());
   const [notice,     setNotice]     = useState("");
-  const readonly = ctx.role === "viewer";
+  const readonly  = !ctx.can("crm.edit");
+  const canDelete = ctx.can("crm.delete");
   const staffName = (id) => staff.find((s) => String(s.id) === String(id))?.name || "—";
   const rows = useMemo(() => influencers.filter((i) => {
     if (q        && ![i.influencerId, ...i.aliases].some((n) => n.includes(normName(q)))) return false;
@@ -86,7 +87,7 @@ export default function CRMModule({ ctx }) {
         </SectionIntro>
         {!readonly && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" }}>
-            <button onClick={() => setShowImport(true)} style={{ padding: "10px 18px", borderRadius: 999, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.7)", color: T.muted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📥 批量导入</button>
+            {ctx.can("crm.import") && <button onClick={() => setShowImport(true)} style={{ padding: "10px 18px", borderRadius: 999, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.7)", color: T.muted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>📥 批量导入</button>}
             <AddShipmentButton onClick={() => setEditing("new")} />
           </div>
         )}
@@ -106,7 +107,7 @@ export default function CRMModule({ ctx }) {
         <Sel value={fProduct} onChange={setFProduct}><option value="">全部产品</option>{products.map((p) => <option key={p.id} value={p.internal_name}>{p.internal_name}</option>)}</Sel>
         <Sel value={fStaff} onChange={setFStaff}><option value="">全部跟进人</option>{staff.map((s) => <option key={s.id} value={String(s.id)}>{s.name}</option>)}</Sel>
         <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
-          {!readonly && effectiveSelected.size > 0 && <Btn small danger onClick={bulkDelete}>批量删除（{effectiveSelected.size}）</Btn>}
+          {canDelete && effectiveSelected.size > 0 && <Btn small danger onClick={bulkDelete}>批量删除（{effectiveSelected.size}）</Btn>}
           <Btn small onClick={() => exportCRM(rows, staffName)}>导出 xlsx</Btn>
         </div>
       </div>
@@ -122,7 +123,7 @@ export default function CRMModule({ ctx }) {
         <div style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", minWidth:880 }}>
             <thead><tr>
-              {!readonly && <th style={{ ...th, width:36 }}><input type="checkbox" checked={allSel} onChange={toggleAll} style={{ cursor:"pointer" }} /></th>}
+              {canDelete && <th style={{ ...th, width:36 }}><input type="checkbox" checked={allSel} onChange={toggleAll} style={{ cursor:"pointer" }} /></th>}
               {COLS.map((c, i) => <th key={i} style={th}>{c}</th>)}
             </tr></thead>
             <tbody>
@@ -134,7 +135,7 @@ export default function CRMModule({ ctx }) {
                 return (
                   <Fragment key={i.id}>
                     <tr onClick={() => setExpandedId(open ? null : i.id)} style={{ cursor:"pointer", background:open?"rgba(255,255,255,0.45)":"transparent" }}>
-                      {!readonly && <td style={td} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={effectiveSelected.has(i.id)} onChange={() => toggleOne(i.id)} style={{ cursor:"pointer" }} /></td>}
+                      {canDelete && <td style={td} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={effectiveSelected.has(i.id)} onChange={() => toggleOne(i.id)} style={{ cursor:"pointer" }} /></td>}
                       <td style={{ ...td, fontWeight:700 }}>{i.influencerId}{i.aliases.length > 0 && <span title={i.aliases.join("、")} style={{ fontSize:11, color:T.hint, fontWeight:400, marginLeft:5 }}>+{i.aliases.length} 别名</span>}</td>
                       <td style={td}>{i.product || "—"}{i.productColor ? <span style={{ fontSize:11, color:T.hint, marginLeft:4 }}>({i.productColor})</span> : null}</td>
                       <td style={td}>{i.shipDate || "—"}</td>
@@ -151,7 +152,7 @@ export default function CRMModule({ ctx }) {
                       <td style={td} onClick={(e) => e.stopPropagation()}>
                         {!readonly && <span style={{ display:"flex", gap:8, whiteSpace:"nowrap" }}>
                           <button onClick={() => setEditing(i)} style={linkBtn(T.accent)}>编辑</button>
-                          <button onClick={() => del(i.id)} style={linkBtn(T.hint)}>删除</button>
+                          {canDelete && <button onClick={() => del(i.id)} style={linkBtn(T.hint)}>删除</button>}
                         </span>}
                       </td>
                     </tr>

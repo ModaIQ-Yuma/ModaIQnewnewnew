@@ -18,9 +18,10 @@ const SUBTABS = [
 ];
 
 export default function TasksModule({ ctx }) {
-  const { storeId, isAdmin, userId, products, collabs, videos, staff, tasksApi } = ctx;
+  const { storeId, products, collabs, videos, staff, tasksApi, myStaffId } = ctx;
   const { goals, gantt, menus, tasks, loading, error, reload } = tasksApi;
-  const [sub,    setSub]    = useState(isAdmin ? 'goals' : 'action');
+  const canPlan = ctx.can('task.plan');   // 甘特图 / 目标 / 分配 / 日程单 / 新建任务
+  const [sub,    setSub]    = useState(canPlan ? 'goals' : 'action');
   const [genMsg, setGenMsg] = useState('');
 
   async function generateWeeklyTasks() {
@@ -62,8 +63,8 @@ export default function TasksModule({ ctx }) {
 
   return (
     <div>
-      <SubNav tabs={SUBTABS} active={sub} onChange={setSub} right={<>
-        {isAdmin && (
+      <SubNav tabs={SUBTABS.filter(t => t.id !== 'perf' || ctx.can('perf.viewSelf'))} active={sub} onChange={setSub} right={<>
+        {canPlan && (
           <>
             <button onClick={generateWeeklyTasks} style={{ fontSize:FONT.sm2, padding:'6px 14px', borderRadius:18, border:`1.5px solid ${T.success}`, background:'transparent', color:T.success, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>⚡ 生成本周任务</button>
             {tasks.some(t => t.is_auto) && (
@@ -74,11 +75,11 @@ export default function TasksModule({ ctx }) {
         {genMsg && <span style={{ fontSize:FONT.sm2, color:T.success }}>{genMsg}</span>}
       </>} />
 
-      {sub==='gantt'  && <GanttStrategy     storeId={storeId} products={products} ganttStrategies={gantt} shippingGoals={goals} changeLogs={[]} collabs={collabs} isAdmin={isAdmin} onReload={reload} />}
-      {sub==='goals'  && <CycleGoals        storeId={storeId} products={products} shippingGoals={goals} ganttStrategies={gantt} collabs={collabs} staff={staff} isAdmin={isAdmin} onReload={reload} />}
-      {sub==='menu'   && <WeeklyMenu        storeId={storeId} menus={menus} products={products} isAdmin={isAdmin} onReload={reload} />}
-      {sub==='action' && <ActionList        storeId={storeId} tasks={tasks} products={products} staff={staff} currentStaffId={userId} isAdmin={isAdmin} onReload={reload} />}
-      {sub==='perf'   && <PerformanceModule storeId={storeId} collabs={collabs} videos={videos} shippingGoals={goals} products={products} staff={staff} isAdmin={isAdmin} userId={userId} />}
+      {sub==='gantt'  && <GanttStrategy     storeId={storeId} products={products} ganttStrategies={gantt} shippingGoals={goals} changeLogs={[]} collabs={collabs} canEdit={canPlan} onReload={reload} />}
+      {sub==='goals'  && <CycleGoals        storeId={storeId} products={products} shippingGoals={goals} ganttStrategies={gantt} collabs={collabs} staff={staff} canEdit={canPlan} onReload={reload} />}
+      {sub==='menu'   && <WeeklyMenu        storeId={storeId} menus={menus} products={products} canEdit={canPlan} onReload={reload} />}
+      {sub==='action' && <ActionList        storeId={storeId} tasks={tasks} products={products} staff={staff} currentStaffId={myStaffId} canEdit={canPlan} canToggle={ctx.can('task.do')} onReload={reload} />}
+      {sub==='perf'   && <PerformanceModule ctx={ctx} showIntro={false} />}
     </div>
   );
 }

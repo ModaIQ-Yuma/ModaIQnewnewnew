@@ -11,6 +11,7 @@ import { s } from "./invitePoolStyles.js";
 export default function InvitePoolModule({ ctx }) {
   const { storeId, userId, products, core, dataLoading, dataError } = ctx;
   const records = core.invites;
+  const canEdit = ctx.can("pool.edit");
   const nameIndex = useMemo(() => buildNameIndex(core.creators, core.aliases), [core.creators, core.aliases]);
   const staffName = (id) => (ctx.staff || []).find((s) => s.id === id)?.name || "未指定";
 
@@ -69,7 +70,7 @@ export default function InvitePoolModule({ ctx }) {
         还没合作过的精选达人名单，供助理后续邀约。录入时自动查重：同一达人 + 同一产品已在邀约库里，或已在 CRM 合作过，都会拦下并提示。
       </SectionIntro>
 
-      <div style={{ ...glassStyle(14), padding: "16px 20px", marginBottom: 16 }}>
+      {canEdit && <div style={{ ...glassStyle(14), padding: "16px 20px", marginBottom: 16 }}>
         <div style={s.row}>
           <input style={s.input} placeholder="达人 username（不含 @）" value={creatorHandle}
             onChange={(e) => { setCreatorHandle(e.target.value); setFormError(""); }}
@@ -89,7 +90,7 @@ export default function InvitePoolModule({ ctx }) {
           </button>
         </div>
         {formError && <div style={s.err}>{formError}</div>}
-      </div>
+      </div>}
 
       <div style={s.filters}>
         <select style={s.sel} value={filterProduct} onChange={(e) => setFilterProduct(e.target.value)}>
@@ -129,7 +130,7 @@ export default function InvitePoolModule({ ctx }) {
                   </span>
                 </td>
                 <td style={s.td}>
-                  {r.status === "pending" && (
+                  {canEdit && r.status === "pending" && (
                     <button style={s.btnDanger} onClick={() => handleRemove(r.id)}>删除</button>
                   )}
                 </td>

@@ -3,7 +3,7 @@ import { PRODUCT_STATUSES, PS_COLORS, PRODUCT_TYPES } from "../../constants/prod
 import { Btn, Badge, Pill } from "../../components/ui/index.jsx";
 
 /** 单个产品卡片：折叠显示概要，展开后可快捷改状态 / 新老品，或进入编辑 */
-export default function ProductCard({ p, expanded, onToggle, onUpdate, onEdit, onDelete, readonly }) {
+export default function ProductCard({ p, expanded, onToggle, onUpdate, onEdit, onDelete, readonly, canDelete }) {
   return (
     <div style={{ ...glassStyle(14), padding: "12px 16px", marginBottom: 10 }}>
       <div onClick={onToggle} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
@@ -28,7 +28,7 @@ export default function ProductCard({ p, expanded, onToggle, onUpdate, onEdit, o
               </div>
               <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                 <Btn small onClick={onEdit}>编辑</Btn>
-                <Btn small danger onClick={onDelete}>删除</Btn>
+                {canDelete && <Btn small danger onClick={onDelete}>删除</Btn>}
               </div>
             </div>
           )}

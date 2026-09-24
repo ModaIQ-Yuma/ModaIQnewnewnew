@@ -17,7 +17,7 @@ const CAT_ORDER = PRODUCT_STATUSES;   // 分组顺序与全站产品排序口径
 const toolbarBtn = (active) => ({ ...glassStyle(12), border:`1px solid ${active ? T.accent : T.glassStroke}`, padding:'8px 16px', fontSize:FONT.lg2, fontWeight:600, color:active ? T.accent : T.muted, cursor:'pointer', fontFamily:'inherit', background:active ? 'rgba(61,127,239,0.10)' : undefined });
 const arrowBtn = { border:'none', background:'transparent', cursor:'pointer', fontSize:20, color:T.muted, padding:'6px 14px', fontFamily:'inherit', lineHeight:1 };
 
-export default function GanttStrategy({ storeId, products=[], ganttStrategies=[], shippingGoals=[], changeLogs=[], influencers=[], isAdmin, onReload }) {
+export default function GanttStrategy({ storeId, products=[], ganttStrategies=[], shippingGoals=[], changeLogs=[], influencers=[], canEdit, onReload }) {
   const now = new Date();
   const [viewStart, setViewStart] = useState(() => currentYearMonth(now));
   const [showLogs,  setShowLogs]  = useState(false);
@@ -63,14 +63,14 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
   }
 
   const handleCellClick = useCallback((product, col) => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     if (batchMode) {
       const key = cellKey(product.id, col.key);
       setBatchSelected(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
     } else {
       setPending({ product, col, fromStrategy: getStrategy(product.id, col), toStrategy: null, selectMode: true });
     }
-  }, [isAdmin, batchMode, ganttMap, columns]);
+  }, [canEdit, batchMode, ganttMap, columns]);
 
   function handleStrategySelect(toStrategy) {
     if (!pending) return;
@@ -130,7 +130,7 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
         </div>
         <button onClick={() => setViewStart(currentYearMonth(now))} style={{ ...glassStyle(12), border:`1px solid ${T.glassStroke}`, padding:'8px 14px', fontSize:FONT.md2, fontWeight:600, color:T.muted, cursor:'pointer', fontFamily:'inherit' }}>回到本月</button>
         <div style={{ flex:1 }} />
-        {isAdmin && (
+        {canEdit && (
           <button onClick={() => { setBatchMode(v => !v); if (batchMode) setBatchSelected(new Set()); }} style={toolbarBtn(batchMode)}>
             {batchMode ? `✓ 批量模式 (${batchSelected.size})` : '批量编辑'}
           </button>
@@ -161,7 +161,7 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
                     batchCtx={{ batchMode, batchSelected }}
                     handlers={{ handleCellClick: (p, col) => handleCellClick(product, col), setHoverKey }}
                     hoverKey={hoverKey}
-                    meta={{ product: { internalName: product.internal_name, ...product }, isAdmin, nowHalf }}
+                    meta={{ product: { internalName: product.internal_name, ...product }, canEdit, nowHalf }}
                   />
                 </div>
               ))}

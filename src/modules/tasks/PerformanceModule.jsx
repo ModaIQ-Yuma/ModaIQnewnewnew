@@ -8,22 +8,17 @@ import { SectionIntro } from '../../components/layout/SubNav.jsx';
 
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRadius:12, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.4)', color:T.muted, cursor:'pointer', fontFamily:'inherit' };
 
-export default function PerformanceModule({ ctx, storeId: _storeId, collabs: _collabs, videos: _videos, shippingGoals: _goals, products: _products, staff: _staff, isAdmin: _isAdmin, userId: _userId }) {
-  // 支持两种调用方式：独立 tab（ctx）和 TasksModule 子页（单独 props）
-  const storeId      = ctx?.storeId      ?? _storeId      ?? "";
-  const collabs      = ctx?.collabs      ?? _collabs      ?? [];
-  const videos       = ctx?.videos       ?? _videos       ?? [];
-  const shippingGoals = ctx ? (ctx.tasksApi?.goals ?? []) : (_goals ?? []);
-  const products     = ctx?.products     ?? _products     ?? [];
-  const staff        = ctx?.staff        ?? _staff        ?? [];
-  const isAdmin      = ctx?.isAdmin      ?? _isAdmin      ?? false;
-  const userId       = ctx?.userId       ?? _userId       ?? null;
+/** 绩效评估（独立导航 + 任务中心子页共用，都传 ctx） */
+export default function PerformanceModule({ ctx, showIntro = true }) {
+  const { collabs, videos, products, staff, myStaffId } = ctx;
+  const shippingGoals = ctx.tasksApi?.goals ?? [];
+  const viewAll = ctx.can("perf.viewAll");        // 管理员：看全店 / 任意助理；成员：只看自己
   const now = new Date();
   const [cycleStart,      setCycleStart]      = useState(() => currentCycleStart(now));
   const [selectedStaffId, setSelectedStaffId] = useState(null);
 
   const cEnd        = cycleEnd(cycleStart);
-  const viewStaffId = isAdmin ? selectedStaffId : userId;
+  const viewStaffId = viewAll ? selectedStaffId : myStaffId;
 
   const metrics = useMemo(() =>
     calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId: viewStaffId }),
@@ -34,11 +29,16 @@ export default function PerformanceModule({ ctx, storeId: _storeId, collabs: _co
     ? '全店（Admin）'
     : (staff.find(s => s.id === viewStaffId)?.name || viewStaffId);
 
-  if (ctx?.dataLoading) return <div style={{ padding:48, textAlign:'center', color:T.hint }}>加载中…</div>;
+  if (ctx.dataLoading) return <div style={{ padding:48, textAlign:'center', color:T.hint }}>加载中…</div>;
+  if (!viewAll && !myStaffId) return (
+    <div style={{ ...glassStyle(16, true), padding:'40px 24px', textAlign:'center', color:T.hint, lineHeight:1.8 }}>
+      你的登录账号还没有和助理名册绑定，暂时看不到个人绩效。<br />请管理员在「人员管理 → 助理名册」里绑定，或用带绑定的邀请码重新加入。
+    </div>
+  );
 
   return (
     <div>
-      {ctx && <SectionIntro style={{ marginBottom:14 }}>按账期（15 日 ~ 次月 14 日）计算绩效：寄样看账期内的寄样记录，视频和出单看账期结束月的自然月。管理员可切换查看全店或单个助理，助理只能看到自己。</SectionIntro>}
+      {showIntro && <SectionIntro style={{ marginBottom:14 }}>按账期（15 日 ~ 次月 14 日）计算绩效：寄样看账期内的寄样记录，视频和出单看账期结束月的自然月。管理员可切换查看全店或单个助理，助理只能看到自己。</SectionIntro>}
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:22, flexWrap:'wrap' }}>
         <button onClick={() => setCycleStart(prevCycleStart(cycleStart))} style={navBtn}>‹ 上周期</button>
         <div style={{ ...glassStyle(12), padding:'8px 18px', fontSize:FONT.xl2, fontWeight:700, color:T.text }}>
@@ -46,7 +46,7 @@ export default function PerformanceModule({ ctx, storeId: _storeId, collabs: _co
         </div>
         <button onClick={() => setCycleStart(nextCycleStart(cycleStart))} style={navBtn}>下周期 ›</button>
         <div style={{ flex:1 }} />
-        {isAdmin && (
+        {viewAll && (
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             <button onClick={() => setSelectedStaffId(null)} style={{ ...navBtn, border:`1.5px solid ${viewStaffId==null ? T.accent : T.border}`, color:viewStaffId==null ? T.accent : T.muted, fontWeight:viewStaffId==null ? 700 : 600 }}>全店</button>
             {staff.map(s => (

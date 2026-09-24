@@ -34,15 +34,16 @@ export default function App() {
     storeId: store.activeStoreId,
     storeName: store.activeStore.store_name,
     role: store.role,
-    isAdmin: store.isAdmin,
     isSuperAdmin: store.isSuperAdmin,
+    can: store.can,                 // 权限判断：ctx.can("crm.delete") 等，见 constants/permissions.js
+    reloadStores: store.reload,     // 超管新建店铺后刷新店铺列表
     userId,
     userEmail: session.user.email,
   };
 
   return (
     <AppShell
-      store={store.activeStore} stores={store.stores} isAdmin={store.isAdmin}
+      store={store.activeStore} stores={store.stores} can={store.can}
       onSwitchStore={store.switchStore} tab={tab} onTab={setTab} userEmail={ctx.userEmail}
     >
       <ModuleRouter tab={tab} ctx={ctx} />
