@@ -6,6 +6,7 @@
 **一次性迁移脚本**（按日期命名，只执行一次，执行后 ALL_IN_ONE.sql 已是最终结构）：
 - `2026-09-23_crm_rebuild.sql`：CRM 重建——清空寄样/达人/别名，新建 collab_attrs（寄样时属性），creators 只保留身份。执行后用旧版全量导出重新导入。
 - `2026-09-24_snapshot_orders.sql`：月度快照加「整店总出单 / 自然流量单」两列。
+- `2026-09-24_goal_estimates.sql`：周期目标加「预估视频产出」一列（助理分配用已有的 goal_allocations 表）。
 
 不落表的板块：④日数据、⑩绩效评估（全部实时计算），⑪员工管理（用 staff / user_store_roles / invite_codes），⑫AI助手（RAG 表待 embedding 模型确认后单独加）。
 

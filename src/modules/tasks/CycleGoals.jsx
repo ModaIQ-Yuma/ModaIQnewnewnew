@@ -1,9 +1,11 @@
 // modules/tasks/CycleGoals.jsx — 本周期目标（适配新版 Supabase）
 import { useState, useMemo } from 'react';
 import { T, glassStyle, FONT } from '../../constants/tokens.js';
-import { PRIORITIES, PRIORITY_COLORS, STRATEGY_COLORS, STRATEGY_SUGGESTED_GOAL } from './constants.js';
-import { currentCycleStart, cycleEnd, prevCycleStart, nextCycleStart, timePct, daysRemaining, formatDate, uid } from './utils.js';
-import { upsertShippingGoal, deleteShippingGoal } from '../../lib/supabase/taskData.js';
+import { PRIORITIES, PRIORITY_COLORS } from './constants.js';
+import { currentCycleStart, cycleEnd, prevCycleStart, nextCycleStart, timePct, daysRemaining, formatDate } from './utils.js';
+import { upsertShippingGoal, deleteShippingGoal, saveGoalAllocations } from '../../lib/supabase/taskData.js';
+import GoalCard from './GoalCard.jsx';
+import { GoalForm, AllocModal } from './GoalModals.jsx';
 import { byProductOrder } from '../../lib/products/productOrder.js';
 
 const PRIORITY_EMOJI = { 测款最优:'🟣', 一级:'🔴', 二级:'🟠', 三级:'🔵', 不动:'⛔' };
@@ -12,14 +14,16 @@ const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRa
 export default function CycleGoals({ storeId, products=[], shippingGoals=[], ganttStrategies=[], collabs=[], staff=[], isAdmin, onReload }) {
   const now = new Date();
   const [cycleStart, setCycleStart] = useState(() => currentCycleStart(now));
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
+  const [editing, setEditing] = useState(null);       // null | 'new' | goal
+  const [allocating, setAllocating] = useState(null); // goal
   const cEnd = cycleEnd(cycleStart);
 
   const goals = useMemo(() => shippingGoals.filter(g => g.cycle_start === cycleStart), [shippingGoals, cycleStart]);
 
   // 实际已寄数：按 product_id + cycle 从 collaborations 计算
-  const doneQty = (goal) => collabs.filter(c => c.product_id === goal.product_id && c.ship_date >= cycleStart && c.ship_date <= cEnd).length;
+  const inCycle = (c, goal) => c.product_id === goal.product_id && c.ship_date >= cycleStart && c.ship_date <= cEnd;
+  const doneQty = (goal) => collabs.filter(c => inCycle(c, goal)).length;
+  const doneByStaff = (goal, staffId) => collabs.filter(c => inCycle(c, goal) && c.staff_id === staffId).length;
 
   const grouped = useMemo(() => {
     const map = {};
@@ -29,14 +33,12 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
     return PRIORITIES.map(p => ({ priority: p, items: (map[p] || []).sort(byProduct) })).filter(g => g.items.length > 0);
   }, [goals, products]);
 
-  function openNew() { setForm({ product_id:'', target_qty:50, priority:'二级', strategy:'精选' }); setEditing('new'); }
-  function openEdit(g) { setForm({ ...g }); setEditing(g.id); }
-
-  async function saveForm() {
-    const rec = { ...form, id: editing === 'new' ? undefined : editing, cycle_start: cycleStart, target_qty: Number(form.target_qty) || 0 };
-    await upsertShippingGoal(storeId, rec);
+  // 只写 shipping_goals 自己的列（编辑时不能把 products / goal_allocations 等关联数据带进去）
+  async function saveForm(fields) {
+    await upsertShippingGoal(storeId, { ...fields, id: editing === 'new' ? undefined : editing.id, cycle_start: cycleStart });
     setEditing(null); onReload?.();
   }
+  async function saveAlloc(alloc) { await saveGoalAllocations(allocating.id, alloc); setAllocating(null); onReload?.(); }
   async function del(id) { if (!window.confirm('删除该目标？')) return; await deleteShippingGoal(id); onReload?.(); }
 
   const tp = timePct(cycleStart, cEnd);
@@ -51,7 +53,6 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
     return { totalTarget, totalDone, totalPct, statusColor };
   }, [goals, tp, collabs, cEnd]);
 
-  const inp = { width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:10, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.6)', color:T.text, fontSize:FONT.lg2, fontFamily:'inherit' };
 
   return (
     <div>
@@ -63,7 +64,7 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
         </div>
         <button onClick={() => setCycleStart(nextCycleStart(cycleStart))} style={navBtn}>下周期 ›</button>
         <div style={{ flex:1 }} />
-        {isAdmin && <button onClick={openNew} style={{ ...navBtn, border:`1.5px solid ${T.accent}`, color:T.accent }}>+ 新增目标</button>}
+        {isAdmin && <button onClick={() => setEditing('new')} style={{ ...navBtn, border:`1.5px solid ${T.accent}`, color:T.accent }}>+ 新增目标</button>}
       </div>
 
       {/* 时间进度条 */}
@@ -104,71 +105,19 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
               <span style={{ fontSize:FONT.sm2, color:T.hint }}>({items.length} 款)</span>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:14 }}>
-              {items.map(g => {
-                const done = doneQty(g); const pct = g.target_qty > 0 ? Math.min(1, done / g.target_qty) : 0;
-                const ahead = pct > tp + 0.1; const behind = pct < tp - 0.1;
-                const sc = ahead ? T.success : behind ? T.danger : T.accent;
-                const product = products.find(p => p.id === g.product_id);
-                return (
-                  <div key={g.id} style={{ ...glassStyle(16, true), padding:'16px 18px' }}>
-                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
-                      <div>
-                        <div style={{ fontWeight:800, fontSize:FONT.xl2, color:T.text }}>{product?.internal_name || g.product_id}</div>
-                        <div style={{ fontSize:FONT.sm, color:T.hint, marginTop:2 }}>{product?.product_title || ''}</div>
-                      </div>
-                      {isAdmin && (
-                        <div style={{ display:'flex', gap:8 }}>
-                          <button onClick={() => openEdit(g)} style={{ border:'none', background:'none', color:T.accent, cursor:'pointer', fontSize:FONT.sm2, padding:0 }}>编辑</button>
-                          <button onClick={() => del(g.id)} style={{ border:'none', background:'none', color:T.danger, cursor:'pointer', fontSize:FONT.sm2, padding:0 }}>删除</button>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:FONT.md2, marginBottom:5 }}>
-                      <span style={{ color:sc, fontWeight:700 }}>{done} / {g.target_qty} 件</span>
-                      <span style={{ color:T.hint }}>{Math.round(pct * 100)}%</span>
-                    </div>
-                    <div style={{ height:8, borderRadius:8, background:`${sc}20`, overflow:'hidden' }}>
-                      <div style={{ height:'100%', width:`${Math.min(100, pct * 100)}%`, background:sc, borderRadius:8, transition:'width .4s' }} />
-                    </div>
-                    <div style={{ marginTop:4, fontSize:FONT.xs, color:T.hint }}>
-                      {ahead ? '✅ 进度超前' : behind ? '⚠️ 进度落后' : '📊 进度正常'} · 时间进度 {Math.round(tp * 100)}%
-                    </div>
-                  </div>
-                );
-              })}
+              {items.map(g => (
+                <GoalCard key={g.id} goal={g} product={products.find(p => p.id === g.product_id)} done={doneQty(g)} tp={tp}
+                  staff={staff} doneByStaff={(sid) => doneByStaff(g, sid)} isAdmin={isAdmin}
+                  onEdit={() => setEditing(g)} onDelete={() => del(g.id)} onAllocate={() => setAllocating(g)} />
+              ))}
             </div>
           </div>
         ))
       }
 
-      {editing && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(10,22,40,0.55)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-          <div style={{ ...glassStyle(20, true), padding:'26px 28px', width:'100%', maxWidth:440 }}>
-            <div style={{ fontSize:FONT.x4l, fontWeight:800, color:T.text, marginBottom:20 }}>{editing === 'new' ? '新增目标' : '编辑目标'}</div>
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:FONT.md2, fontWeight:600, color:T.muted, marginBottom:6 }}>产品 *</div>
-              <select style={{ ...inp, cursor:'pointer' }} value={form.product_id||''} onChange={e => setForm(f => ({ ...f, product_id:e.target.value }))}>
-                <option value="">选择产品…</option>
-                {products.map(p => <option key={p.id} value={p.id}>{p.internal_name}</option>)}
-              </select>
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:FONT.md2, fontWeight:600, color:T.muted, marginBottom:6 }}>目标寄样数</div>
-              <input type="number" style={inp} value={form.target_qty||''} onChange={e => setForm(f => ({ ...f, target_qty:e.target.value }))} />
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:FONT.md2, fontWeight:600, color:T.muted, marginBottom:6 }}>优先级</div>
-              <select style={{ ...inp, cursor:'pointer' }} value={form.priority||'二级'} onChange={e => setForm(f => ({ ...f, priority:e.target.value }))}>
-                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:20 }}>
-              <button onClick={() => setEditing(null)} style={{ ...navBtn }}>取消</button>
-              <button onClick={saveForm} disabled={!form.product_id} style={{ padding:'9px 20px', borderRadius:10, border:'none', cursor:'pointer', background:T.grad, color:'#fff', fontWeight:700, fontSize:FONT.lg2, fontFamily:'inherit' }}>保存</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {editing && <GoalForm initial={editing === 'new' ? null : editing} products={products} onSave={saveForm} onClose={() => setEditing(null)} />}
+      {allocating && <AllocModal goal={allocating} productName={products.find(p => p.id === allocating.product_id)?.internal_name}
+        staff={staff} doneOf={(sid) => doneByStaff(allocating, sid)} onSave={saveAlloc} onClose={() => setAllocating(null)} />}
     </div>
   );
 }

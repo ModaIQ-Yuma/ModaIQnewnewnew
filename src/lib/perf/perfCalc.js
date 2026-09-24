@@ -57,17 +57,21 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
 
   const scoped  = staffId ? collabs.filter(c => c.staff_id === staffId) : collabs;
   const sampled = scoped.filter(c => inShip(c.ship_date));
-  const sampledIds = new Set(sampled.map(c => c.id));
 
-  // ── a：实际视频数 ÷ 本周期寄样目标总数 ────────────────────────────────────
-  const targetQty = staffId
-    ? 0  // 助理级别需要 goal_allocations，暂不支持
-    : goalsInCycle.reduce((s, g) => s + (Number(g.target_qty) || 0), 0);
+  // ── a：实际视频数 ÷ 预估视频数 ────────────────────────────────────────────
+  // 助理预估 = 预估视频 ÷ 寄样目标 × 分到的件数（每个产品四舍五入后相加）
+  const allocOf = (g) => (g.goal_allocations || []).find(a => a.staff_id === staffId)?.qty || 0;
+  const estimatedVideos = goalsInCycle.reduce((s, g) => s + (staffId
+    ? Math.round((Number(g.estimated_videos) || 0) / (Number(g.target_qty) || 1) * allocOf(g))
+    : (Number(g.estimated_videos) || 0)), 0);
+  // 实际视频（自然月发布）：全店 = 全部视频（含非CRM）；助理 = 按达人算，
+  // 和她合作过的达人（她名下有寄样），这些达人当月发布的所有视频都算她的
   const periodVids = videos.filter(v => inVideo(v.published_at?.slice(0, 10)));
-  const actualVideos = staffId
-    ? periodVids.filter(v => sampledIds.has(v.collaboration_id)).length
-    : periodVids.length;
-  const a = targetQty > 0 ? actualVideos / targetQty : null;
+  const creatorOf = new Map(collabs.map(c => [c.id, c.creator_id]));
+  const myCreators = new Set(scoped.map(c => c.creator_id));
+  const staffVids = staffId ? periodVids.filter(v => myCreators.has(creatorOf.get(v.collaboration_id))) : periodVids;
+  const actualVideos = staffVids.length;
+  const a = estimatedVideos > 0 ? actualVideos / estimatedVideos : null;
 
   // ── b：老品达人转化率 ──────────────────────────────────────────────────────
   const oldSampled    = sampled.filter(c => oldPids.has(c.product_id));
@@ -82,13 +86,13 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
   const b = safeDiv(oldWithSales.size, oldCreatorIds.size);
 
   // ── c：视频出单率 ──────────────────────────────────────────────────────────
-  const scopedVids = staffId ? periodVids.filter(v => sampledIds.has(v.collaboration_id)) : periodVids;
+  const scopedVids = staffVids;
   const saleVids   = scopedVids.filter(v => (v.orders || 0) > 0).length;
   const c = safeDiv(saleVids, scopedVids.length);
 
   // ── d：新品寄样达成率 ─────────────────────────────────────────────────────
   const newGoals  = goalsInCycle.filter(g => newPids.has(g.product_id));
-  const newTarget = newGoals.reduce((s, g) => s + (Number(g.target_qty) || 0), 0);
+  const newTarget = newGoals.reduce((s, g) => s + (staffId ? allocOf(g) : (Number(g.target_qty) || 0)), 0);
   const newActual = sampled.filter(c => newPids.has(c.product_id)).length;
   const d = safeDiv(newActual, newTarget);
 
@@ -99,7 +103,7 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
 
   return {
     a, b, c, d, e,
-    estimatedVideos: targetQty,
+    estimatedVideos,
     actualVideos,
     newTarget, newActual,
     oldInfluencerTotal: oldCreatorIds.size,

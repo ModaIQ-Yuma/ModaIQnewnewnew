@@ -210,3 +210,32 @@ test("达人归属：最早有跟进人的寄样定归属；多跟进人列为�
   expect(c[0]).toMatchObject({ handle: "5patito", owner: "zhao", rows: 3 });
   expect(c[0].staff.map((s) => [s.staffId, s.count])).toEqual([["zhao", 1], ["fang", 2]]);
 });
+
+import { calcPerfMetrics } from "../perf/perfCalc.js";
+test("视频产出分配：助理预估 = 预估 ÷ 目标 × 分配（每品四舍五入后相加）；实际视频按达人算", () => {
+  const goals = [
+    { cycle_start: "2026-08-15", product_id: "P1", target_qty: 100, estimated_videos: 40, goal_allocations: [{ staff_id: "zhu", qty: 33 }, { staff_id: "fang", qty: 67 }] },
+    { cycle_start: "2026-08-15", product_id: "P2", target_qty: 100, estimated_videos: 40, goal_allocations: [{ staff_id: "zhu", qty: 33 }] },
+    { cycle_start: "2026-08-15", product_id: "P3", target_qty: 100, estimated_videos: 40, goal_allocations: [{ staff_id: "zhu", qty: 33 }] },
+  ];
+  const collabs = [
+    { id: "c1", creator_id: "A", staff_id: "zhu", product_id: "P1", ship_date: "2026-08-20" },
+    { id: "c2", creator_id: "A", staff_id: "zhu", product_id: "P2", ship_date: "2026-03-01" },  // 同一达人的老寄样
+    { id: "c3", creator_id: "B", staff_id: "fang", product_id: "P1", ship_date: "2026-08-20" },
+  ];
+  const videos = [
+    { id: "v1", collaboration_id: "c1", published_at: "2026-09-03", orders: 1 },
+    { id: "v2", collaboration_id: "c2", published_at: "2026-09-10", orders: 0 },   // 老寄样的视频也算（按达人）
+    { id: "v3", collaboration_id: "c3", published_at: "2026-09-12", orders: 2 },
+    { id: "v4", collaboration_id: null, published_at: "2026-09-12", orders: 5 },   // 非CRM：只算全店
+  ];
+  const products = [{ id: "P1", is_new: false }, { id: "P2", is_new: true }, { id: "P3", is_new: false }];
+  const base = { collabs, videos, shippingGoals: goals, products, cycleStart: "2026-08-15" };
+  const zhu = calcPerfMetrics({ ...base, staffId: "zhu" });
+  expect(zhu.estimatedVideos).toBe(39);             // 13.2 → 13，× 3 个产品
+  expect(zhu.actualVideos).toBe(2);
+  expect(zhu.newTarget).toBe(33);
+  const all = calcPerfMetrics({ ...base, staffId: null });
+  expect(all.estimatedVideos).toBe(120);
+  expect(all.actualVideos).toBe(4);
+});

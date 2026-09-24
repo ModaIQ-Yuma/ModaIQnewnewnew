@@ -3,7 +3,7 @@ import { T, FONT } from "../../constants/tokens.js";
 import { WEIGHTS, getScore, getFinalGrade } from "../../lib/perf/perfCalc.js";
 
 const pct = (v) => v == null ? "—" : (v * 100).toFixed(1) + "%";
-const LABELS = { a:"目标发布数量达成率", b:"老品红人转化率", c:"视频转化率", d:"新品寄样达成率", e:"Lv1达人占比" };
+const LABELS = { a:"视频产出达成率", b:"老品红人转化率", c:"视频转化率", d:"新品寄样达成率", e:"Lv1达人占比" };
 
 export default function PerfTable({ metrics }) {
   const { a, b, c, d, e } = metrics;
@@ -50,7 +50,7 @@ export default function PerfTable({ metrics }) {
       )}
       <div style={{ marginTop:12, display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
         {[
-          ["实际视频数", metrics.actualVideos],
+          ["预估 / 实际视频数", `${metrics.estimatedVideos} / ${metrics.actualVideos}`],
           ["新品实际寄样", metrics.newActual],
           ["老品达人（出单/总）", `${metrics.oldWithSalesTotal}/${metrics.oldInfluencerTotal}`],
           ["出单视频/总视频", `${metrics.saleVids}/${metrics.totalVids}`],

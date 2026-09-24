@@ -260,6 +260,7 @@ CREATE TABLE shipping_goals (
   cycle_start date NOT NULL,
   product_id  uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   target_qty  int NOT NULL DEFAULT 0,
+  estimated_videos int,                    -- 预估视频产出（手填）
   strategy    text CHECK (strategy IN ('扩张','精选','收缩','停寄','清仓','测款')),
   priority    text CHECK (priority IN ('测款最优','一级','二级','三级','不动')),
   tags        text,

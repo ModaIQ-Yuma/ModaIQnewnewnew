@@ -5,7 +5,7 @@ import { sb, unwrap } from "./client.js";
 export async function fetchShippingGoals(storeId) {
   return unwrap(
     await sb.from("shipping_goals")
-      .select("id,product_id,cycle_start,target_qty,priority,strategy,tags,products(internal_name,product_title)")
+      .select("id,product_id,cycle_start,target_qty,estimated_videos,priority,strategy,tags,products(internal_name,product_title),goal_allocations(staff_id,qty)")
       .eq("store_id", storeId)
       .order("cycle_start", { ascending: false }),
     "shipping_goals"
@@ -20,6 +20,13 @@ export async function upsertShippingGoal(storeId, goal) {
 }
 export async function deleteShippingGoal(id) {
   unwrap(await sb.from("shipping_goals").delete().eq("id", id), "shipping_goals");
+}
+
+/** 保存助理分配：alloc = { staffId: 件数 }；件数为 0/空 的不存（整组覆盖） */
+export async function saveGoalAllocations(goalId, alloc) {
+  unwrap(await sb.from("goal_allocations").delete().eq("goal_id", goalId), "goal_allocations");
+  const rows = Object.entries(alloc).map(([staff_id, qty]) => ({ goal_id: goalId, staff_id, qty: Number(qty) || 0 })).filter((r) => r.qty > 0);
+  if (rows.length) unwrap(await sb.from("goal_allocations").insert(rows), "goal_allocations");
 }
 
 // ─── gantt_strategies ────────────────────────────────────────────────────────
