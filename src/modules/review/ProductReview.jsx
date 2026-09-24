@@ -58,15 +58,15 @@ export default function ProductReview({ storeId, collabs, videos, products, burs
         <RangePicker range={range} />
       </div>
 
-      <AreaTitle chip="寄样端" label="从 CRM 寄样记录计算" note={`寄样区间 ${spanLabel(range.ship)}`} />
+      <AreaTitle chip="寄样端" label="从 CRM 寄样记录计算" note={`寄样区间 ${spanLabel(range.ship)} · 看这些寄样的全部视频，不限发布时间`} />
       <CardGrid>
         <MCard label="合作达人数"   value={num(m.shipCount)}      sub="寄样记录数" />
-        <MCard label="履约达人数"   value={num(m.fulfillCount)}   sub="在视频区间内发过视频" />
-        <MCard label="有出单达人数" value={num(m.withSalesCount)} sub="视频出单 ≥ 1" />
+        <MCard label="履约达人数"   value={num(m.fulfillCount)}   sub="发过视频（不限发布时间）" />
+        <MCard label="有出单达人数" value={num(m.withSalesCount)} sub="该寄样累计出单 ≥ 1" />
         <MCard label="履约率"       value={pct(m.fulfillRate)}    sub="履约 ÷ 寄样" />
         <MCard label="达人出单率"   value={pct(m.saleRate)}       sub="出单达人 ÷ 履约" accent />
         <MCard label="平均履约天数" value={m.avgFulfillDays == null ? "—" : m.avgFulfillDays + " 天"} sub="寄样 → 首条视频" />
-        <MCard label="样销比"       value={dec(m.sampleSalesRatio)} sub="视频出单 ÷ 寄样数" />
+        <MCard label="样销比"       value={dec(m.sampleSalesRatio)} sub="寄样累计出单 ÷ 寄样数" />
       </CardGrid>
       <AreaTitle chip="寄样端" label="各等级寄样（按寄样时等级）" />
       <ShipGradeTable rows={shipGrades} />

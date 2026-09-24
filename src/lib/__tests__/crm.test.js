@@ -147,3 +147,26 @@ test("区间计算：按月 = 默认区间；等级 Lv7→Lv1；寄样端分层�
   expect(o.rows.find((r) => r.staffId === "s1").inviteCount).toBe(1);
   expect(o.total.videoCount).toBe(V.filter((v) => v.collaboration_id && C.some((c) => c.id === v.collaboration_id)).length);
 });
+
+test("寄样端口径：履约/出单/样销比看寄样的全部视频，不限发布时间；视频端仍按区间", () => {
+  const collabs = [
+    { id: "c1", product_id: "P", ship_date: "2026-08-20", staff_id: "s1", attrs: { official_grade: "Lv3" } },
+    { id: "c2", product_id: "P", ship_date: "2026-08-01", staff_id: "s1", attrs: { official_grade: "Lv3" } },
+    { id: "c3", product_id: "P", ship_date: "2026-08-02", staff_id: "s1", attrs: {} },
+  ];
+  const videos = [
+    { id: "v1", collaboration_id: "c1", product_id: "P", orders: 4, published_at: "2026-09-10T08:00:00Z" },  // 月底寄、次月才发
+    { id: "v2", collaboration_id: "c2", product_id: "P", orders: 0, published_at: "2026-08-05T08:00:00Z" },
+  ];
+  const r = { collabs, videos, productId: "P", ship: { from: "2026-07-15", to: "2026-08-14" }, video: { from: "2026-08-01", to: "2026-08-31" } };
+  const shipAll = { ...r, ship: { from: "2026-08-01", to: "2026-08-31" } };
+  const m = calcRangeMetrics(shipAll);
+  expect(m).toMatchObject({ shipCount: 3, fulfillCount: 2, withSalesCount: 1, shipOrders: 4, videoCount: 1, videoOrders: 0 });
+  expect(m.sampleSalesRatio).toBeCloseTo(4 / 3);
+  expect(calcRangeMetrics(r).fulfillCount).toBe(1);                  // 8/20 那条不在寄样区间
+  const g = calcShipGradeMetrics(shipAll);
+  expect(g.find((x) => x.grade === "Lv3")).toMatchObject({ shipCount: 2, salesCount: 1, ordersSum: 4 });
+  const s = calcStaffOverview({ ...shipAll, invites: [], staff: [] });
+  expect(s.total).toMatchObject({ shipCount: 3, fulfillCount: 2, withSalesCount: 1, videoCount: 1 });
+  expect(s.total.sampleSalesRatio).toBeCloseTo(4 / 3);
+});

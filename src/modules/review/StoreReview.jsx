@@ -68,6 +68,7 @@ export default function StoreReview({ collabs, videos, products }) {
       withSalesCount: all.reduce((s,m)=>s+m.withSalesCount,0),
       videoWithSales: all.reduce((s,m)=>s+m.videoWithSales,0),
       videoOrders:    all.reduce((s,m)=>s+m.videoOrders,0),
+      shipOrders:     all.reduce((s,m)=>s+m.shipOrders,0),
       avgFulfillDays: (() => { const v=all.filter(m=>m.avgFulfillDays!=null); return v.length?Math.round(v.reduce((s,m)=>s+m.avgFulfillDays,0)/v.length):null; })(),
     };
   }, [collabs, videos, months]);
@@ -89,7 +90,7 @@ export default function StoreReview({ collabs, videos, products }) {
   const fulfillRate   = summary.shipCount ? summary.fulfillCount/summary.shipCount : null;
   const saleRate      = summary.fulfillCount ? summary.withSalesCount/summary.fulfillCount : null;
   const videoSaleRate = summary.videoCount ? summary.videoWithSales/summary.videoCount : null;
-  const sampleRatio   = summary.shipCount ? summary.videoOrders/summary.shipCount : null;
+  const sampleRatio   = summary.shipCount ? summary.shipOrders/summary.shipCount : null;
 
   return (
     <div>
@@ -103,10 +104,10 @@ export default function StoreReview({ collabs, videos, products }) {
       <div style={rs.metricGrid}>
         <MetricCard label="合作达人数"   value={rs.num(summary.shipCount)}   sub="CRM寄样记录数" />
         <MetricCard label="新视频数"     value={rs.num(summary.videoCount)}  sub="CRM+非CRM" />
-        <MetricCard label="履约率"       value={pct(fulfillRate)}            sub="有视频÷总寄样" accent />
+        <MetricCard label="履约率"       value={pct(fulfillRate)}            sub="发过视频÷总寄样（不限时间）" accent />
         <MetricCard label="达人出单率"   value={pct(saleRate)}               sub="出单达人÷有视频" accent />
         <MetricCard label="视频出单率"   value={pct(videoSaleRate)}          sub="出单视频÷总视频" accent />
-        <MetricCard label="区间样销比"   value={dec(sampleRatio)}            sub="总出单÷总寄样" accent />
+        <MetricCard label="区间样销比"   value={dec(sampleRatio)}            sub="寄样累计出单÷总寄样" accent />
         <MetricCard label="平均履约周期" value={summary.avgFulfillDays==null?"—":`${summary.avgFulfillDays}天`} sub="寄样→首条视频" />
       </div>
       <div style={{ ...glassStyle(14), padding:"16px 20px", marginBottom:12 }}>

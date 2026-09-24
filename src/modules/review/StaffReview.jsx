@@ -52,7 +52,7 @@ export default function StaffReview({ collabs, videos, invites, products, staff,
   return (
     <div>
       <RangePicker range={range} />
-      <AreaTitle chip="总览" label="全部产品合计" note="视频数 / 视频出单 / 爆单 = 视频区间内发布、归属该助理寄样的视频；邀约录入按视频区间统计" />
+      <AreaTitle chip="总览" label="全部产品合计" note="寄样/履约/出单/样销比 看寄样的全部视频（不限时间）；视频数/视频出单/爆单 = 视频区间内发布的视频；邀约录入按视频区间统计" />
       <StaffTable data={overview} nameOf={nameOf} />
 
       <AreaTitle chip="明细" label="按产品拆分" note="点产品名展开" />
