@@ -44,3 +44,38 @@ export function videosAsOf(videos, ledger, cutoff) {
   }
   return { videos: videos.filter((v) => sum.has(v.id)).map((v) => ({ ...v, ...sum.get(v.id) })), dataTo, unknown };
 }
+
+const nextDay = (d) => { const t = new Date(d + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); };
+/** 区间涉及的每个月的 cutoffDay 号（YYYY-MM-DD 列表） */
+function cutoffDaysWithin(w, cutoffDay) {
+  const out = [];
+  let [y, m] = w.from.split("-").map(Number);
+  const [ty, tm] = w.to.split("-").map(Number);
+  while (y < ty || (y === ty && m <= tm)) {
+    out.push(`${y}-${String(m).padStart(2, "0")}-${String(cutoffDay).padStart(2, "0")}`);
+    if (++m > 12) { m = 1; y++; }
+  }
+  return out;
+}
+const daysBetween = (a, b) => Math.round((new Date(b + "T00:00:00Z") - new Date(a + "T00:00:00Z")) / 86400000);
+
+/**
+ * 导入前检查新文件的数据区间（每周/每月导入都适用）
+ * @param fileName  新文件名        @param existingNames 已导入批次的文件名
+ * @returns { window, errors: [拦截原因], warnings: [提醒] }
+ *   拦截：文件名看不出区间 / 跨过某月 cutoffDay 号（快照口径会漏数据）/ 与已导入区间重叠（会重复累加）
+ *   提醒：与之前最近一个文件之间有断档
+ */
+export function checkNewWindow(fileName, existingNames, cutoffDay) {
+  const w = parseWindow(fileName);
+  if (!w) return { window: null, errors: ["文件名看不出数据区间，请改成「20260906到20260912所有视频」这种格式"], warnings: [] };
+  const errors = [], warnings = [];
+  for (const d of cutoffDaysWithin(w, cutoffDay)) {
+    if (w.from <= d && d < w.to) errors.push(`区间跨过了 ${d}：请拆成「${w.from} ~ ${d}」和「${nextDay(d)} ~ ${w.to}」两个文件，否则月度快照会漏掉这段数据`);
+  }
+  const olds = existingNames.map(parseWindow).filter(Boolean);
+  for (const o of olds) if (w.from <= o.to && o.from <= w.to) errors.push(`与已导入的 ${o.from} ~ ${o.to} 有重叠日期，重复导入会让数据算两遍`);
+  const before = olds.filter((o) => o.to < w.from).sort((a, b) => b.to.localeCompare(a.to))[0];
+  if (before && nextDay(before.to) !== w.from) warnings.push(`与上一个文件（到 ${before.to}）之间空了 ${daysBetween(before.to, w.from) - 1} 天，确认没漏导吗？`);
+  return { window: w, errors, warnings };
+}

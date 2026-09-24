@@ -1,5 +1,6 @@
 import { T } from '../../constants/tokens.js';
 import { STRATEGY_COLORS } from './constants.js';
+import { cellKey } from './utils.js';
 
 const stratGrad = (c) => `linear-gradient(135deg, ${c}D9 0%, ${c}99 100%)`;
 
@@ -55,7 +56,7 @@ function EmptyCells({ seg, columns, product, batchMode, batchSelected, isAdmin, 
     <div style={{ width, display: 'flex', gap: 4, padding: '0 3px' }}>
       {Array.from({ length: seg.span }).map((_, j) => {
         const col = columns[seg.startIdx + j];
-        const hk = `${product.internalName}__${col.key}`;
+        const hk = cellKey(product.id, col.key);
         const hovered = hoverKey === hk;
         const isChecked = batchSelected.has(hk);
         return (
@@ -65,12 +66,12 @@ function EmptyCells({ seg, columns, product, batchMode, batchSelected, isAdmin, 
             onMouseLeave={() => onHover(null)}
             style={{
               flex: 1, borderRadius: 10,
-              border: `1.5px dashed ${isChecked ? T.accent : (hovered && isAdmin ? T.accent + '88' : T.glassStroke)}`,
-              background: isChecked ? 'rgba(61,127,239,0.14)' : (hovered && isAdmin ? 'rgba(61,127,239,0.08)' : 'transparent'),
+              border: isChecked ? `2px solid ${T.accent}` : `1.5px dashed ${hovered && isAdmin ? T.accent + '88' : T.glassStroke}`,
+              background: isChecked ? 'rgba(61,127,239,0.22)' : (hovered && isAdmin ? 'rgba(61,127,239,0.08)' : 'transparent'),
               cursor: isAdmin ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: batchMode ? 14 : 16, transition: 'all .18s ease',
-              color: isChecked ? T.accent : (hovered && isAdmin ? T.accent : 'transparent'),
+              color: isChecked ? T.accent : (hovered && isAdmin ? T.accent : batchMode ? T.hint : 'transparent'),
             }}
           >{batchMode ? (isChecked ? '☑' : '☐') : '＋'}</div>
         );
@@ -83,9 +84,9 @@ function EmptyCells({ seg, columns, product, batchMode, batchSelected, isAdmin, 
 function StrategyBandCell({ seg, si, columns, product, batchMode, batchSelected, isAdmin, hoverKey, onCellClick, onHover }) {
   const width = `${(seg.span / columns.length) * 100}%`;
   const c = STRATEGY_COLORS[seg.strategy] || T.hint;
-  const hk = `${product.internalName}__seg${si}`;
+  const hk = cellKey(product.id, `seg${si}`);
   const hovered = hoverKey === hk;
-  const segColKeys = Array.from({ length: seg.span }, (_, j) => `${product.internalName}__${columns[seg.startIdx + j].key}`);
+  const segColKeys = Array.from({ length: seg.span }, (_, j) => cellKey(product.id, columns[seg.startIdx + j].key));
   const segCheckedCount = batchMode ? segColKeys.filter(k => batchSelected.has(k)).length : 0;
   const segAllChecked = batchMode && segCheckedCount === seg.span;
 

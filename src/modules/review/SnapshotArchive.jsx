@@ -1,50 +1,38 @@
-// modules/review/SnapshotArchive.jsx — 快照记录 + 补存历史快照
-import { useState } from "react";
+// modules/review/SnapshotArchive.jsx — 快照记录：按月份/产品筛选、按状态分段、表头排序、分页
+import { useMemo, useState } from "react";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
+import { PS_COLORS } from "../../constants/products.js";
 import { rs } from "./reviewStyles.js";
-import { Hint } from "../../components/layout/SubNav.jsx";
 import { deleteProductSnapshot } from "../../lib/supabase/reviewWrite.js";
 import { byProductOrder } from "../../lib/products/productOrder.js";
-import { monthRange } from "../../lib/review/snapshotPlan.js";
-import { describeSave } from "./snapshotUi.js";
+import { usePaged } from "../../hooks/usePaged.js";
+import Pager from "../../components/ui/Pager.jsx";
+import SnapshotBackfill from "./SnapshotBackfill.jsx";
 
-const prevYm = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); };
-
-/** 补存历史快照：历史视频按「6 号到下月 5 号」全部导完后，一次按口径存多个月 */
-function Backfill({ saver }) {
-  const [from, setFrom] = useState(`${new Date().getFullYear() - 1}-01`);
-  const [to, setTo]     = useState(prevYm());
-  const [msg, setMsg]   = useState("");
-  async function run() {
-    const months = monthRange(from, to);
-    if (!months.length) { setMsg("开始月份不能晚于结束月份"); return; }
-    if (!window.confirm(`将按「当月发布的视频，数据截止次月 5 日」重新计算并保存 ${months.length} 个月的快照（已有的同月快照会被覆盖）。视频数据还没导到截止日的月份会自动跳过。继续吗？`)) return;
-    setMsg("计算中…");
-    try { setMsg(describeSave(await saver.saveMonths(months))); }
-    catch (e) { setMsg(`❌ ${e.message}`); }
-  }
-  return (
-    <div style={{ ...glassStyle(14), padding: "14px 18px", marginBottom: 16 }}>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: FONT.h3, fontWeight: 700, color: T.text }}>📚 补存历史快照</span>
-        <input type="month" style={rs.monthInp} value={from} onChange={(e) => setFrom(e.target.value)} />
-        <span style={{ color: T.hint }}>—</span>
-        <input type="month" style={rs.monthInp} value={to} onChange={(e) => setTo(e.target.value)} />
-        <button style={rs.btn} disabled={saver.busy} onClick={run}>{saver.busy ? "保存中…" : "按口径补存"}</button>
-        {msg && <span style={{ fontSize: FONT.note, color: msg.startsWith("❌") ? T.danger : T.text }}>{msg}</span>}
-      </div>
-      <Hint style={{ marginTop: 6 }}>
-        重建历史时用：先把历史视频按「6 号到下月 5 号」的文件全部导完（文件名写成「20250106到20250205所有视频」），再在这里选月份一次补存。
-        系统按文件名识别每批数据的区间，只累加到次月 5 号为止，和每月按时保存的结果一致。
-      </Hint>
-    </div>
-  );
-}
+const NUM_COLS = [["寄样数", "ship_count"], ["视频数", "video_count"], ["爆单数", "burst_count"], ["视频出单", "orders"], ["总出单", "total_orders"], ["自然单", "organic_orders"]];
+const isEmpty = (s) => !s.ship_count && !s.video_count && !s.orders;
+const sel = { ...rs.monthInp, cursor: "pointer", minWidth: 120 };
 
 export default function SnapshotArchive({ gradeSnapshots, products, onDeleted, saver }) {
-  const byProduct = byProductOrder(products);   // 月份从新到旧；同月内按产品状态排
-  const rows = [...gradeSnapshots].sort((a, b) =>
-    String(b.month || "").localeCompare(String(a.month || "")) || byProduct(a, b));
+  const months = useMemo(() => [...new Set(gradeSnapshots.map((s) => s.month?.slice(0, 7)))].sort().reverse(), [gradeSnapshots]);
+  const [month, setMonth]         = useState("");            // "" = 最近一个月；"all" = 全部月份
+  const [productId, setProductId] = useState("");
+  const [hideEmpty, setHideEmpty] = useState(true);
+  const [sort, setSort]           = useState(null);          // null = 默认（月份↓ + 产品状态）；{ key, desc }
+  const pm = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const curMonth = month || months[0] || "";
+
+  const rows = useMemo(() => {
+    const byProduct = byProductOrder(products);
+    const list = gradeSnapshots.filter((s) => (curMonth === "all" || s.month?.slice(0, 7) === curMonth)
+      && (!productId || s.product_id === productId) && (!hideEmpty || !isEmpty(s)));
+    return list.sort(sort
+      ? (a, b) => ((Number(a[sort.key]) || 0) - (Number(b[sort.key]) || 0)) * (sort.desc ? -1 : 1)
+      : (a, b) => String(b.month).localeCompare(String(a.month)) || byProduct(a, b));
+  }, [gradeSnapshots, products, curMonth, productId, hideEmpty, sort]);
+  const { page, setPage, totalPages, pageRows } = usePaged(rows, 50, `${curMonth}|${productId}|${hideEmpty}|${sort?.key}|${sort?.desc}`);
+  const clickSort = (key) => setSort((s) => (s?.key === key ? { key, desc: !s.desc } : { key, desc: true }));
+  const statusOf = (s) => pm.get(s.product_id)?.status || "未设置";
 
   async function handleDelete(id) {
     if (!window.confirm("确认删除此快照？")) return;
@@ -54,42 +42,64 @@ export default function SnapshotArchive({ gradeSnapshots, products, onDeleted, s
 
   return (
     <div>
-      <Backfill saver={saver} />
-      {!rows.length ? <div style={rs.empty}>暂无快照记录。</div> : (
-      <div style={{ ...glassStyle(14), overflow: "hidden" }}>
-      <table style={rs.table}>
-        <thead><tr>
-          <th style={rs.th}>月份</th>
-          <th style={rs.th}>产品</th>
-          <th style={rs.thR}>寄样数</th>
-          <th style={rs.thR}>视频数</th>
-          <th style={rs.thR}>爆单数</th>
-          <th style={rs.thR}>视频出单</th>
-          <th style={rs.thR}>总出单</th>
-          <th style={rs.thR}>自然单</th>
-          <th style={rs.th}>保存时间</th>
-          <th style={rs.th}>操作</th>
-        </tr></thead>
-        <tbody>
-          {rows.map((s) => (
-            <tr key={s.id}>
-              <td style={{ ...rs.td, fontWeight: 700 }}>{s.month?.slice(0, 7)}</td>
-              <td style={rs.td}>{s.products?.internal_name || "-"}</td>
-              <td style={rs.tdR}>{s.ship_count}</td>
-              <td style={rs.tdR}>{s.video_count}</td>
-              <td style={{ ...rs.tdR, color: s.burst_count > 0 ? T.success : T.hint, fontWeight: 600 }}>{s.burst_count}</td>
-              <td style={{ ...rs.tdR, fontWeight: 600 }}>{s.orders}</td>
-              <td style={rs.tdR}>{s.total_orders ?? "—"}</td>
-              <td style={rs.tdR}>{s.organic_orders ?? "—"}</td>
-              <td style={{ ...rs.td, color: T.muted, fontSize: 12 }}>{s.created_at?.slice(0, 16).replace("T", " ")}</td>
-              <td style={rs.td}>
-                <button style={rs.btnDanger} onClick={() => handleDelete(s.id)}>删除</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      <SnapshotBackfill saver={saver} />
+      <div style={{ ...rs.toolbar, marginBottom: 12 }}>
+        <span style={rs.label}>月份</span>
+        <select style={sel} value={curMonth} onChange={(e) => setMonth(e.target.value)}>
+          <option value="all">全部月份</option>
+          {months.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <span style={rs.label}>产品</span>
+        <select style={sel} value={productId} onChange={(e) => setProductId(e.target.value)}>
+          <option value="">全部产品</option>
+          {products.map((p) => <option key={p.id} value={p.id}>{p.internal_name}</option>)}
+        </select>
+        <label style={{ fontSize: FONT.body, color: T.text, display: "flex", gap: 6, alignItems: "center", cursor: "pointer" }}>
+          <input type="checkbox" checked={hideEmpty} onChange={(e) => setHideEmpty(e.target.checked)} />隐藏没有数据的产品
+        </label>
+        {sort && <button style={rs.btnGhost} onClick={() => setSort(null)}>恢复默认排序</button>}
+        <span style={{ fontSize: FONT.note, color: T.hint, marginLeft: "auto" }}>共 {rows.length} 条 · 默认按月份从新到旧、同月按产品状态分段；点表头可排序</span>
+      </div>
+
+      {!rows.length ? <div style={rs.empty}>没有符合条件的快照。</div> : (
+        <div style={{ ...glassStyle(14), overflowX: "auto" }}>
+          <table style={rs.table}>
+            <thead><tr>
+              <th style={rs.th}>月份</th><th style={rs.th}>产品</th><th style={rs.th}>状态</th>
+              {NUM_COLS.map(([h, k]) => (
+                <th key={k} onClick={() => clickSort(k)} style={{ ...rs.thR, cursor: "pointer", whiteSpace: "nowrap", color: sort?.key === k ? T.accent : rs.thR.color }}>
+                  {h}{sort?.key === k ? (sort.desc ? " ▼" : " ▲") : " ↕"}
+                </th>
+              ))}
+              <th style={rs.th}>保存时间</th><th style={rs.th}>操作</th>
+            </tr></thead>
+            <tbody>
+              {pageRows.map((s, i) => {
+                const prev = pageRows[i - 1], st = statusOf(s);
+                const header = !sort && (!prev || prev.month !== s.month || statusOf(prev) !== st);
+                const count = header ? rows.filter((r) => r.month === s.month && statusOf(r) === st).length : 0;
+                return [
+                  header && (
+                    <tr key={`h-${s.id}`}><td colSpan={NUM_COLS.length + 5} style={{ ...rs.td, background: `${PS_COLORS[st] || T.hint}14`, fontWeight: 700, color: PS_COLORS[st] || T.muted }}>
+                      {s.month?.slice(0, 7)} · {st}（{count}）
+                    </td></tr>
+                  ),
+                  <tr key={s.id}>
+                    <td style={{ ...rs.td, fontWeight: 700 }}>{s.month?.slice(0, 7)}</td>
+                    <td style={rs.td}>{s.products?.internal_name || "-"}</td>
+                    <td style={{ ...rs.td, color: PS_COLORS[st] || T.muted, fontWeight: 600 }}>{st}</td>
+                    {NUM_COLS.map(([, k]) => (
+                      <td key={k} style={{ ...rs.tdR, fontWeight: k === "orders" ? 700 : 400, color: k === "burst_count" && s[k] > 0 ? T.success : undefined }}>{s[k] ?? "—"}</td>
+                    ))}
+                    <td style={{ ...rs.td, color: T.muted, fontSize: FONT.note }}>{s.created_at?.slice(0, 16).replace("T", " ")}</td>
+                    <td style={rs.td}><button style={rs.btnDanger} onClick={() => handleDelete(s.id)}>删除</button></td>
+                  </tr>,
+                ];
+              })}
+            </tbody>
+          </table>
+          <Pager page={page} totalPages={totalPages} onChange={setPage} />
+        </div>
       )}
     </div>
   );

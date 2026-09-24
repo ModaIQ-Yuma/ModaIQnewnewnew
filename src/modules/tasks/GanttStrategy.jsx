@@ -4,7 +4,7 @@ import { T, FONT, glassStyle } from '../../constants/tokens.js';
 import { GANTT_MONTHS_PER_VIEW, GANTT_COL_PRODUCT_WIDTH } from '../../constants/config.js';
 import { normalizeStatus } from '../../constants/crm.js';
 import { PRODUCT_STATUSES } from '../../constants/products.js';
-import { currentYearMonth, currentHalfKey, halfMonthColumns, shiftMonth, currentCycleStart, halfKeyToCycleStart } from './utils.js';
+import { currentYearMonth, currentHalfKey, halfMonthColumns, shiftMonth, currentCycleStart, halfKeyToCycleStart, cellKey } from './utils.js';
 import StrategyChangeConfirm from './StrategyChangeConfirm.jsx';
 import GanttBatchBar from './GanttBatchBar.jsx';
 import ChangeLogModal from './ChangeLogModal.jsx';
@@ -34,7 +34,7 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
   // 适配新版：product_id + half_key
   const ganttMap = useMemo(() => {
     const m = {};
-    ganttStrategies.forEach(g => { if (g.strategy) m[`${g.product_id}__${g.half_key}`] = g; });
+    ganttStrategies.forEach(g => { if (g.strategy) m[cellKey(g.product_id, g.half_key)] = g; });
     return m;
   }, [ganttStrategies]);
 
@@ -48,8 +48,8 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
       .concat(Object.keys(map).filter(c => !CAT_ORDER.includes(c)).map(cat => ({ cat, items: map[cat] })));
   }, [products, onlySet, ganttStrategies]);
 
-  function getStrategy(productId, col) { return ganttMap[`${productId}__${col.key}`]?.strategy || null; }
-  function getEntry(productId, col) { return ganttMap[`${productId}__${col.key}`] || null; }
+  function getStrategy(productId, col) { return ganttMap[cellKey(productId, col.key)]?.strategy || null; }
+  function getEntry(productId, col) { return ganttMap[cellKey(productId, col.key)] || null; }
 
   function buildSegments(productId) {
     const segs = [];
@@ -65,7 +65,7 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
   const handleCellClick = useCallback((product, col) => {
     if (!isAdmin) return;
     if (batchMode) {
-      const key = `${product.id}__${col.key}`;
+      const key = cellKey(product.id, col.key);
       setBatchSelected(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
     } else {
       setPending({ product, col, fromStrategy: getStrategy(product.id, col), toStrategy: null, selectMode: true });
@@ -105,7 +105,7 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
     if (!window.confirm(`将 ${batchSelected.size} 个半月格设为「${toStrategy === null ? '清空' : toStrategy}」？`)) return;
     const entries = [...batchSelected].map(k => { const sep = k.lastIndexOf('__'); return { productId: k.slice(0, sep), colKey: k.slice(sep + 2) }; });
     await Promise.all(entries.map(({ productId, colKey }) => {
-      const existing = ganttMap[`${productId}__${colKey}`];
+      const existing = ganttMap[cellKey(productId, colKey)];
       if (toStrategy === null) return existing?.id ? deleteGanttStrategy(existing.id) : Promise.resolve();
       return upsertGanttStrategy(storeId, { id: existing?.id, product_id: productId, half_key: colKey, strategy: toStrategy });
     }));

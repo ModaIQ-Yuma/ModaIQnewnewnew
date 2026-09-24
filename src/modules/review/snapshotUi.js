@@ -6,10 +6,25 @@ export const confirmIncomplete = (plan, ym) => window.confirm(
   `目前视频数据只导到 ${plan.dataTo || "（还没有导入）"}，现在保存会缺最后几天的数据。\n\n仍要保存吗？`
 );
 
-/** saveMonths 的结果 → 一句提示 */
+/** 月份列表压缩成区间：2025-01 ~ 2025-04、2025-06 */
+export function compressMonths(yms) {
+  const idx = (ym) => { const [y, m] = ym.split("-").map(Number); return y * 12 + m; };
+  const sorted = [...yms].sort(), out = [];
+  for (let i = 0; i < sorted.length; i++) {
+    let j = i;
+    while (j + 1 < sorted.length && idx(sorted[j + 1]) === idx(sorted[j]) + 1) j++;
+    out.push(i === j ? sorted[i] : `${sorted[i]} ~ ${sorted[j]}`);
+    i = j;
+  }
+  return out.join("、");
+}
+
+/** saveMonths 的结果 → 提示（每类一行） */
 export function describeSave(res) {
-  const parts = [];
-  if (res.saved.length) parts.push(`✅ 已保存 ${res.saved.join("、")} 快照（视频数据截止次月 5 日）`);
-  if (res.skipped.length) parts.push(`⏭ 跳过 ${res.skipped.map((s) => `${s.ym}（数据只到 ${s.dataTo || "无"}）`).join("、")}`);
-  return parts.join("；") || "没有保存任何快照";
+  const lines = [];
+  if (res.saved.length) lines.push(`✅ 已保存 ${res.saved.length} 个月（${compressMonths(res.saved)}），视频数据截止次月 5 日`);
+  const byDataTo = {};
+  for (const s of res.skipped) (byDataTo[s.dataTo || "（未导入）"] ||= []).push(s.ym);
+  for (const [to, yms] of Object.entries(byDataTo)) lines.push(`⏭ 跳过 ${yms.length} 个月（${compressMonths(yms)}）：视频数据只导到 ${to}，导完后再补存`);
+  return lines.join("\n") || "没有保存任何快照";
 }

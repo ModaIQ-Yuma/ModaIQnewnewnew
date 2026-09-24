@@ -9,6 +9,8 @@ import { parseVideoXlsx } from "../../lib/video/videoParser.js";
 import { importVideos } from "../../lib/supabase/videosWrite.js";
 import { buildVideoImportPlan, buildVideoLookup } from "../../lib/video/videoImportPlan.js";
 import { buildNameIndex } from "../../lib/crm/identity.js";
+import { checkNewWindow } from "../../lib/video/cutoff.js";
+import { ORDER_WINDOW_TAIL_DAYS } from "../../constants/config.js";
 import { revertBatch } from "../../lib/supabase/videosRevert.js";
 
 const TABS = [
@@ -45,6 +47,10 @@ export default function VideosModule({ ctx }) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    // 导入前检查数据区间：跨 5 号 / 与已导入重叠 → 拦下；断档 → 提醒
+    const chk = checkNewWindow(file.name, batches.map((b) => b.file_name), ORDER_WINDOW_TAIL_DAYS);
+    if (chk.errors.length) { setErrMsg(`未导入：${chk.errors.join("；")}`); return; }
+    if (chk.warnings.length && !window.confirm(`${chk.warnings.join("\n")}\n\n仍要导入吗？`)) return;
     setImporting(true); setErrMsg(null);
     try {
       const parsed = await parseVideoXlsx(file);
@@ -88,7 +94,7 @@ export default function VideosModule({ ctx }) {
               </button>
               <Hint style={{ marginTop: 6 }}>
                 数据获取路径：联盟重心 → 数据分析 → 所有视频<br />
-                建议文件命名为右上角框选视频日期，示例：20260101到20260201所有视频
+                文件名必须写数据区间，如「20260906到20260912所有视频」；每月 5 号那周要在 5 号截断、6 号重新开始。系统会拦下跨 5 号或与已导入重叠的文件
               </Hint>
             </div>
             {errMsg && <span style={{ fontSize: 13, color: errMsg.startsWith("✅") ? T.success : T.danger, fontWeight: 600 }}>{errMsg}</span>}

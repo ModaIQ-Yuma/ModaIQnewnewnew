@@ -170,3 +170,24 @@ test("寄样端口径：履约/出单/样销比看寄样的全部视频，不限
   expect(s.total).toMatchObject({ shipCount: 3, fulfillCount: 2, withSalesCount: 1, videoCount: 1 });
   expect(s.total.sampleSalesRatio).toBeCloseTo(4 / 3);
 });
+
+import { checkNewWindow } from "../video/cutoff.js";
+test("导入区间检查：跨 5 号拦截 / 重叠拦截 / 断档提醒 / 正常通过", () => {
+  const done = ["20260906到20260912所有视频.xlsx", "20260913到20260919所有视频.xlsx"];
+  expect(checkNewWindow("20260920到20260926", done, 5)).toMatchObject({ errors: [], warnings: [] });
+  expect(checkNewWindow("20260927到20261003", [...done, "20260920到20260926"], 5).errors).toEqual([]);
+  expect(checkNewWindow("20261004到20261010", done, 5).errors[0]).toMatch("2026-10-05");
+  expect(checkNewWindow("20261004到20261005", done, 5).errors).toEqual([]);                 // 截断到 5 号：可以
+  expect(checkNewWindow("20261006到20261012", done, 5).errors).toEqual([]);                 // 6 号开始：可以
+  expect(checkNewWindow("20260918到20260925", done, 5).errors[0]).toMatch("重叠");
+  expect(checkNewWindow("20260925到20261001", done, 5).warnings[0]).toMatch("空了 5 天");
+  expect(checkNewWindow("所有视频.xlsx", done, 5).errors[0]).toMatch("看不出");
+  expect(checkNewWindow("20260806到20260905", [], 5).errors).toEqual([]);                   // 标准月度文件：以 5 号结尾
+});
+
+import { compressMonths, describeSave } from "../../modules/review/snapshotUi.js";
+test("补存结果文案：月份压缩成区间，跳过按数据截止日分组", () => {
+  expect(compressMonths(["2025-12", "2025-11", "2026-01", "2026-03"])).toBe("2025-11 ~ 2026-01、2026-03");
+  const msg = describeSave({ saved: ["2025-01", "2025-02", "2025-03"], skipped: [{ ym: "2026-05", dataTo: "2026-05-05" }, { ym: "2026-06", dataTo: "2026-05-05" }] });
+  expect(msg).toBe("✅ 已保存 3 个月（2025-01 ~ 2025-03），视频数据截止次月 5 日\n⏭ 跳过 2 个月（2026-05 ~ 2026-06）：视频数据只导到 2026-05-05，导完后再补存");
+});
