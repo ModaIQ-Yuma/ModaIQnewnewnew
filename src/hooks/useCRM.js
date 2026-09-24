@@ -1,6 +1,7 @@
 // ─── CRM hook：从核心数据派生 influencer 列表；身份检查 + 保存 + 合并 ────────
 import { useCallback, useMemo } from "react";
 import { buildInfluencers, latestByCreator } from "../lib/crm/buildInfluencers.js";
+import { ownerMap } from "../lib/crm/ownership.js";
 import { buildNameIndex, checkIdentity, normName, resolveName, searchCreators } from "../lib/crm/identity.js";
 import { buildShipmentPayload } from "../lib/crm/shipmentPayload.js";
 import { withComputedStatus } from "../lib/crm/crmFlow.js";
@@ -23,6 +24,7 @@ export function useCRM(storeId, core, products) {
     [collabs, creators, aliases, videos, productById]
   );
   const latest = useMemo(() => latestByCreator(influencers), [influencers]);
+  const owners = useMemo(() => ownerMap(collabs), [collabs]);   // 达人归属：录入时自动填跟进人
   const shipCount = useMemo(() => {
     const m = new Map();
     for (const c of collabs) m.set(c.creator_id, (m.get(c.creator_id) || 0) + 1);
@@ -84,5 +86,5 @@ export function useCRM(storeId, core, products) {
   }, [removeRows, refresh]);
   const remove = useCallback((id) => bulkRemove([id]), [bulkRemove]);
 
-  return { influencers, latest, staff, loading, error, reload: refresh, resolve, search, check, save, handleOf, updateStatus, remove, bulkRemove };
+  return { influencers, latest, staff, loading, error, reload: refresh, resolve, search, check, save, handleOf, owners, updateStatus, remove, bulkRemove };
 }

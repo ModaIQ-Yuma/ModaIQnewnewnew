@@ -26,3 +26,14 @@ export async function deleteInfluencers(ids) {
 /** 只改状态（表格里的状态下拉）：status = 人工基线，status_manual 标记「人工改过」 */
 export const setInfluencerStatus = async (id, baseStatus) =>
   unwrap(await sb.from("collaborations").update({ status: baseStatus, status_manual: true }).eq("id", id), "collaborations");
+
+/**
+ * 变更达人归属：把该达人的寄样跟进人改成 staffId
+ * @param includeUnassigned true = 连「未指定跟进人」的旧寄样也一并归给他
+ * @returns 改动的寄样条数
+ */
+export async function setCreatorOwner(storeId, creatorId, staffId, includeUnassigned = false) {
+  let q = sb.from("collaborations").update({ staff_id: staffId }).eq("store_id", storeId).eq("creator_id", creatorId);
+  if (!includeUnassigned) q = q.not("staff_id", "is", null);
+  return (unwrap(await q.select("id"), "collaborations") || []).length;
+}

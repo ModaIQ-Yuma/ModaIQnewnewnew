@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { T, FONT, glassStyle } from "../../constants/tokens.js";
 import { fetchMembers, fetchInviteCodes, createInviteCode, deleteInviteCode, updateMemberRole, removeMember } from "../../lib/supabase/members.js";
 import StaffRoster from "./StaffRoster.jsx";
+import CreatorOwnership from "./CreatorOwnership.jsx";
 import SubNav from "../../components/layout/SubNav.jsx";
 
 const TRIAL_DAYS = 3;
@@ -70,6 +71,7 @@ export default function StaffModule({ ctx }) {
   const TABS = [
     { id:"roster",  label:"📋 助理名册", desc:"维护助理名单；这里的名字就是 CRM「跟进人」、任务分配和助理复盘里的选项。" },
     { id:"members", label:"👥 团队账号", desc:"能登录本店铺的账号：生成邀请码发给新成员，调整角色（管理员 / 成员）或移除。" },
+    { id:"owner",   label:"🔗 达人归属", desc:"一个达人的寄样应只记在一个助理名下：在这里检查冲突、变更达人归属。" },
   ];
   const inp = { padding:"9px 12px", borderRadius:10, border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.6)", color:T.text, fontSize:FONT.lg2, fontFamily:"inherit" };
 
@@ -78,6 +80,7 @@ export default function StaffModule({ ctx }) {
       <SubNav tabs={TABS} active={tab} onChange={setTab} />
 
       {tab === "roster" && <StaffRoster storeId={storeId} core={core} />}
+      {tab === "owner" && <CreatorOwnership storeId={storeId} core={core} />}
 
       {tab === "members" && (
         <div>

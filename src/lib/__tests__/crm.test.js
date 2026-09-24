@@ -191,3 +191,22 @@ test("补存结果文案：月份压缩成区间，跳过按数据截止日分�
   const msg = describeSave({ saved: ["2025-01", "2025-02", "2025-03"], skipped: [{ ym: "2026-05", dataTo: "2026-05-05" }, { ym: "2026-06", dataTo: "2026-05-05" }] });
   expect(msg).toBe("✅ 已保存 3 个月（2025-01 ~ 2025-03），视频数据截止次月 5 日\n⏭ 跳过 2 个月（2026-05 ~ 2026-06）：视频数据只导到 2026-05-05，导完后再补存");
 });
+
+import { ownerMap, findOwnershipConflicts } from "../crm/ownership.js";
+test("达人归属：最早有跟进人的寄样定归属；多跟进人列为冲突；未指定跟进人不参与", () => {
+  const collabs = [
+    { creator_id: "A", staff_id: null, ship_date: "2026-01-01" },
+    { creator_id: "A", staff_id: "zhao", ship_date: "2026-05-31" },
+    { creator_id: "A", staff_id: "fang", ship_date: "2026-07-06" },
+    { creator_id: "A", staff_id: "fang", ship_date: "2026-07-29" },
+    { creator_id: "B", staff_id: "zhu", ship_date: "2026-03-01" },
+    { creator_id: "B", staff_id: null, ship_date: "2026-04-01" },
+    { creator_id: "C", staff_id: null, ship_date: "2026-04-01" },
+  ];
+  const o = ownerMap(collabs);
+  expect([o.get("A"), o.get("B"), o.get("C")]).toEqual(["zhao", "zhu", undefined]);
+  const c = findOwnershipConflicts(collabs, [{ id: "A", handle: "5patito" }, { id: "B", handle: "b" }]);
+  expect(c).toHaveLength(1);
+  expect(c[0]).toMatchObject({ handle: "5patito", owner: "zhao", rows: 3 });
+  expect(c[0].staff.map((s) => [s.staffId, s.count])).toEqual([["zhao", 1], ["fang", 2]]);
+});

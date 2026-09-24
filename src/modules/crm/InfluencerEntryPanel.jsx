@@ -36,14 +36,17 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
   const history = useMemo(() => crm.influencers.filter((i) => i.creatorId === resolvedId && i.id !== initial?.id)
     .sort((a, b) => b.shipDate.localeCompare(a.shipDate)), [crm.influencers, resolvedId, initial?.id]);
   const repeat = history.find((h) => h.product === f.product);
+  const ownerId = resolvedId ? crm.owners.get(resolvedId) : null;
 
   // 新录入时认出已有达人 → 带出她最近一次寄样的属性、别名、达人备注
   useEffect(() => {
     if (initial || !resolvedId || resolvedId === prefilledFrom) return;
     const last = crm.latest.get(resolvedId);
-    if (last) setF((p) => ({ ...p, aliases: last.aliases, creatorNote: last.creatorNote, ...Object.fromEntries(ATTR_KEYS.map((k) => [k, last[k]])) }));
+    const owner = crm.owners.get(resolvedId);                        // 有归属人 → 自动填跟进人
+    if (last) setF((p) => ({ ...p, aliases: last.aliases, creatorNote: last.creatorNote, ...(owner ? { staffId: String(owner) } : {}),
+      ...Object.fromEntries(ATTR_KEYS.map((k) => [k, last[k]])) }));
     setPrefilled(resolvedId);
-  }, [initial, resolvedId, prefilledFrom, crm.latest]);
+  }, [initial, resolvedId, prefilledFrom, crm.latest, crm.owners]);
 
   const typed = normName(f.influencerId);
   const who = !typed ? null
@@ -97,6 +100,9 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
                   return <button key={s.id} type="button" onClick={() => set("staffId", String(s.id))} style={{ fontSize: FONT.body, padding: "5px 12px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${on ? T.accent : T.glassStroke}`, background: on ? `${T.accent}22` : "rgba(255,255,255,0.4)", color: on ? T.accent : T.muted, fontWeight: on ? 700 : 500 }}>{s.name}</button>;
                 })}
             </div>
+            {ownerId && <div style={{ fontSize: FONT.note, marginTop: 5, color: String(ownerId) === f.staffId ? T.hint : T.warning }}>
+              {String(ownerId) === f.staffId ? `归属人：${staffName(ownerId)}（已自动填写）` : `⚠ 她的归属人是 ${staffName(ownerId)}，选别人会产生归属冲突`}
+            </div>}
           </Field>
         </div>
 
