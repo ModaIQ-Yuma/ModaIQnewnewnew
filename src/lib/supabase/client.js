@@ -1,11 +1,16 @@
 // ─── Supabase 客户端单例（全项目唯一 createClient 调用点）───────────────────
 import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../constants/env.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, FSORDER_URL, FSORDER_ANON_KEY } from "../../constants/env.js";
 import { PAGE_SIZE, PAGE_WAVE } from "../../constants/config.js";
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true },
 });
+
+/** FSorder 订单站只读客户端（不登录、不存会话，避免与主站会话冲突） */
+export const sbFS = FSORDER_URL
+  ? createClient(FSORDER_URL, FSORDER_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false, storageKey: "fsorder" } })
+  : null;
 
 /** 统一错误处理：抛出带表名的 Error，调用方用 try/catch 或 hook 层兜底 */
 export function unwrap({ data, error }, ctx = "") {

@@ -82,3 +82,68 @@ test("视频导入计划：别名匹配 / 只挂同商品 / 文件内重复合�
   expect(plan.toUpdate[0]).toMatchObject({ id: "v-old", delta: { orders: 4 }, next: { orders: 5, video_id: "900", sku_id: "111" } });
   expect(plan.stats).toMatchObject({ merged: 1, skipped: 1, crm: 2, nonCrm: 1, inserted: 2, updated: 1 });
 });
+
+import { parseWindow, cutoffOf, videosAsOf } from "../video/cutoff.js";
+import { planMonthSnapshot, monthRange } from "../review/snapshotPlan.js";
+test("截止日口径：文件名识别区间、只累加到次月 5 号", () => {
+  expect(parseWindow("20260806到20260905所有视频.xlsx")).toEqual({ from: "2026-08-06", to: "2026-09-05" });
+  expect(parseWindow("20260326-20260331所有视频.xlsx")).toEqual({ from: "2026-03-26", to: "2026-03-31" });
+  expect(parseWindow("2026-08-06至2026-09-05")).toEqual({ from: "2026-08-06", to: "2026-09-05" });
+  expect(parseWindow("所有视频.xlsx")).toBe(null);
+  expect(cutoffOf("2026-12", 5)).toBe("2027-01-05");
+  expect(monthRange("2025-11", "2026-02")).toEqual(["2025-11", "2025-12", "2026-01", "2026-02"]);
+
+  const ledger = {
+    batches: [{ id: "A", file_name: "20260706到20260805" }, { id: "B", file_name: "20260806到20260905" }, { id: "C", file_name: "20260906到20261005" }],
+    lines: [
+      { video_record_id: "V", batch_id: "A", delta_orders: 2, delta_vv: 10, delta_clicks: 1, delta_gmv: 20 },
+      { video_record_id: "V", batch_id: "B", delta_orders: 3, delta_vv: 10, delta_clicks: 1, delta_gmv: 30 },
+      { video_record_id: "V", batch_id: "C", delta_orders: 4, delta_vv: 10, delta_clicks: 1, delta_gmv: 40 },
+      { video_record_id: "W", batch_id: "C", delta_orders: 9, delta_vv: 1, delta_clicks: 0, delta_gmv: 0 },
+    ],
+  };
+  const videos = [
+    { id: "V", published_at: "2026-08-03T08:00:00+00:00", orders: 9, collaboration_id: "c1", product_id: "P" },
+    { id: "W", published_at: "2026-08-30T08:00:00+00:00", orders: 9, collaboration_id: "c1", product_id: "P" },
+  ];
+  const r = videosAsOf(videos, ledger, "2026-09-05");
+  expect(r.videos).toHaveLength(1);
+  expect(r.videos[0]).toMatchObject({ id: "V", orders: 5, vv: 20, gmv: 50 });
+  expect(r.dataTo).toBe("2026-10-05");
+
+  const collabs = [{ id: "c1", product_id: "P", ship_date: "2026-07-20", creator_id: "X" }];
+  const plan = planMonthSnapshot({ ym: "2026-08", products: [{ id: "P" }], collabs, videos, ledger, cutoffDay: 5 });
+  expect(plan.complete).toBe(true); expect(plan.cutoff).toBe("2026-09-05");
+  expect(plan.rows[0].metrics.videoOrders).toBe(5);
+  expect(planMonthSnapshot({ ym: "2026-10", products: [], collabs, videos, ledger, cutoffDay: 5 }).complete).toBe(false);
+});
+
+import { calcMonthMetrics as newCalc, calcGradeMetrics } from "../review/reviewCalc.js";
+import { calcRangeMetrics, calcShipGradeMetrics, GRADE_ORDER } from "../review/rangeCalc.js";
+import { calcStaffOverview } from "../review/staffCalc.js";
+test("区间计算：按月 = 默认区间；等级 Lv7→Lv1；寄样端分层；助理总览合计", () => {
+  const rnd = (n) => Math.floor(Math.random() * n);
+  const G = ["Lv1", "Lv3", "Lv7", ""];
+  const C = Array.from({ length: 600 }, (_, i) => ({ id: "c" + i, product_id: "p" + rnd(4), staff_id: "s" + rnd(3), creator_id: "k" + rnd(200),
+    ship_date: `2026-0${6 + rnd(3)}-${String(1 + rnd(28)).padStart(2, "0")}`, attrs: { official_grade: G[rnd(4)] } }));
+  const V = Array.from({ length: 2500 }, (_, i) => ({ id: "v" + i, collaboration_id: rnd(4) ? "c" + rnd(650) : null, product_id: "p" + rnd(4),
+    orders: rnd(70), vv: rnd(9999), clicks: rnd(99), published_at: `2026-0${6 + rnd(3)}-${String(1 + rnd(28)).padStart(2, "0")}T08:00:00+00:00` }));
+  // 按月 = 通用区间套默认口径（改造时已与旧实现逐月逐产品比对一致）
+  expect(newCalc(C, V, "2026-07", "p1")).toEqual(calcRangeMetrics({ collabs: C, videos: V, productId: "p1", ship: { from: "2026-06-15", to: "2026-07-14" }, video: { from: "2026-07-01", to: "2026-07-31" } }));
+
+  const grades = calcGradeMetrics(C, V, "2026-07", null, 50).map((r) => r.grade);
+  expect(grades).toEqual(GRADE_ORDER.filter((g) => grades.includes(g)));
+
+  const all = { from: "", to: "" };
+  const ship = calcShipGradeMetrics({ collabs: C, videos: V, ship: all, video: all });
+  expect(ship.reduce((s, r) => s + r.shipCount, 0)).toBe(600);
+  expect(ship[0].grade).toBe("Lv7");
+  expect(calcRangeMetrics({ collabs: C, videos: V, ship: all, video: all }).shipCount).toBe(600);
+
+  const staff = [{ id: "s1", auth_user_id: "u1" }];
+  const inv = [{ added_by: "u1", added_at: "2026-07-03T10:00:00Z", product_id: "p1" }];
+  const o = calcStaffOverview({ collabs: C, videos: V, invites: inv, staff, ship: all, video: all });
+  expect(o.total.shipCount).toBe(600);
+  expect(o.rows.find((r) => r.staffId === "s1").inviteCount).toBe(1);
+  expect(o.total.videoCount).toBe(V.filter((v) => v.collaboration_id && C.some((c) => c.id === v.collaboration_id)).length);
+});

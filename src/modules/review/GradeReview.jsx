@@ -3,22 +3,23 @@ import { useState, useMemo } from "react";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
 import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
-import { calcGradeMetrics, calcMonthMetrics } from "../../lib/review/reviewCalc.js";
+import { calcGradeMetrics } from "../../lib/review/reviewCalc.js";
+import { GRADE_ORDER } from "../../lib/review/rangeCalc.js";
+import { GRADE_COLORS } from "./GradeTables.jsx";
 import { monthsBetween } from "../../lib/utils.js";
-import { saveProductSnapshot } from "../../lib/supabase/reviewWrite.js";
+import { confirmIncomplete, describeSave } from "./snapshotUi.js";
 
-const GRADE_COLORS = { Lv1:"#94A3B8",Lv2:"#60A5FA",Lv3:"#34D399",Lv4:"#FBBF24",Lv5:"#F97316",Lv6:"#A78BFA",Lv7:"#EC4899","未标注":"#CBD5E1","非CRM":"#F59E0B" };
 const defFrom = () => { const d=new Date(); d.setMonth(d.getMonth()-5); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
 const thisMonth = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
 
-export default function GradeReview({ collabs, videos, products, storeId, userId, burstThreshold, onSnapshotSaved }) {
+export default function GradeReview({ collabs, videos, products, burstThreshold, onSnapshotSaved, saver }) {
   const [view,      setView]      = useState("single");
   const [ym,        setYm]        = useState(thisMonth);
   const [fromYm,    setFromYm]    = useState(defFrom);
   const [toYm,      setToYm]      = useState(thisMonth);
   const [videoFrom, setVideoFrom] = useState("");
   const [videoTo,   setVideoTo]   = useState("");
-  const [saving,    setSaving]    = useState(false);
+  const saving = saver.busy;
   const [saveMsg,   setSaveMsg]   = useState("");
 
   const vFrom = videoFrom || undefined;
@@ -31,22 +32,18 @@ export default function GradeReview({ collabs, videos, products, storeId, userId
 
   const months  = useMemo(() => monthsBetween(fromYm,toYm),[fromYm,toYm]);
   const allData = useMemo(() =>
-    months.map((m) => ({ ym:m, rows:calcGradeMetrics(collabs,videos,m,null,burstThreshold,vFrom,vTo) })),
-    [collabs,videos,months,burstThreshold,vFrom,vTo]
+    // 全时期：每个月都按自身自然月统计（不套用单月视图的视频日期，避免同一批视频被重复计算）
+    months.map((m) => ({ ym:m, rows:calcGradeMetrics(collabs,videos,m,null,burstThreshold) })),
+    [collabs,videos,months,burstThreshold]
   );
-  const activeGrades = useMemo(() => { const s=new Set(); allData.forEach(({rows})=>rows.forEach(r=>s.add(r.grade))); return [...s]; },[allData]);
+  const activeGrades = useMemo(() => { const s=new Set(); allData.forEach(({rows})=>rows.forEach(r=>s.add(r.grade))); return GRADE_ORDER.filter((g)=>s.has(g)); },[allData]);
 
+  /** 按统一口径（视频数据截止次月 5 日）保存全部产品的 ym 快照，不受页面上「视频日期」筛选影响 */
   async function handleSave() {
-    setSaving(true); setSaveMsg("");
-    try {
-      for (const p of products) {
-        const m = calcMonthMetrics(collabs,videos,ym,p.id,vFrom,vTo);
-        await saveProductSnapshot(storeId,p.id,ym,m,userId);
-      }
-      setSaveMsg(`✅ 已保存 ${products.length} 个产品的 ${ym} 快照`);
-      onSnapshotSaved?.();
-    } catch(e) { setSaveMsg(`❌ ${e.message}`); }
-    finally { setSaving(false); setTimeout(()=>setSaveMsg(""),5000); }
+    setSaveMsg("");
+    try { setSaveMsg(describeSave(await saver.saveMonths([ym], { confirmIncomplete }))); onSnapshotSaved?.(); }
+    catch (e) { setSaveMsg(`❌ ${e.message}`); }
+    finally { setTimeout(() => setSaveMsg(""), 8000); }
   }
 
   return (
@@ -108,8 +105,7 @@ export default function GradeReview({ collabs, videos, products, storeId, userId
             <input type="month" style={rs.monthInp} value={fromYm} onChange={e=>setFromYm(e.target.value)} />
             <span style={{ color:T.hint }}>—</span>
             <input type="month" style={rs.monthInp} value={toYm} onChange={e=>setToYm(e.target.value)} />
-            <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
-            <ScopeHint />
+            <ScopeHint video={false} />
           </div>
           <div style={{ ...glassStyle(14), overflow:"auto" }}>
             <table style={rs.table}>

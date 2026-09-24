@@ -229,6 +229,8 @@ CREATE TABLE grade_snapshots (
   cooperate_count  int NOT NULL DEFAULT 0,   -- 合作达人数（= 当月账期寄样数）
   fulfill_count    int NOT NULL DEFAULT 0,   -- 履约达人数（有视频的寄样）
   video_with_sales int NOT NULL DEFAULT 0,   -- 出单视频数
+  total_orders     int,                      -- 整店总出单（FSorder 或手填，可空）
+  organic_orders   int,                      -- 自然流量单（同上）
   note           text,
   created_by     uuid,
   created_at     timestamptz NOT NULL DEFAULT now(),

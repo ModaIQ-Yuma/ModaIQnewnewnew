@@ -1,77 +1,68 @@
-// modules/review/StaffReview.jsx
-import { useState, useMemo } from "react";
+// modules/review/StaffReview.jsx — 助理复盘：总览（含合计）在上，按产品明细折叠在下
+import { useMemo, useState } from "react";
 import { glassStyle, T } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
-import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
-import { calcStaffMetrics } from "../../lib/review/reviewCalc.js";
-import { videoRange } from "../../lib/utils.js";
+import { RangePicker } from "./ReviewFilters.jsx";
+import { calcStaffOverview } from "../../lib/review/staffCalc.js";
+import { useReviewRange } from "../../hooks/useReviewRange.js";
+import { AreaTitle } from "./ReviewCards.jsx";
 
-const thisMonth = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
+const thisMonth = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }).slice(0, 7);
+const COLS = [
+  ["寄样", "shipCount"], ["履约", "fulfillCount"], ["履约率", "fulfillRate", "pct"], ["出单达人", "withSalesCount"],
+  ["达人出单率", "saleRate", "pct"], ["视频数", "videoCount"], ["视频出单", "videoOrders"], ["样销比", "sampleSalesRatio", "dec"],
+  ["爆单", "burstCount"], ["邀约录入", "inviteCount"],
+];
+const fmt = (v, f) => (f === "pct" ? rs.pct(v) : f === "dec" ? rs.dec(v) : v ?? "—");
 
-export default function StaffReview({ collabs, videos, invites, products, staff }) {
-  const [ym,        setYm]        = useState(thisMonth);
-  const [videoFrom, setVideoFrom] = useState("");
-  const [videoTo,   setVideoTo]   = useState("");
+function StaffTable({ data, nameOf }) {
+  return (
+    <div style={{ ...glassStyle(14), overflowX: "auto" }}>
+      <table style={rs.table}>
+        <thead><tr><th style={rs.th}>助理</th>{COLS.map(([h]) => <th key={h} style={rs.thR}>{h}</th>)}</tr></thead>
+        <tbody>
+          {data.rows.map((r) => (
+            <tr key={r.staffId}>
+              <td style={{ ...rs.td, fontWeight: 600 }}>{nameOf(r.staffId)}</td>
+              {COLS.map(([h, k, f]) => <td key={h} style={rs.tdR}>{fmt(r[k], f)}</td>)}
+            </tr>
+          ))}
+          <tr style={{ background: `${T.accent}0d` }}>
+            <td style={{ ...rs.td, fontWeight: 800 }}>合计</td>
+            {COLS.map(([h, k, f]) => <td key={h} style={{ ...rs.tdR, fontWeight: 800 }}>{fmt(data.total[k], f)}</td>)}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-  const vFrom = videoFrom||undefined;
-  const vTo   = videoTo||undefined;
-
-  const inviteMap = useMemo(() => {
-    const vr   = videoRange(ym);
-    const from = videoFrom||vr.from;
-    const to   = videoTo||vr.to;
-    const map  = {};
-    for (const inv of invites) {
-      const d = inv.added_at?.slice(0,10);
-      if (!d||d<from||d>to) continue;
-      const key = `${inv.added_by}__${inv.product_id}`;
-      map[key] = (map[key]||0)+1;
-    }
-    return map;
-  }, [invites,ym,videoFrom,videoTo]);
-
-  const staffNameMap = useMemo(()=>Object.fromEntries((staff||[]).map(s=>[s.id,s.name])),[staff]);
+export default function StaffReview({ collabs, videos, invites, products, staff, burstThreshold }) {
+  const range = useReviewRange(thisMonth());
+  const [open, setOpen] = useState(() => new Set());
+  const nameOf = useMemo(() => {
+    const m = Object.fromEntries((staff || []).map((s) => [s.id, s.name]));
+    return (id) => (id === "unknown" ? "未指定" : m[id] || `ID:${String(id).slice(0, 8)}`);
+  }, [staff]);
+  const base = useMemo(() => ({ collabs, videos, invites, staff, ship: range.ship, video: range.video, burst: burstThreshold }),
+    [collabs, videos, invites, staff, range.ship, range.video, burstThreshold]);
+  const overview = useMemo(() => calcStaffOverview(base), [base]);
+  const toggle = (id) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   return (
     <div>
-      <div style={rs.toolbar}>
-        <span style={rs.label}>统计月份</span>
-        <input type="month" style={rs.monthInp} value={ym} onChange={e=>setYm(e.target.value)} />
-        <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
-        <ScopeHint />
-      </div>
-      {products.map(p=>{
-        const rows = calcStaffMetrics(collabs,videos,ym,p.id,vFrom,vTo);
-        if (!rows.length) return null;
+      <RangePicker range={range} />
+      <AreaTitle chip="总览" label="全部产品合计" note="视频数 / 视频出单 / 爆单 = 视频区间内发布、归属该助理寄样的视频；邀约录入按视频区间统计" />
+      <StaffTable data={overview} nameOf={nameOf} />
+
+      <AreaTitle chip="明细" label="按产品拆分" note="点产品名展开" />
+      {products.map((p) => {
+        const isOpen = open.has(p.id);
+        const data = isOpen ? calcStaffOverview({ ...base, productId: p.id }) : null;
         return (
-          <div key={p.id} style={{ marginBottom:20 }}>
-            <div style={rs.groupTitle}>{p.internal_name}</div>
-            <div style={{ ...glassStyle(14),overflow:"hidden" }}>
-              <table style={rs.table}>
-                <thead><tr>
-                  <th style={rs.th}>助理</th>
-                  <th style={rs.thR}>寄样数</th><th style={rs.thR}>履约数</th><th style={rs.thR}>履约率</th>
-                  <th style={rs.thR}>出单达人</th><th style={rs.thR}>达人出单率</th><th style={rs.thR}>拉新数</th>
-                </tr></thead>
-                <tbody>
-                  {rows.map(r=>{
-                    const inviteCount = inviteMap[`${r.staffId}__${p.id}`]||0;
-                    const name = staffNameMap[r.staffId]||`ID:${r.staffId?.slice(0,8)||"未知"}`;
-                    return (
-                      <tr key={r.staffId}>
-                        <td style={{ ...rs.td,fontWeight:600 }}>{name}</td>
-                        <td style={rs.tdR}>{r.shipCount}</td>
-                        <td style={rs.tdR}>{r.fulfillCount}</td>
-                        <td style={{ ...rs.tdR,color:r.fulfillRate>=0.6?T.success:T.accent }}>{rs.pct(r.fulfillRate)}</td>
-                        <td style={rs.tdR}>{r.withSalesCount}</td>
-                        <td style={{ ...rs.tdR,color:r.saleRate>=0.3?T.success:T.accent }}>{rs.pct(r.saleRate)}</td>
-                        <td style={{ ...rs.tdR,fontWeight:600,color:T.accent }}>{inviteCount}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+          <div key={p.id} style={{ marginBottom: 8 }}>
+            <div onClick={() => toggle(p.id)} style={{ ...rs.groupTitle, cursor: "pointer", marginBottom: 6 }}>{isOpen ? "▾" : "▸"} {p.internal_name}</div>
+            {isOpen && (data.rows.length ? <StaffTable data={data} nameOf={nameOf} /> : <div style={rs.empty}>这个区间没有数据</div>)}
           </div>
         );
       })}

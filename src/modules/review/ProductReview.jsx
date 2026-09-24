@@ -1,189 +1,99 @@
-// modules/review/ProductReview.jsx
-import { useState, useMemo } from "react";
+// modules/review/ProductReview.jsx — 单品复盘：任意寄样/视频区间（或全量）+ 等级分层 + 整店订单
+import { useMemo, useState } from "react";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
-import { calcMonthMetrics, calcGradeMetrics } from "../../lib/review/reviewCalc.js";
-import { saveProductSnapshot } from "../../lib/supabase/reviewWrite.js";
-import { monthlyShipRange, videoRange } from "../../lib/utils.js";
+import { ORDER_WINDOW_TAIL_DAYS } from "../../constants/config.js";
+import { calcRangeMetrics, calcShipGradeMetrics, calcVideoGradeMetrics } from "../../lib/review/rangeCalc.js";
+import { cutoffOf } from "../../lib/video/cutoff.js";
+import { useReviewRange } from "../../hooks/useReviewRange.js";
+import { useFsorderOrders } from "../../hooks/useFsorderOrders.js";
+import { RangePicker } from "./ReviewFilters.jsx";
+import { ShipGradeTable, VideoGradeTable } from "./GradeTables.jsx";
+import { OrdersPanel } from "./OrdersPanel.jsx";
+import { MCard, CardGrid, AreaTitle, pct, num, dec, wan } from "./ReviewCards.jsx";
+import { confirmIncomplete, describeSave } from "./snapshotUi.js";
 
-const GRADE_COLORS = { Lv1:"#94A3B8",Lv2:"#60A5FA",Lv3:"#34D399",Lv4:"#FBBF24",Lv5:"#F97316",Lv6:"#A78BFA",Lv7:"#EC4899","未标注":"#CBD5E1","非CRM":"#F59E0B" };
 const thisMonth = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }).slice(0, 7);
-const pct = (v) => v == null ? "—" : (v * 100).toFixed(1) + "%";
-const num = (v) => v == null ? "—" : Number(v).toLocaleString();
-const dec = (v) => v == null ? "—" : Number(v).toFixed(2);
+const spanLabel = (r) => (r.from || r.to ? `${r.from || "最早"} ~ ${r.to || "最新"}` : "全部");
 
-// ── 指标卡 ────────────────────────────────────────────────────────────────────
-function MCard({ label, value, sub, accent }) {
-  return (
-    <div style={{ background: "rgba(255,255,255,0.72)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 16px" }}>
-      <div style={{ fontSize: FONT.md2, color: T.muted, fontWeight: 600, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: accent ? T.accent : T.text, letterSpacing: "-0.3px" }}>{value}</div>
-      {sub && <div style={{ fontSize: FONT.xs, color: T.hint, marginTop: 4 }}>{sub}</div>}
-    </div>
-  );
-}
+export default function ProductReview({ storeId, collabs, videos, products, burstThreshold, saver }) {
+  const range = useReviewRange(thisMonth());
+  const [productId, setProductId] = useState("");                  // "" = 全部产品
+  const [manual, setManual] = useState({ total: "", organic: "" });
+  const [saveMsg, setSaveMsg] = useState("");
+  const product = products.find((p) => p.id === productId) || null;
 
-// ── 分区标题（chip 标签） ─────────────────────────────────────────────────────
-function AreaTitle({ chip, label, note }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 10px" }}>
-      <span style={{ fontSize: FONT.sm, fontWeight: 800, color: "#fff", background: T.accent, borderRadius: 8, padding: "3px 10px", letterSpacing: "0.04em" }}>{chip}</span>
-      <span style={{ fontSize: FONT.lg2, fontWeight: 700, color: T.text }}>{label}</span>
-      {note && <span style={{ fontSize: FONT.md2, color: T.hint }}>{note}</span>}
-    </div>
-  );
-}
+  const args = useMemo(() => ({ collabs, videos, productId: productId || null, ship: range.ship, video: range.video, burst: burstThreshold }),
+    [collabs, videos, productId, range.ship, range.video, burstThreshold]);
+  const m          = useMemo(() => calcRangeMetrics(args), [args]);
+  const shipGrades = useMemo(() => calcShipGradeMetrics(args), [args]);
+  const vidGrades  = useMemo(() => calcVideoGradeMetrics(args), [args]);
 
-// ── 日期输入 ──────────────────────────────────────────────────────────────────
-const inpStyle = { background: "rgba(255,255,255,0.45)", border: `1.5px solid ${T.border}`, borderRadius: 8, fontSize: FONT.lg2, padding: "7px 10px", fontFamily: "inherit", outline: "none" };
-
-export default function ProductReview({ collabs, videos, products, storeId, userId, burstThreshold, reloadReview }) {
-  const [ym,        setYm]        = useState(thisMonth);
-  const [productId, setProductId] = useState(() => products[0]?.id || "");
-  const [videoFrom, setVideoFrom] = useState("");
-  const [videoTo,   setVideoTo]   = useState("");
-  const [saving,    setSaving]    = useState(false);
-  const [saveMsg,   setSaveMsg]   = useState("");
-
-  const product = products.find((p) => p.id === productId);
-
-  // 寄样区间（跟随月份自动计算，只展示不可改 — 和旧版一致）
-  const shipRangeLabel = useMemo(() => {
-    const r = monthlyShipRange(ym);
-    return `${r.start} ~ ${r.end}`;
-  }, [ym]);
-
-  const vFrom = videoFrom || undefined;
-  const vTo   = videoTo   || undefined;
-
-  const metrics   = useMemo(() => productId ? calcMonthMetrics(collabs, videos, ym, productId, vFrom, vTo)   : null, [collabs, videos, ym, productId, vFrom, vTo]);
-  const gradeRows = useMemo(() => productId ? calcGradeMetrics(collabs, videos, ym, productId, burstThreshold, vFrom, vTo) : [], [collabs, videos, ym, productId, burstThreshold, vFrom, vTo]);
-  const crmRows   = gradeRows.filter((r) => r.grade !== "非CRM");
-
-  // 该产品该月是否已有快照
-  const existingSnap = useMemo(() => {
-    // gradeSnapshots 在 ctx 里，通过 reloadReview 触发刷新
-    // 这里不直接访问，保存成功后提示即可
-    return null;
-  }, []);
+  // FSorder 窗口：默认按月 = 当月 1 日 ~ 次月 5 日（与快照口径一致）；自选区间 = 视频端区间
+  const fsWindow = range.isMonthDefault ? { from: `${range.ym}-01`, to: cutoffOf(range.ym, ORDER_WINDOW_TAIL_DAYS) }
+    : (range.video.from && range.video.to ? range.video : null);
+  const fs = useFsorderOrders(storeId, fsWindow, product?.sku_id || null);
 
   async function handleSave() {
-    if (!metrics || !productId || saving) return;
-    setSaving(true); setSaveMsg("");
-    try {
-      await saveProductSnapshot(storeId, productId, ym, metrics, userId);
-      setSaveMsg(`✅ ${product?.internal_name || ""} ${ym} 快照已保存`);
-      reloadReview?.();
-    } catch (e) {
-      setSaveMsg(`❌ 保存失败：${e.message}`);
-    } finally {
-      setSaving(false);
-      setTimeout(() => setSaveMsg(""), 5000);
-    }
+    if (saver.busy) return;
+    setSaveMsg("");
+    const manualOrders = product && (manual.total !== "" || manual.organic !== "")
+      ? { [product.id]: { totalOrders: manual.total !== "" ? Number(manual.total) : fs.data?.totalOrders ?? null,
+                          organicOrders: manual.organic !== "" ? Number(manual.organic) : fs.data?.organicOrders ?? null } } : undefined;
+    try { setSaveMsg(describeSave(await saver.saveMonths([range.ym], { productIds: product ? [product.id] : undefined, confirmIncomplete, manualOrders }))); }
+    catch (e) { setSaveMsg(`❌ 保存失败：${e.message}`); }
+    finally { setTimeout(() => setSaveMsg(""), 8000); }
   }
-
-  const m = metrics;
 
   return (
     <div>
-      {/* ── 选择区 ── */}
-      <div style={{ ...glassStyle(14), padding: "16px 20px", marginBottom: 12 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "flex-end" }}>
-          <div>
-            <div style={lbl}>产品</div>
-            <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inpStyle, minWidth: 160, cursor: "pointer" }}>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.internal_name}</option>)}
-            </select>
-          </div>
-          <div>
-            <div style={lbl}>统计月份</div>
-            <input type="month" value={ym} onChange={(e) => setYm(e.target.value)} style={inpStyle} />
-          </div>
-          <div>
-            <div style={lbl}>视频端区间（可选，默认自然月）</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input type="date" value={videoFrom} onChange={(e) => setVideoFrom(e.target.value)} style={inpStyle} />
-              <span style={{ color: T.hint }}>~</span>
-              <input type="date" value={videoTo}   onChange={(e) => setVideoTo(e.target.value)}   style={inpStyle} />
-              {(videoFrom || videoTo) && <button onClick={() => { setVideoFrom(""); setVideoTo(""); }} style={rs.btnGhost}>清除</button>}
-            </div>
-          </div>
+      <div style={{ ...glassStyle(14), padding: "14px 18px", marginBottom: 12 }}>
+        <div style={{ ...rs.toolbar, marginBottom: 6 }}>
+          <span style={rs.label}>产品</span>
+          <select value={productId} onChange={(e) => { setProductId(e.target.value); setManual({ total: "", organic: "" }); }} style={{ ...rs.monthInp, minWidth: 160, cursor: "pointer" }}>
+            <option value="">全部产品</option>
+            {products.map((p) => <option key={p.id} value={p.id}>{p.internal_name}</option>)}
+          </select>
         </div>
+        <RangePicker range={range} />
       </div>
 
-      {!m && <div style={rs.empty}>选择产品后自动显示各项指标</div>}
+      <AreaTitle chip="寄样端" label="从 CRM 寄样记录计算" note={`寄样区间 ${spanLabel(range.ship)}`} />
+      <CardGrid>
+        <MCard label="合作达人数"   value={num(m.shipCount)}      sub="寄样记录数" />
+        <MCard label="履约达人数"   value={num(m.fulfillCount)}   sub="在视频区间内发过视频" />
+        <MCard label="有出单达人数" value={num(m.withSalesCount)} sub="视频出单 ≥ 1" />
+        <MCard label="履约率"       value={pct(m.fulfillRate)}    sub="履约 ÷ 寄样" />
+        <MCard label="达人出单率"   value={pct(m.saleRate)}       sub="出单达人 ÷ 履约" accent />
+        <MCard label="平均履约天数" value={m.avgFulfillDays == null ? "—" : m.avgFulfillDays + " 天"} sub="寄样 → 首条视频" />
+        <MCard label="样销比"       value={dec(m.sampleSalesRatio)} sub="视频出单 ÷ 寄样数" />
+      </CardGrid>
+      <AreaTitle chip="寄样端" label="各等级寄样（按寄样时等级）" />
+      <ShipGradeTable rows={shipGrades} />
 
-      {m && (
-        <div>
-          {/* ── 寄样端 ── */}
-          <AreaTitle chip="寄样端" label="从 CRM 寄样记录自动计算" note={`寄样区间 ${shipRangeLabel}`} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px,1fr))", gap: 10 }}>
-            <MCard label="合作达人数"  value={num(m.shipCount)}     sub="寄样记录数" />
-            <MCard label="履约达人数"  value={num(m.fulfillCount)}   sub="发过视频" />
-            <MCard label="有出单达人数" value={num(m.withSalesCount)} sub="出单视频≥1" />
-            <MCard label="履约率"      value={pct(m.fulfillRate)}    sub="履约÷寄样" />
-            <MCard label="达人出单率"  value={pct(m.saleRate)}       sub="出单达人÷履约" accent />
-            <MCard label="平均履约天数" value={m.avgFulfillDays == null ? "—" : m.avgFulfillDays + "天"} sub="寄样→首视频" />
-          </div>
+      <AreaTitle chip="视频端" label="CRM + 非CRM 视频合计" note={`视频区间 ${spanLabel(range.video)}`} />
+      <CardGrid>
+        <MCard label="新视频数"     value={num(m.videoCount)}    sub="区间内发布的视频" />
+        <MCard label="视频出单率"   value={pct(m.videoSaleRate)} sub="有成交 ÷ 新视频" accent />
+        <MCard label="总播放量 VV"  value={wan(m.totalVV)}       sub="播放量之和" />
+        <MCard label="总点击"       value={wan(m.totalClicks)}   sub="商品点击之和" />
+        <MCard label="CTR"          value={pct(m.ctr)}           sub="点击 ÷ 播放" />
+        <MCard label="新视频出单数" value={num(m.videoOrders)}   sub="出单件数之和" />
+        <MCard label="CVR"          value={pct(m.cvr)}           sub="出单 ÷ 点击" />
+        <MCard label={`爆单视频（≥${burstThreshold}单）`} value={num(m.burstCount)} sub="单条视频成交 ≥ 阈值" />
+      </CardGrid>
+      <AreaTitle chip="视频端" label="各等级视频（按视频所属寄样的等级）" />
+      <VideoGradeTable rows={vidGrades} />
 
-          {/* ── 视频端 ── */}
-          <AreaTitle chip="视频端" label="CRM + 非CRM 视频合计" note={vFrom ? `${vFrom} ~ ${vTo}` : `${videoRange(ym).from} ~ ${videoRange(ym).to}`} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px,1fr))", gap: 10 }}>
-            <MCard label="新视频数"    value={num(m.videoCount)}      sub="区间内视频总条数" />
-            <MCard label="视频出单率"  value={pct(m.videoSaleRate)}    sub="有成交÷新视频" accent />
-            <MCard label="总播放量 VV" value={m.totalVV >= 10000 ? (m.totalVV/10000).toFixed(1)+"w" : num(m.totalVV)} sub="所有视频VV之和" />
-            <MCard label="总点击"      value={m.totalClicks >= 10000 ? (m.totalClicks/10000).toFixed(1)+"w" : num(m.totalClicks)} sub="商品点击之和" />
-            <MCard label="CTR"         value={pct(m.ctr)}              sub="点击÷播放" />
-            <MCard label="视频出单数"  value={num(m.videoOrders)}      sub="orders之和" />
-            <MCard label="CVR"         value={pct(m.cvr)}              sub="出单÷点击" />
-            <MCard label={`爆单视频（≥${burstThreshold}单）`} value={num(m.burstCount)} sub="单视频成交≥阈值" />
-            <MCard label="样销比"      value={dec(m.sampleSalesRatio)} sub="视频出单÷寄样数" />
-          </div>
+      <OrdersPanel fs={fs} manual={manual} setManual={setManual} window={fsWindow} videoOrders={m.videoOrders} />
 
-          {/* ── 等级分层 ── */}
-          {crmRows.length > 0 && (
-            <>
-              <AreaTitle chip="等级分层" label="CRM 达人按官方等级分组" />
-              <div style={{ ...glassStyle(12), overflow: "hidden" }}>
-                <table style={rs.table}>
-                  <thead><tr style={{ background: "rgba(255,255,255,0.5)" }}>
-                    {["等级","视频数","视频出单率","总出单","均单/视频","爆单数"].map((h) => (
-                      <th key={h} style={{ ...rs.th, textAlign: h === "等级" ? "left" : "right" }}>{h}</th>
-                    ))}
-                  </tr></thead>
-                  <tbody>
-                    {crmRows.map((r) => (
-                      <tr key={r.grade}>
-                        <td style={rs.td}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: GRADE_COLORS[r.grade] || T.muted, flexShrink: 0 }} />
-                            <span style={{ fontWeight: 700, color: GRADE_COLORS[r.grade] || T.muted }}>{r.grade}</span>
-                          </span>
-                        </td>
-                        <td style={rs.tdR}>{r.videoCount}</td>
-                        <td style={{ ...rs.tdR, fontWeight: 600, color: r.videoSaleRate >= 0.3 ? T.success : r.videoSaleRate >= 0.15 ? T.accent : T.danger }}>{pct(r.videoSaleRate)}</td>
-                        <td style={{ ...rs.tdR, fontWeight: 600 }}>{r.orders}</td>
-                        <td style={{ ...rs.tdR, color: T.accent, fontWeight: 600 }}>{dec(r.avgOrder)}</td>
-                        <td style={{ ...rs.tdR, color: r.burstCount > 0 ? T.success : T.hint, fontWeight: 600 }}>{r.burstCount > 0 ? r.burstCount : "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {/* ── 快照操作 ── */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-            <button onClick={handleSave} disabled={saving} style={{ ...rs.btn, opacity: saving ? 0.6 : 1 }}>
-              {saving ? "保存中…" : `💾 保存 ${ym} 快照`}
-            </button>
-            {saveMsg && <span style={{ fontSize: FONT.lg2, color: saveMsg.startsWith("✅") ? T.success : T.danger, fontWeight: 600 }}>{saveMsg}</span>}
-          </div>
-        </div>
-      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+        <button onClick={handleSave} disabled={saver.busy} style={{ ...rs.btn, opacity: saver.busy ? 0.6 : 1 }}>
+          {saver.busy ? "保存中…" : `💾 保存 ${range.ym} 快照（${product ? product.internal_name : "全部产品"}）`}
+        </button>
+        <span style={{ fontSize: FONT.note, color: T.hint }}>快照一律按统一口径计算（寄样账期、视频截止次月 5 日），不受上面手动改的区间影响；手填的总出单/自然单会一并存入。</span>
+        {saveMsg && <span style={{ fontSize: FONT.body, color: saveMsg.startsWith("❌") ? T.danger : T.success, fontWeight: 600 }}>{saveMsg}</span>}
+      </div>
     </div>
   );
 }
-
-const lbl = { fontSize: FONT.md2, fontWeight: 600, color: T.muted, marginBottom: 5 };

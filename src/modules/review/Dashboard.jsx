@@ -61,9 +61,9 @@ export default function Dashboard({ gradeSnapshots, collabs, videos, products })
         ? <div style={rs.empty}>该月暂无快照，请先保存</div>
         : (
           <div style={{ ...glassStyle(14), overflow: "auto" }}>
-            <table style={{ ...rs.table, minWidth: 1100 }}>
+            <table style={{ ...rs.table, minWidth: 1320 }}>
               <thead><tr>
-                {["品名","状态","合作达人","达人出单率","新视频","视频出单率","播放量","点击量","CTR","视频出单数","CVR","爆单数","样销比(累计)"].map((h) => (
+                {["品名","状态","合作达人","达人出单率","新视频","视频出单率","播放量","点击量","CTR","视频出单数","CVR","爆单数","样销比(累计)","总出单","新视频占比","自然单占比"].map((h) => (
                   <th key={h} style={rs.thR}>{h}</th>
                 ))}
               </tr></thead>
@@ -88,6 +88,9 @@ export default function Dashboard({ gradeSnapshots, collabs, videos, products })
                       <td style={rs.tdR}>{rs.pct(cvr)}</td>
                       <td style={{ ...rs.tdR, fontWeight: 700, color: snap.burst_count > 0 ? T.success : T.hint }}>{snap.burst_count}</td>
                       <td style={{ ...rs.tdR, fontWeight: 700, color: T.accent }}>{rs.dec(cum?.sampleSalesRatio)}</td>
+                      <td style={rs.tdR}>{snap.total_orders ?? "—"}</td>
+                      <td style={rs.tdR}>{rs.pct(safeDiv(snap.total_orders ? snap.orders : null, snap.total_orders))}</td>
+                      <td style={rs.tdR}>{rs.pct(safeDiv(snap.total_orders && snap.organic_orders != null ? snap.organic_orders : null, snap.total_orders))}</td>
                     </tr>
                   );
                 })}

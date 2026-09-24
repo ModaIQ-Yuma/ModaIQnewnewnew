@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
-import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
+import { ScopeHint } from "./ReviewFilters.jsx";
 import { calcMonthMetrics } from "../../lib/review/reviewCalc.js";
 import { monthsBetween } from "../../lib/utils.js";
 
@@ -57,12 +57,10 @@ function MetricCard({ label, value, sub, accent }) {
 export default function StoreReview({ collabs, videos, products }) {
   const [fromYm,  setFromYm]  = useState(defFrom);
   const [toYm,    setToYm]    = useState(defTo);
-  const [videoFrom, setVideoFrom] = useState("");
-  const [videoTo,   setVideoTo]   = useState("");
   const months = useMemo(() => monthsBetween(fromYm, toYm), [fromYm, toYm]);
 
   const summary = useMemo(() => {
-    const all = months.map((ym) => calcMonthMetrics(collabs, videos, ym, null, videoFrom||undefined, videoTo||undefined));
+    const all = months.map((ym) => calcMonthMetrics(collabs, videos, ym, null));
     return {
       shipCount:      all.reduce((s,m)=>s+m.shipCount,0),
       videoCount:     all.reduce((s,m)=>s+m.videoCount,0),
@@ -72,19 +70,19 @@ export default function StoreReview({ collabs, videos, products }) {
       videoOrders:    all.reduce((s,m)=>s+m.videoOrders,0),
       avgFulfillDays: (() => { const v=all.filter(m=>m.avgFulfillDays!=null); return v.length?Math.round(v.reduce((s,m)=>s+m.avgFulfillDays,0)/v.length):null; })(),
     };
-  }, [collabs, videos, months, videoFrom, videoTo]);
+  }, [collabs, videos, months]);
 
   const storeData = useMemo(() =>
-    months.map((ym) => { const m=calcMonthMetrics(collabs,videos,ym,null,videoFrom||undefined,videoTo||undefined); return { ym, shipCount:m.shipCount, videoCount:m.videoCount, videoOrders:m.videoOrders }; }),
-    [collabs,videos,months,videoFrom,videoTo]
+    months.map((ym) => { const m=calcMonthMetrics(collabs,videos,ym,null); return { ym, shipCount:m.shipCount, videoCount:m.videoCount, videoOrders:m.videoOrders }; }),
+    [collabs,videos,months]
   );
 
   const productData = useMemo(() =>
     products.map((p) => ({
       product:p,
-      data: months.map((ym) => { const m=calcMonthMetrics(collabs,videos,ym,p.id,videoFrom||undefined,videoTo||undefined); return { ym, shipCount:m.shipCount, videoCount:m.videoCount, videoOrders:m.videoOrders }; }),
+      data: months.map((ym) => { const m=calcMonthMetrics(collabs,videos,ym,p.id); return { ym, shipCount:m.shipCount, videoCount:m.videoCount, videoOrders:m.videoOrders }; }),
     })).filter(({data})=>data.some(d=>d.shipCount>0||d.videoCount>0)),
-    [collabs,videos,products,months,videoFrom,videoTo]
+    [collabs,videos,products,months]
   );
 
   const pct = rs.pct; const dec = rs.dec;
@@ -100,8 +98,7 @@ export default function StoreReview({ collabs, videos, products }) {
         <input type="month" style={rs.monthInp} value={fromYm} onChange={e=>setFromYm(e.target.value)} />
         <span style={{ color:T.hint }}>—</span>
         <input type="month" style={rs.monthInp} value={toYm}   onChange={e=>setToYm(e.target.value)} />
-        <VideoDateRange from={videoFrom} to={videoTo} onFrom={setVideoFrom} onTo={setVideoTo} />
-        <ScopeHint />
+        <ScopeHint video={false} />
       </div>
       <div style={rs.metricGrid}>
         <MetricCard label="合作达人数"   value={rs.num(summary.shipCount)}   sub="CRM寄样记录数" />
