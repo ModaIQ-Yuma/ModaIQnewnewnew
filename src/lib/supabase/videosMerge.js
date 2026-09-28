@@ -20,3 +20,14 @@ export async function mergeVideosIntoCreator(storeId, { creator, newHandle, vide
   }
   return { attached, unmatched: unmatched.length };
 }
+
+/** 按 planRematch 的结果批量改归属：同一目标一组，每批 150 个 id */
+export async function applyRematch(changes) {
+  const groups = new Map();
+  for (const c of changes) groups.set(c.to, [...(groups.get(c.to) || []), c.id]);
+  for (const [to, ids] of groups) {
+    for (let i = 0; i < ids.length; i += 150) {
+      unwrap(await sb.from("video_records").update({ collaboration_id: to }).in("id", ids.slice(i, i + 150)), "video_records");
+    }
+  }
+}

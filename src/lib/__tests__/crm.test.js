@@ -36,12 +36,13 @@ test("payload: 编辑改名 + 删别名 + 改达人备注", () => {
   expect(p.creator).toMatchObject({ id: "A", rename: true, handle: "amy2", oldHandle: "amy", noteChanged: true, aliasesRemove: ["amy_old"], aliasesAdd: [] });
   expect(p.names.sort()).toEqual(["amy", "amy2", "amy_old"]); expect(p.isNew).toBe(false);
 });
-test("视频归属：只挂同商品，复投挂发布前最近一次", () => {
+test("视频归属：只挂同商品、寄样日期不晚于发布日期，复投挂发布前最近一次", () => {
   const cs = [{ collabId: "c1", productId: "P", shipDate: "2026-01-01" }, { collabId: "c2", productId: "P", shipDate: "2026-05-01" }, { collabId: "c3", productId: "Q", shipDate: "2026-06-01" }];
   expect(pickCollab(cs, "P", "2026-03-01T00:00:00Z")).toBe("c1");
   expect(pickCollab(cs, "P", "2026-07-01T00:00:00Z")).toBe("c2");
   expect(pickCollab(cs, "Z", "2026-07-01")).toBe(null);
-  const r = assignByProduct([{ id: "v1", product_id: "Q" }, { id: "v2", product_id: "Z" }], cs);
+  expect(pickCollab(cs, "P", "2025-12-01")).toBe(null);          // 早于所有寄样：寄样前自己发的 → 非CRM
+  const r = assignByProduct([{ id: "v1", product_id: "Q", published_at: "2026-06-10" }, { id: "v2", product_id: "Z", published_at: "2026-06-10" }], cs);
   expect(r.byCollab.get("c3")).toEqual(["v1"]); expect(r.unmatched).toEqual(["v2"]);
 });
 test("邀约库查重：别名也算同一人；复投多条不报错", () => {
@@ -279,4 +280,22 @@ test("生成本周任务：催发/复投/激活，接入日 7/1，复投 ≥3，
   const again = buildAutoTasks({ today, collabs, videos, creators, nameIndex, products, dormant,
     existing: rows.map((r) => ({ ...r, status: "open", created_at: "2026-09-24T10:00:00Z" })) });
   expect(again).toEqual([]);
+});
+
+import { planRematch } from "../video/rematch.js";
+test("重新匹配：寄样前的视频改为非CRM，复投改挂到发布前最近一次，缺失的补挂", () => {
+  const creators = [{ id: "M", handle: "mandiehunter_" }], aliases = [{ creator_id: "M", alias: "mandie_old" }];
+  const collabs = [
+    { id: "c1", creator_id: "M", product_id: "P", ship_date: "2026-02-01" },
+    { id: "c9", creator_id: "M", product_id: "P", ship_date: "2026-09-07" },
+  ];
+  const videos = [
+    { id: "a", creator_handle: "mandiehunter_", product_id: "P", published_at: "2025-08-25", collaboration_id: "c9" }, // 寄样前 → 非CRM
+    { id: "b", creator_handle: "mandiehunter_", product_id: "P", published_at: "2026-02-19", collaboration_id: "c9" }, // → c1
+    { id: "c", creator_handle: "MANDIE_OLD",   product_id: "P", published_at: "2026-09-10", collaboration_id: null }, // 别名，补挂 c9
+    { id: "d", creator_handle: "mandiehunter_", product_id: "P", published_at: "2026-09-12", collaboration_id: "c9" }, // 不变
+  ];
+  const { changes, stats } = planRematch({ videos, collabs, creators, aliases });
+  expect(changes).toEqual([{ id: "a", from: "c9", to: null }, { id: "b", from: "c9", to: "c1" }, { id: "c", from: null, to: "c9" }]);
+  expect(stats).toMatchObject({ total: 4, unchanged: 1, moved: 1, unlinked: 1, linked: 1 });
 });
