@@ -13,6 +13,11 @@ export const BURST_ORDER_THRESHOLD = 50;
 // 待复投：该达人在该产品下累计出单 > 此值
 export const REPOST_THRESHOLD_ORDERS = 3;
 
+// 生成本周任务：只扫描这天之后的寄样（新系统接入日）
+export const TASK_SCAN_START = "2026-07-01";
+// 激活任务：FSorder 里「达人 + 产品」累计出单 ≥ 此值，且 3 个月内无新视频
+export const DORMANT_MIN_ORDERS = 30;
+
 // 超期未发布：寄样超过此天数且无视频
 export const OVERDUE_DAYS = 14;
 

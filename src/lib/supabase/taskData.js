@@ -1,5 +1,5 @@
 // lib/supabase/taskData.js
-import { sb, unwrap } from "./client.js";
+import { sb, unwrap, fetchAll } from "./client.js";
 
 // ─── shipping_goals ───────────────────────────────────────────────────────────
 export async function fetchShippingGoals(storeId) {
@@ -60,12 +60,11 @@ export async function fetchWeeklyMenus(storeId) {
     "weekly_menus"
   );
   if (!menus.length) return [];
-  const slots = unwrap(
-    await sb.from("weekly_menu_slots")
-      .select("menu_id,weekday,slot_idx,product_id,note,products(internal_name)")
-      .in("menu_id", menus.map((m) => m.id)),
-    "weekly_menu_slots"
-  );
+  // 格子数会随周数增长（一周 28 格），翻页读全，不受单次 1000 条限制
+  const slots = await fetchAll((a, b) => sb.from("weekly_menu_slots")
+    .select("menu_id,weekday,slot_idx,product_id,note,products(internal_name)")
+    .in("menu_id", menus.map((m) => m.id))
+    .order("menu_id").order("weekday").order("slot_idx").range(a, b), "weekly_menu_slots");
   return menus.map((m) => ({ ...m, slots: slots.filter((s) => s.menu_id === m.id) }));
 }
 export async function upsertWeeklyMenu(storeId, weekStart, status, generatedBy) {

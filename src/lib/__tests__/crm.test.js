@@ -167,7 +167,10 @@ test("寄样端口径：履约/出单/样销比看寄样的全部视频，不限
   const g = calcShipGradeMetrics(shipAll);
   expect(g.find((x) => x.grade === "Lv3")).toMatchObject({ shipCount: 2, salesCount: 1, ordersSum: 4 });
   const s = calcStaffOverview({ ...shipAll, invites: [], staff: [] });
-  expect(s.total).toMatchObject({ shipCount: 3, fulfillCount: 2, withSalesCount: 1, videoCount: 1 });
+  expect(s.total).toMatchObject({ shipCount: 3, fulfillCount: 2, withSalesCount: 1, videoCount: 1, videoWithSales: 0 });
+  const s2 = calcStaffOverview({ ...shipAll, video: { from: "", to: "" }, invites: [], staff: [] });
+  expect(s2.total).toMatchObject({ videoCount: 2, videoWithSales: 1, videoOrders: 4 });
+  expect(s2.total.videoSaleRate).toBeCloseTo(0.5);
   expect(s.total.sampleSalesRatio).toBeCloseTo(4 / 3);
 });
 
@@ -249,4 +252,31 @@ test("权限表：超管全开；管理员除平台管理外全开；成员能�
   expect(["product.delete", "crm.delete", "crm.import", "video.revert", "snapshot.write", "task.plan", "perf.viewAll", "staff.manage"].some((a) => can("staff", false, a))).toBe(false);
   expect(["product.edit", "crm.edit", "pool.edit", "video.import", "task.do", "perf.viewSelf"].some((a) => can("viewer", false, a))).toBe(false);
   expect(can("admin", false, "不存在的动作")).toBe(false);
+});
+
+import { buildAutoTasks, weekDates } from "../tasks/autoTasks.js";
+test("生成本周任务：催发/复投/激活，接入日 7/1，复投 ≥3，不重复生成", () => {
+  const today = "2026-09-24";                                   // 周四
+  expect(weekDates(today)).toEqual({ due: "2026-09-25", monday: "2026-09-21" });
+  const creators = [{ id: "A", handle: "amy" }, { id: "B", handle: "bo" }, { id: "C", handle: "cat" }];
+  const products = [{ id: "P", internal_name: "2208", sku_id: "111" }];
+  const collabs = [
+    { id: "c1", creator_id: "A", product_id: "P", ship_date: "2026-09-01", staff_id: "s1" },   // 23 天无视频 → 催发
+    { id: "c2", creator_id: "B", product_id: "P", ship_date: "2026-08-01", staff_id: "s2" },   // 出单 3 → 复投
+    { id: "c3", creator_id: "A", product_id: "P", ship_date: "2026-06-20", staff_id: "s1" },   // 接入日前 → 不扫描
+    { id: "c4", creator_id: "C", product_id: "P", ship_date: "2026-07-10", staff_id: "s2" },   // 激活候选（旧视频）
+  ];
+  const videos = [
+    { id: "v1", collaboration_id: "c2", orders: 3, published_at: "2026-08-20" },
+    { id: "v2", collaboration_id: "c3", orders: 9, published_at: "2026-06-25" },
+    { id: "v3", collaboration_id: "c4", orders: 1, published_at: "2026-05-01" },
+  ];
+  const nameIndex = new Map([["amy", { creatorId: "A" }], ["bo", { creatorId: "B" }], ["cat", { creatorId: "C" }]]);
+  const dormant = [{ creator: "cat", sku: "111", totalOrders: 40 }, { creator: "bo", sku: "111", totalOrders: 50 }];
+  const rows = buildAutoTasks({ today, collabs, videos, creators, nameIndex, products, existing: [], dormant });
+  expect(rows.map((r) => [r.kind, r.collaboration_id])).toEqual([["催发", "c1"], ["复投", "c2"], ["激活", "c4"]]);
+  expect(rows[0]).toMatchObject({ title: "【催发】amy - 2208｜2026-09-01 寄样，已 23 天未发视频", staff_id: "s1", due_date: "2026-09-25", is_auto: true });
+  const again = buildAutoTasks({ today, collabs, videos, creators, nameIndex, products, dormant,
+    existing: rows.map((r) => ({ ...r, status: "open", created_at: "2026-09-24T10:00:00Z" })) });
+  expect(again).toEqual([]);
 });

@@ -3,17 +3,18 @@ import { safeDiv } from "../utils.js";
 import { BURST_ORDER_THRESHOLD } from "../../constants/config.js";
 import { within, ordersByCollab } from "./rangeCalc.js";
 
-const blank = () => ({ shipCount: 0, fulfillCount: 0, withSalesCount: 0, shipOrders: 0, videoCount: 0, videoOrders: 0, burstCount: 0, inviteCount: 0 });
+const blank = () => ({ shipCount: 0, fulfillCount: 0, withSalesCount: 0, shipOrders: 0, videoCount: 0, videoWithSales: 0, videoOrders: 0, burstCount: 0, inviteCount: 0 });
 const finish = (r) => ({
   ...r,
   fulfillRate: safeDiv(r.fulfillCount, r.shipCount), saleRate: safeDiv(r.withSalesCount, r.fulfillCount),
   sampleSalesRatio: safeDiv(r.shipOrders, r.shipCount),
+  videoSaleRate: safeDiv(r.videoWithSales, r.videoCount),
 });
 
 /**
  * @param p { collabs, videos, invites, staff, productId?, ship, video, burst? }
  *   寄样/履约/出单/样销比：寄样区间内的寄样，看其全部视频（不限发布时间，与单品复盘口径一致）
- *   视频数/视频出单/爆单：视频区间内发布、归属该助理寄样的视频
+ *   视频数/出单视频数/视频出单件数/爆单：视频区间内发布、归属该助理寄样的视频
  *   邀约录入：视频区间内录入邀约库的条数（录入人账号 → 助理）
  * @returns { rows: [...按寄样数降序], total }
  */
@@ -31,7 +32,8 @@ export function calcStaffOverview(p) {
   for (const x of videos) {
     if (!x.collaboration_id || !staffOfCollab.has(x.collaboration_id)) continue;
     const r = row(staffOfCollab.get(x.collaboration_id));
-    r.videoCount++; r.videoOrders += x.orders || 0; if ((x.orders || 0) >= burst) r.burstCount++;
+    const o = x.orders || 0;
+    r.videoCount++; r.videoOrders += o; if (o >= 1) r.videoWithSales++; if (o >= burst) r.burstCount++;
   }
   for (const c of collabs.filter((x) => within(x.ship_date, p.ship))) {
     const r = row(c.staff_id || "unknown");

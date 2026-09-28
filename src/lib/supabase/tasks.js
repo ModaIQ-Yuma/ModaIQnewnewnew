@@ -1,14 +1,16 @@
 // lib/supabase/tasks.js
-import { sb, unwrap } from "./client.js";
+import { sb, unwrap, fetchAll } from "./client.js";
 
 export async function fetchTasks(storeId) {
-  return unwrap(
-    await sb.from("action_tasks")
-      .select("id,kind,title,collaboration_id,product_id,staff_id,due_date,status,is_auto,created_at")
-      .eq("store_id", storeId)
-      .order("created_at", { ascending: false }),
-    "action_tasks"
-  );
+  return fetchAll((a, b) => sb.from("action_tasks")
+    .select("id,kind,title,collaboration_id,product_id,staff_id,due_date,status,is_auto,created_at")
+    .eq("store_id", storeId).order("created_at", { ascending: false }).order("id").range(a, b), "action_tasks");
+}
+/** 批量新建任务（一次请求，每批 500 条） */
+export async function createTasks(storeId, tasks) {
+  for (let i = 0; i < tasks.length; i += 500) {
+    unwrap(await sb.from("action_tasks").insert(tasks.slice(i, i + 500).map((t) => ({ store_id: storeId, ...t }))), "action_tasks");
+  }
 }
 export async function createTask(storeId, task) {
   return unwrap(

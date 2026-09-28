@@ -10,7 +10,8 @@ import { AreaTitle } from "./ReviewCards.jsx";
 const thisMonth = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }).slice(0, 7);
 const COLS = [
   ["寄样", "shipCount"], ["履约", "fulfillCount"], ["履约率", "fulfillRate", "pct"], ["出单达人", "withSalesCount"],
-  ["达人出单率", "saleRate", "pct"], ["视频数", "videoCount"], ["视频出单", "videoOrders"], ["样销比", "sampleSalesRatio", "dec"],
+  ["达人出单率", "saleRate", "pct"], ["样销比", "sampleSalesRatio", "dec"],
+  ["视频数", "videoCount"], ["出单视频数", "videoWithSales"], ["视频出单率", "videoSaleRate", "pct"], ["视频出单件数", "videoOrders"],
   ["爆单", "burstCount"], ["邀约录入", "inviteCount"],
 ];
 const fmt = (v, f) => (f === "pct" ? rs.pct(v) : f === "dec" ? rs.dec(v) : v ?? "—");
@@ -47,12 +48,20 @@ export default function StaffReview({ collabs, videos, invites, products, staff,
   const base = useMemo(() => ({ collabs, videos, invites, staff, ship: range.ship, video: range.video, burst: burstThreshold }),
     [collabs, videos, invites, staff, range.ship, range.video, burstThreshold]);
   const overview = useMemo(() => calcStaffOverview(base), [base]);
+  const span = (r) => (r.from || r.to ? `${r.from || "最早"} ~ ${r.to || "最新"}` : "全部");
+  const shipAllVideoNot = !range.ship.from && !range.ship.to && (range.video.from || range.video.to);
   const toggle = (id) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   return (
     <div>
       <RangePicker range={range} />
-      <AreaTitle chip="总览" label="全部产品合计" note="寄样/履约/出单/样销比 看寄样的全部视频（不限时间）；视频数/视频出单/爆单 = 视频区间内发布的视频；邀约录入按视频区间统计" />
+      {shipAllVideoNot && (
+        <div style={{ fontSize: 13, color: T.warning, marginBottom: 10 }}>
+          寄样端是「全部」，但视频端仍是 {span(range.video)}，视频相关的列只统计这段时间发布的视频。
+          <button style={{ ...rs.btnGhost, marginLeft: 8 }} onClick={() => range.setVideo({ from: "", to: "" })}>视频端也看全部</button>
+        </div>
+      )}
+      <AreaTitle chip="总览" label="全部产品合计" note={`寄样：${span(range.ship)}｜视频：${span(range.video)}　·　寄样类列看这些寄样的全部视频（不限时间）；视频类列 = 视频区间内发布、挂在该助理寄样上的视频（非CRM视频不计入）`} />
       <StaffTable data={overview} nameOf={nameOf} />
 
       <AreaTitle chip="明细" label="按产品拆分" note="点产品名展开" />

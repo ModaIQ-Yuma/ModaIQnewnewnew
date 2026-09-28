@@ -38,6 +38,8 @@ export default function WeeklyMenu({ storeId, menus=[], products=[], canEdit, on
   const [weekStart,      setWeekStart]      = useState(thisWeekMonday);
   const [saving,         setSaving]         = useState(false);
   const [pendingInvites, setPendingInvites] = useState([]);
+  // 已改但还没等到刷新的格子：{ "周一日期|星期|格": productId|null }，改完立刻显示，保存在后台进行
+  const [local, setLocal] = useState({});
   const todayWd = todayWeekday();
 
   const menu = useMemo(() => menus.find((m) => m.week_start === weekStart), [menus, weekStart]);
@@ -48,8 +50,12 @@ export default function WeeklyMenu({ storeId, menus=[], products=[], canEdit, on
       if (!map[s.weekday]) map[s.weekday] = {};
       map[s.weekday][s.slot_idx] = s.product_id;
     });
+    for (const [k, pid] of Object.entries(local)) {
+      const [wk, wd, idx] = k.split("|");
+      if (wk === weekStart) (map[wd] ||= {})[idx] = pid;
+    }
     return map;
-  }, [menu]);
+  }, [menu, local, weekStart]);
 
   const todayProductIds = useMemo(() => {
     const ids = new Set();
@@ -65,17 +71,20 @@ export default function WeeklyMenu({ storeId, menus=[], products=[], canEdit, on
 
   useEffect(() => { loadInvites(); }, [loadInvites]);
 
+  /** 改一格：先在界面上改好，再后台保存；失败则恢复并提示。只有这周第一次建日程单时才刷新 */
   async function handleSlotChange(weekday, slotIdx, productId) {
-    setSaving(true);
+    const key = `${weekStart}|${weekday}|${slotIdx}`;
+    const prev = slotMap[weekday]?.[slotIdx] ?? null;
+    setLocal((l) => ({ ...l, [key]: productId || null }));
     try {
       let menuId = menu?.id;
-      if (!menuId) {
-        const m = await upsertWeeklyMenu(storeId, weekStart, "draft", "manual");
-        menuId = m.id;
-      }
+      if (!menuId) menuId = (await upsertWeeklyMenu(storeId, weekStart, "draft", "manual")).id;
       await setMenuSlot(menuId, weekday, slotIdx, productId || null);
-      onReload?.();
-    } finally { setSaving(false); }
+      if (!menu?.id) onReload?.();
+    } catch (e) {
+      setLocal((l) => ({ ...l, [key]: prev }));
+      window.alert(`保存失败，已恢复：${e.message}`);
+    }
   }
 
   async function togglePublish() {
