@@ -10,8 +10,19 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [filter, setFilter] = useState('all');
+  // 本地改动（先改界面、后台保存）：{ 任务id: { status } | { deleted: true } | { ...字段 } }
+  const [patch, setPatch] = useState({});
+  const merged = useMemo(() => tasks.map(t => ({ ...t, ...patch[t.id] })).filter(t => !t.deleted), [tasks, patch]);
 
-  const visible = useMemo(() => tasks.filter(t => {
+  /** 乐观更新：界面立刻生效，保存失败则撤回并提示 */
+  async function optimistic(id, change, save) {
+    const prev = patch[id];
+    setPatch(p => ({ ...p, [id]: { ...p[id], ...change } }));
+    try { await save(); }
+    catch (e) { setPatch(p => ({ ...p, [id]: prev })); window.alert(`保存失败，已恢复：${e.message}`); }
+  }
+
+  const visible = useMemo(() => merged.filter(t => {
     if (!canEdit && t.staff_id && t.staff_id !== currentStaffId) return false;
     if (filter === 'open' && t.status !== 'open') return false;
     if (filter === 'done' && t.status !== 'done') return false;
@@ -20,28 +31,30 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
   }).sort((a, b) => {
     if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
     return (a.due_date||'') < (b.due_date||'') ? -1 : 1;
-  }), [tasks, filter, canEdit, currentStaffId]);
+  }), [merged, filter, canEdit, currentStaffId]);
 
   function openNew() { setForm({ title:'', kind:'手动', product_id:'', staff_id:'', due_date:'' }); setEditing('new'); }
   function openEdit(t) { setForm({ ...t }); setEditing(t.id); }
 
   async function save() {
-    if (editing === 'new') {
+    if (editing === 'new') {                                    // 新建需要数据库生成的 id，保存后刷新一次
       await createTask(storeId, { ...form, status:'open', is_auto:false });
-    } else {
-      await updateTask(editing, { title:form.title, kind:form.kind, product_id:form.product_id||null, staff_id:form.staff_id||null, due_date:form.due_date||null });
+      setEditing(null); onReload?.();
+      return;
     }
-    setEditing(null); onReload?.();
+    const fields = { title:form.title, kind:form.kind, product_id:form.product_id||null, staff_id:form.staff_id||null, due_date:form.due_date||null };
+    const id = editing; setEditing(null);
+    optimistic(id, fields, () => updateTask(id, fields));
   }
 
-  async function toggleDone(t) {
-    await updateTask(t.id, { status: t.status === 'done' ? 'open' : 'done' });
-    onReload?.();
-  }
+  const toggleDone = (t) => {
+    const status = t.status === 'done' ? 'open' : 'done';
+    optimistic(t.id, { status }, () => updateTask(t.id, { status }));
+  };
 
-  async function del(id) {
+  function del(id) {
     if (!window.confirm('删除此任务？')) return;
-    await deleteTask(id); onReload?.();
+    optimistic(id, { deleted: true }, () => deleteTask(id));
   }
 
   const todo = visible.filter(t => t.status === 'open');
