@@ -1,7 +1,8 @@
 // modules/tasks/PerformanceModule.jsx
 import { useState, useMemo } from 'react';
 import { T, glassStyle, FONT } from '../../constants/tokens.js';
-import { currentCycleStart, cycleEnd, prevCycleStart, nextCycleStart } from './utils.js';
+import { todayPST } from '../../lib/dates.js';
+import { cycleStartOf, cycleEndOf, prevCycleStart, nextCycleStart } from '../../lib/cycle.js';
 import { calcPerfMetrics } from '../../lib/perf/perfCalc.js';
 import PerfTable from './PerfTable.jsx';
 import { SectionIntro } from '../../components/layout/SubNav.jsx';
@@ -13,11 +14,10 @@ export default function PerformanceModule({ ctx, showIntro = true }) {
   const { collabs, videos, products, staff, myStaffId } = ctx;
   const shippingGoals = ctx.tasksApi?.goals ?? [];
   const viewAll = ctx.can("perf.viewAll");        // 管理员：看全店 / 任意助理；成员：只看自己
-  const now = new Date();
-  const [cycleStart,      setCycleStart]      = useState(() => currentCycleStart(now));
+  const [cycleStart,      setCycleStart]      = useState(() => cycleStartOf(todayPST()));
   const [selectedStaffId, setSelectedStaffId] = useState(null);
 
-  const cEnd        = cycleEnd(cycleStart);
+  const cEnd        = cycleEndOf(cycleStart);
   const viewStaffId = viewAll ? selectedStaffId : myStaffId;
 
   const metrics = useMemo(() =>

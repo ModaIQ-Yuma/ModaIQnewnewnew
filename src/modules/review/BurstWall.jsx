@@ -5,12 +5,12 @@ import { rs } from "./reviewStyles.js";
 import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
 import { calcBurstVideos } from "../../lib/review/burstCalc.js";
 import { safeDiv } from "../../lib/utils.js";
+import { thisMonthPST } from "../../lib/dates.js";
 import { BURST_ORDER_THRESHOLD } from "../../constants/config.js";
 
-const thisMonth = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
 
 export default function BurstWall({ videos, products, burstThreshold, onThresholdChange }) {
-  const [ym,        setYm]        = useState(thisMonth);
+  const [ym,        setYm]        = useState(() => thisMonthPST());
   const [videoFrom, setVideoFrom] = useState("");
   const [videoTo,   setVideoTo]   = useState("");
 

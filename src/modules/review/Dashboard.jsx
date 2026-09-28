@@ -2,20 +2,15 @@
 import { useState, useMemo } from "react";
 import { glassStyle, T } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
-import { calcMonthMetrics } from "../../lib/review/reviewCalc.js";
 import { safeDiv } from "../../lib/utils.js";
+import { thisMonthPST } from "../../lib/dates.js";
 
-function thisMonth() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
 
 export default function Dashboard({ gradeSnapshots, collabs, videos, products }) {
-  const [ym, setYm] = useState(thisMonth);
+  const [ym, setYm] = useState(() => thisMonthPST());
 
   // 快照数据（该月）
   const snapMap = useMemo(() => {
-    const m = `${ym}-01`;
     const map = {};
     for (const s of gradeSnapshots) {
       if (s.month?.slice(0, 7) === ym) map[s.product_id] = s;
@@ -27,7 +22,6 @@ export default function Dashboard({ gradeSnapshots, collabs, videos, products })
   const cumMap = useMemo(() => {
     const map = {};
     for (const p of products) {
-      const m = calcMonthMetrics(collabs, videos, ym, p.id);
       // 全时段：不限月份
       const allOrders = videos.filter((v) => v.product_id === p.id).reduce((s, v) => s + (v.orders || 0), 0);
       const allShips  = collabs.filter((c) => c.product_id === p.id).length;

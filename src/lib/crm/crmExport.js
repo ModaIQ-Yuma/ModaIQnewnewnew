@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { CREATOR_FIELDS, labelOf } from "../../constants/creatorOptions.js";
 import { computeStatus } from "./crmFlow.js";
 import { cumOrders } from "./cumOrders.js";
-import { todayPST } from "../utils.js";
+import { todayPST } from "../dates.js";
 
 export function exportCRM(rows, staffName) {
   const data = rows.map((i) => ({

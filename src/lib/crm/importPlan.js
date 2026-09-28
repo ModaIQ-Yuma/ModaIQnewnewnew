@@ -49,8 +49,10 @@ export function buildImportPlan({ rows, decisions, pairs, existing, productIdByN
     }
   }
 
+  const productKey = (name) => String(name ?? "").trim().toUpperCase();     // 产品名不分大小写、忽略首尾空格
+  const productIdOf = new Map(Object.entries(productIdByName).map(([name, id]) => [productKey(name), id]));
   for (const r of rows) {
-    const h = C(r.handle), productId = productIdByName[r.product];
+    const h = C(r.handle), productId = productIdOf.get(productKey(r.product));
     if (!productId) { skipped.push({ line: r.line, handle: r.handle, reason: `产品「${r.product}」不在产品库` }); continue; }
     const key = `${creators.get(h).existingId || h}|${productId}|${r.shipDate}`;
     if (existing.collabKeys.has(key) || (!keepSameDay && seen.has(key))) {

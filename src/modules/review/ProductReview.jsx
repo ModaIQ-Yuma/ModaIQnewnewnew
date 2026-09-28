@@ -1,5 +1,6 @@
 // modules/review/ProductReview.jsx — 单品复盘：任意寄样/视频区间（或全量）+ 等级分层 + 整店订单
 import { useMemo, useState } from "react";
+import { thisMonthPST } from "../../lib/dates.js";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
 import { ORDER_WINDOW_TAIL_DAYS } from "../../constants/config.js";
@@ -13,11 +14,10 @@ import { OrdersPanel } from "./OrdersPanel.jsx";
 import { MCard, CardGrid, AreaTitle, pct, num, dec, wan } from "./ReviewCards.jsx";
 import { confirmIncomplete, describeSave } from "./snapshotUi.js";
 
-const thisMonth = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }).slice(0, 7);
 const spanLabel = (r) => (r.from || r.to ? `${r.from || "最早"} ~ ${r.to || "最新"}` : "全部");
 
 export default function ProductReview({ storeId, collabs, videos, products, burstThreshold, saver, canSnapshot }) {
-  const range = useReviewRange(thisMonth());
+  const range = useReviewRange(thisMonthPST());
   const [productId, setProductId] = useState("");                  // "" = 全部产品
   const [manual, setManual] = useState({ total: "", organic: "" });
   const [saveMsg, setSaveMsg] = useState("");

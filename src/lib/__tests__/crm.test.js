@@ -85,14 +85,15 @@ test("视频导入计划：别名匹配 / 只挂同商品 / 文件内重复合�
 });
 
 import { parseWindow, cutoffOf, videosAsOf } from "../video/cutoff.js";
-import { planMonthSnapshot, monthRange } from "../review/snapshotPlan.js";
+import { planMonthSnapshot } from "../review/snapshotPlan.js";
+import { monthsBetween } from "../dates.js";
 test("截止日口径：文件名识别区间、只累加到次月 5 号", () => {
   expect(parseWindow("20260806到20260905所有视频.xlsx")).toEqual({ from: "2026-08-06", to: "2026-09-05" });
   expect(parseWindow("20260326-20260331所有视频.xlsx")).toEqual({ from: "2026-03-26", to: "2026-03-31" });
   expect(parseWindow("2026-08-06至2026-09-05")).toEqual({ from: "2026-08-06", to: "2026-09-05" });
   expect(parseWindow("所有视频.xlsx")).toBe(null);
   expect(cutoffOf("2026-12", 5)).toBe("2027-01-05");
-  expect(monthRange("2025-11", "2026-02")).toEqual(["2025-11", "2025-12", "2026-01", "2026-02"]);
+  expect(monthsBetween("2025-11", "2026-02")).toEqual(["2025-11", "2025-12", "2026-01", "2026-02"]);
 
   const ledger = {
     batches: [{ id: "A", file_name: "20260706到20260805" }, { id: "B", file_name: "20260806到20260905" }, { id: "C", file_name: "20260906到20261005" }],

@@ -1,6 +1,7 @@
 // lib/review/reviewCalc.js — 按月统计：给通用区间计算套上默认区间
 //   寄样端 = 账期（上月 15 日 ~ 本月 14 日），视频端 = 自然月
-import { shipRange, videoRange } from "../utils.js";
+import { videoRange } from "../dates.js";
+import { shipRange } from "../cycle.js";
 import { calcRangeMetrics, calcVideoGradeMetrics } from "./rangeCalc.js";
 
 export { calcBurstVideos } from "./burstCalc.js";

@@ -2,7 +2,8 @@
 import { useState, useMemo } from 'react';
 import { T, glassStyle, FONT } from '../../constants/tokens.js';
 import { PRIORITIES, PRIORITY_COLORS } from './constants.js';
-import { currentCycleStart, cycleEnd, prevCycleStart, nextCycleStart, timePct, daysRemaining, formatDate } from './utils.js';
+import { todayPST, fmtMD } from '../../lib/dates.js';
+import { cycleStartOf, cycleEndOf, prevCycleStart, nextCycleStart, cycleTimePct, cycleDaysLeft } from '../../lib/cycle.js';
 import { upsertShippingGoal, deleteShippingGoal, saveGoalAllocations } from '../../lib/supabase/taskData.js';
 import GoalCard from './GoalCard.jsx';
 import { GoalForm, AllocModal } from './GoalModals.jsx';
@@ -12,11 +13,10 @@ const PRIORITY_EMOJI = { 测款最优:'🟣', 一级:'🔴', 二级:'🟠', 三�
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRadius:12, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.4)', color:T.muted, cursor:'pointer', fontFamily:'inherit' };
 
 export default function CycleGoals({ storeId, products=[], shippingGoals=[], ganttStrategies=[], collabs=[], staff=[], canEdit, onReload }) {
-  const now = new Date();
-  const [cycleStart, setCycleStart] = useState(() => currentCycleStart(now));
+  const [cycleStart, setCycleStart] = useState(() => cycleStartOf(todayPST()));
   const [editing, setEditing] = useState(null);       // null | 'new' | goal
   const [allocating, setAllocating] = useState(null); // goal
-  const cEnd = cycleEnd(cycleStart);
+  const cEnd = cycleEndOf(cycleStart);
 
   const goals = useMemo(() => shippingGoals.filter(g => g.cycle_start === cycleStart), [shippingGoals, cycleStart]);
 
@@ -41,8 +41,9 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
   async function saveAlloc(alloc) { await saveGoalAllocations(allocating.id, alloc); setAllocating(null); onReload?.(); }
   async function del(id) { if (!window.confirm('删除该目标？')) return; await deleteShippingGoal(id); onReload?.(); }
 
-  const tp = timePct(cycleStart, cEnd);
-  const daysLeft = daysRemaining(cEnd);
+  const today = todayPST();
+  const tp = cycleTimePct(cycleStart, cEnd, today);
+  const daysLeft = cycleDaysLeft(cEnd, today);
 
   const summary = useMemo(() => {
     if (!goals.length) return null;
@@ -71,7 +72,7 @@ export default function CycleGoals({ storeId, products=[], shippingGoals=[], gan
       <div style={{ marginBottom:22 }}>
         <div style={{ display:'flex', justifyContent:'space-between', fontSize:FONT.sm2, color:T.hint, marginBottom:5 }}>
           <span>周期进度 {Math.round(tp * 100)}%</span>
-          <span>{formatDate(cycleStart)} → {formatDate(cEnd)}</span>
+          <span>{fmtMD(cycleStart)} → {fmtMD(cEnd)}</span>
         </div>
         <div style={{ height:6, borderRadius:6, background:`${T.accent}20`, overflow:'hidden' }}>
           <div style={{ height:'100%', width:`${Math.min(100, tp * 100)}%`, background:T.accent, borderRadius:6 }} />

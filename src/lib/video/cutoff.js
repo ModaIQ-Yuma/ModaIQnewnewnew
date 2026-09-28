@@ -2,6 +2,7 @@
 // 每次导入的增量都记在 video_import_lines 里；批次的数据区间从文件名识别
 // （如「20260806到20260905所有视频.xlsx」）。只累加区间结束日 ≤ 截止日的批次，
 // 就能还原出「截止那天」每条视频的数据，而不受之后导入的影响。
+import { addDays, addMonths, daysBetween, monthsBetween } from "../dates.js";
 
 const D = "(\\d{4})-?(\\d{2})-?(\\d{2})";
 const WINDOW_RE = new RegExp(`${D}\\D{1,3}${D}`);
@@ -15,11 +16,7 @@ export function parseWindow(fileName) {
 }
 
 /** M 月快照的截止日：M+1 月 day 号 */
-export function cutoffOf(ym, day) {
-  const [y, m] = ym.split("-").map(Number);
-  const ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1;
-  return `${ny}-${String(nm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
+export const cutoffOf = (ym, day) => `${addMonths(ym, 1)}-${String(day).padStart(2, "0")}`;
 
 /**
  * @param videos  核心数据里的视频（取发布日期、归属等字段）
@@ -45,19 +42,11 @@ export function videosAsOf(videos, ledger, cutoff) {
   return { videos: videos.filter((v) => sum.has(v.id)).map((v) => ({ ...v, ...sum.get(v.id) })), dataTo, unknown };
 }
 
-const nextDay = (d) => { const t = new Date(d + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); };
+const nextDay = (d) => addDays(d, 1);
 /** 区间涉及的每个月的 cutoffDay 号（YYYY-MM-DD 列表） */
 function cutoffDaysWithin(w, cutoffDay) {
-  const out = [];
-  let [y, m] = w.from.split("-").map(Number);
-  const [ty, tm] = w.to.split("-").map(Number);
-  while (y < ty || (y === ty && m <= tm)) {
-    out.push(`${y}-${String(m).padStart(2, "0")}-${String(cutoffDay).padStart(2, "0")}`);
-    if (++m > 12) { m = 1; y++; }
-  }
-  return out;
+  return monthsBetween(w.from.slice(0, 7), w.to.slice(0, 7)).map((ym) => `${ym}-${String(cutoffDay).padStart(2, "0")}`);
 }
-const daysBetween = (a, b) => Math.round((new Date(b + "T00:00:00Z") - new Date(a + "T00:00:00Z")) / 86400000);
 
 /**
  * 导入前检查新文件的数据区间（每周/每月导入都适用）

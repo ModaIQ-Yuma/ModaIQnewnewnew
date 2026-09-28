@@ -3,44 +3,25 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { T, FONT, glassStyle } from "../../constants/tokens.js";
 import { upsertWeeklyMenu, setMenuSlot, deleteWeeklyMenu, fetchPendingInvites } from "../../lib/supabase/taskData.js";
 import TodayInviteList from "./TodayInviteList.jsx";
+import { todayPST, addDays, mondayOf, weekdayOf, fmtMDShort } from "../../lib/dates.js";
 
 const WEEKDAYS   = [1, 2, 3, 4, 5, 6, 7];
 const WEEK_LABEL = { 1:"周一", 2:"周二", 3:"周三", 4:"周四", 5:"周五", 6:"周六", 7:"周日" };
 const SLOT_IDXS  = [0, 1, 2, 3];
 
-function todayWeekday() {
-  const d = new Date().toLocaleDateString("en-US", { timeZone:"America/Los_Angeles", weekday:"short" });
-  return { Sun:7, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 }[d] ?? 1;
-}
-function thisWeekMonday() {
-  const now = new Date();
-  const pst = new Date(now.toLocaleString("en-US", { timeZone:"America/Los_Angeles" }));
-  const day = pst.getDay();
-  pst.setDate(pst.getDate() + (day === 0 ? -6 : 1 - day));
-  return pst.toLocaleDateString("sv-SE");
-}
-function shiftWeek(monday, delta) {
-  const [y, m, d] = monday.split("-").map(Number);
-  return new Date(y, m - 1, d + delta * 7).toLocaleDateString("sv-SE");
-}
-function weekDates(monday) {
-  const [y, m, d] = monday.split("-").map(Number);
-  return WEEKDAYS.map((_, i) => {
-    const dt = new Date(y, m - 1, d + i);
-    return `${dt.getMonth() + 1}/${String(dt.getDate()).padStart(2, "0")}`;
-  });
-}
+const shiftWeek = (monday, delta) => addDays(monday, delta * 7);
+const weekDates = (monday) => WEEKDAYS.map((_, i) => fmtMDShort(addDays(monday, i)));
 
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:"7px 14px", borderRadius:12, border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.4)", color:T.muted, cursor:"pointer", fontFamily:"inherit" };
 const thCell = { padding:"10px 8px", textAlign:"center", fontSize:FONT.sm2, fontWeight:700, color:T.muted, background:"rgba(235,242,255,0.7)" };
 
 export default function WeeklyMenu({ storeId, menus=[], products=[], canEdit, onReload }) {
-  const [weekStart,      setWeekStart]      = useState(thisWeekMonday);
+  const [weekStart,      setWeekStart]      = useState(() => mondayOf(todayPST()));
   const [saving,         setSaving]         = useState(false);
   const [pendingInvites, setPendingInvites] = useState([]);
   // 已改但还没等到刷新的格子：{ "周一日期|星期|格": productId|null }，改完立刻显示，保存在后台进行
   const [local, setLocal] = useState({});
-  const todayWd = todayWeekday();
+  const todayWd = weekdayOf(todayPST());
 
   const menu = useMemo(() => menus.find((m) => m.week_start === weekStart), [menus, weekStart]);
 

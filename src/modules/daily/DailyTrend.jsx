@@ -1,6 +1,6 @@
 // modules/daily/DailyTrend.jsx
 import { useMemo } from "react";
-import { T, glassStyle, FONT } from "../../constants/tokens.js";
+import { glassStyle } from "../../constants/tokens.js";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";

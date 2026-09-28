@@ -53,3 +53,6 @@ export async function selectIn(values, buildQuery, ctx = "", size = 150) {
   const results = await Promise.all(parts.map(async (part) => unwrap(await buildQuery(part), ctx) || []));
   return results.flat();
 }
+
+/** 唤醒数据库（免费版有冷启动）：页面加载时调一次，结果不用 */
+export const warmup = () => sb.from("stores").select("id").limit(1).then(() => {}, () => {});

@@ -1,5 +1,5 @@
 // lib/review/burstCalc.js
-import { videoRange } from "../utils.js";
+import { videoRange } from "../dates.js";
 import { BURST_ORDER_THRESHOLD } from "../../constants/config.js";
 
 export function calcBurstVideos(videos, ym, productId, burstThreshold, videoFrom, videoTo) {

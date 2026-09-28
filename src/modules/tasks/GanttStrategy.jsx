@@ -4,7 +4,9 @@ import { T, FONT, glassStyle } from '../../constants/tokens.js';
 import { GANTT_MONTHS_PER_VIEW, GANTT_COL_PRODUCT_WIDTH } from '../../constants/config.js';
 import { normalizeStatus } from '../../constants/crm.js';
 import { PRODUCT_STATUSES } from '../../constants/products.js';
-import { currentYearMonth, currentHalfKey, halfMonthColumns, shiftMonth, currentCycleStart, halfKeyToCycleStart, cellKey } from './utils.js';
+import { cellKey } from './utils.js';
+import { todayPST, addMonths } from '../../lib/dates.js';
+import { cycleStartOf, halfKeyOf, halfMonthColumns, halfKeyToCycleStart } from '../../lib/cycle.js';
 import StrategyChangeConfirm from './StrategyChangeConfirm.jsx';
 import GanttBatchBar from './GanttBatchBar.jsx';
 import ChangeLogModal from './ChangeLogModal.jsx';
@@ -18,8 +20,8 @@ const toolbarBtn = (active) => ({ ...glassStyle(12), border:`1px solid ${active 
 const arrowBtn = { border:'none', background:'transparent', cursor:'pointer', fontSize:20, color:T.muted, padding:'6px 14px', fontFamily:'inherit', lineHeight:1 };
 
 export default function GanttStrategy({ storeId, products=[], ganttStrategies=[], shippingGoals=[], changeLogs=[], influencers=[], canEdit, onReload }) {
-  const now = new Date();
-  const [viewStart, setViewStart] = useState(() => currentYearMonth(now));
+  const today = todayPST();
+  const [viewStart, setViewStart] = useState(() => today.slice(0, 7));
   const [showLogs,  setShowLogs]  = useState(false);
   const [pending,   setPending]   = useState(null);
   const [hoverKey,  setHoverKey]  = useState(null);
@@ -28,8 +30,8 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
   const [batchSelected, setBatchSelected] = useState(new Set());
 
   const columns = useMemo(() => halfMonthColumns(viewStart, GANTT_MONTHS_PER_VIEW), [viewStart]);
-  const nowHalf = currentHalfKey(now);
-  const cs = currentCycleStart(now);
+  const nowHalf = halfKeyOf(today);
+  const cs = cycleStartOf(today);
 
   // 适配新版：product_id + half_key
   const ganttMap = useMemo(() => {
@@ -122,13 +124,13 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
     <div>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20, flexWrap:'wrap' }}>
         <div style={{ ...glassStyle(14), display:'flex', alignItems:'center', overflow:'hidden' }}>
-          <button onClick={() => setViewStart(shiftMonth(viewStart, -1))} style={arrowBtn}>‹</button>
+          <button onClick={() => setViewStart(addMonths(viewStart, -1))} style={arrowBtn}>‹</button>
           <div style={{ padding:'9px 20px', fontSize:FONT.xl2, fontWeight:800, background:T.grad, WebkitBackgroundClip:'text', backgroundClip:'text', WebkitTextFillColor:'transparent' }}>
             {viewStart.slice(0, 4)} 年 · {Number(viewStart.slice(5, 7))}—{Number(columns[columns.length - 1].ym.slice(5, 7))} 月
           </div>
-          <button onClick={() => setViewStart(shiftMonth(viewStart, 1))} style={arrowBtn}>›</button>
+          <button onClick={() => setViewStart(addMonths(viewStart, 1))} style={arrowBtn}>›</button>
         </div>
-        <button onClick={() => setViewStart(currentYearMonth(now))} style={{ ...glassStyle(12), border:`1px solid ${T.glassStroke}`, padding:'8px 14px', fontSize:FONT.md2, fontWeight:600, color:T.muted, cursor:'pointer', fontFamily:'inherit' }}>回到本月</button>
+        <button onClick={() => setViewStart(today.slice(0, 7))} style={{ ...glassStyle(12), border:`1px solid ${T.glassStroke}`, padding:'8px 14px', fontSize:FONT.md2, fontWeight:600, color:T.muted, cursor:'pointer', fontFamily:'inherit' }}>回到本月</button>
         <div style={{ flex:1 }} />
         {canEdit && (
           <button onClick={() => { setBatchMode(v => !v); if (batchMode) setBatchSelected(new Set()); }} style={toolbarBtn(batchMode)}>

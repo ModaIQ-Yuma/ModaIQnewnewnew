@@ -6,17 +6,16 @@ import { VideoDateRange, ScopeHint } from "./ReviewFilters.jsx";
 import { calcGradeMetrics } from "../../lib/review/reviewCalc.js";
 import { GRADE_ORDER } from "../../lib/review/rangeCalc.js";
 import { GRADE_COLORS } from "./GradeTables.jsx";
-import { monthsBetween } from "../../lib/utils.js";
+import { monthsBetween, addMonths, thisMonthPST } from "../../lib/dates.js";
 import { confirmIncomplete, describeSave } from "./snapshotUi.js";
 
-const defFrom = () => { const d=new Date(); d.setMonth(d.getMonth()-5); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
-const thisMonth = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
+const defFrom = () => addMonths(thisMonthPST(), -5);
 
 export default function GradeReview({ collabs, videos, products, burstThreshold, onSnapshotSaved, saver, canSnapshot }) {
   const [view,      setView]      = useState("single");
-  const [ym,        setYm]        = useState(thisMonth);
+  const [ym,        setYm]        = useState(() => thisMonthPST());
   const [fromYm,    setFromYm]    = useState(defFrom);
-  const [toYm,      setToYm]      = useState(thisMonth);
+  const [toYm,      setToYm]      = useState(() => thisMonthPST());
   const [videoFrom, setVideoFrom] = useState("");
   const [videoTo,   setVideoTo]   = useState("");
   const saving = saver.busy;

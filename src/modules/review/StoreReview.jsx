@@ -5,11 +5,11 @@ import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
 import { ScopeHint } from "./ReviewFilters.jsx";
 import { calcMonthMetrics } from "../../lib/review/reviewCalc.js";
-import { monthsBetween } from "../../lib/utils.js";
+import { monthsBetween, addMonths, thisMonthPST } from "../../lib/dates.js";
 
 const COLORS = { ship: "#F59E0B", video: "#3B82F6", orders: "#EC4899" };
-const defFrom = () => { const d = new Date(); d.setMonth(d.getMonth()-5); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
-const defTo   = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
+const defFrom = () => addMonths(thisMonthPST(), -5);
+const defTo   = () => thisMonthPST();
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;

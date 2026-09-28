@@ -1,5 +1,6 @@
 // modules/review/ReviewModule.jsx
 import { useState } from "react";
+import { todayPST, addMonths } from "../../lib/dates.js";
 import { rs } from "./reviewStyles.js";
 import { T, FONT } from "../../constants/tokens.js";
 import SubNav from "../../components/layout/SubNav.jsx";
@@ -24,11 +25,6 @@ const SUBTABS = [
   { id:"burst",     label:"爆单视频墙", desc:"单条视频当月出单达到阈值（默认 50 单，可调）的视频，按产品分组。" },
 ];
 
-function prevMonth() {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
 
 export default function ReviewModule({ ctx }) {
   const {
@@ -41,10 +37,11 @@ export default function ReviewModule({ ctx }) {
   const [burstThreshold, setBurstThreshold] = useState(BURST_ORDER_THRESHOLD);
   const [saveMsg,        setSaveMsg]        = useState("");
 
-  const today = new Date().getDate();
+  const todayStr = todayPST();
+  const today = Number(todayStr.slice(8, 10));
   const canSnapshot = ctx.can("snapshot.write");
   const showReminder = canSnapshot && today >= 6 && today <= 10;
-  const ym = prevMonth();
+  const ym = addMonths(todayStr.slice(0, 7), -1);
 
   const saver = useSnapshotSaver({ storeId, userId, products, collabs, videos, onSaved: reloadReview });
   const saving = saver.busy;

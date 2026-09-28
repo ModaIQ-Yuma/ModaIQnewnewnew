@@ -4,6 +4,7 @@ import { T, FONT, glassStyle } from "../../constants/tokens.js";
 import { ROLE_LABELS } from "../../constants/permissions.js";
 import { createInviteCode, deleteInviteCode } from "../../lib/supabase/members.js";
 import { smallBtn, inp, ROLE_OPTIONS } from "./staffUi.js";
+import { pstDay } from "../../lib/dates.js";
 
 const TRIAL_DAYS = 3;
 
@@ -60,7 +61,7 @@ export default function InvitePanel({ storeId, staff, codes, run, toast }) {
                   <span style={{ fontSize:FONT.tiny, fontWeight:700, background:`${color}18`, color, borderRadius:8, padding:"2px 8px" }}>{expired ? "已过期" : days ? `${days} 天后过期` : "永久有效"}</span>
                   <span style={{ fontSize:FONT.tiny, color:T.muted }}>{ROLE_LABELS[c.role] || c.role}{c.staff_id ? ` · 绑定「${staffName(c.staff_id) || "已删除的助理"}」` : ""}</span>
                 </div>
-                <div style={{ fontSize:FONT.note, color:T.hint }}>{c.used_at ? `已被使用 · ${new Date(c.used_at).toLocaleDateString("zh-CN")}` : "尚未使用"}</div>
+                <div style={{ fontSize:FONT.note, color:T.hint }}>{c.used_at ? `已被使用 · ${pstDay(c.used_at)}` : "尚未使用"}</div>
               </div>
               <button onClick={() => remove(c.code)} style={smallBtn(T.danger)}>删除</button>
             </div>

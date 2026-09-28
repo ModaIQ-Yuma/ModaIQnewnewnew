@@ -1,9 +1,9 @@
 // ─── 日数据聚合（纯函数）：从内存里的核心数据按日期范围计数 ─────────────────
 // 输出格式与原先按日期查询数据库时完全一致，换日期不再发请求。
+import { pstDay } from "../dates.js";
 
 const day = (v) => (v ? String(v).slice(0, 10) : "");
 // added_at 是真实录入时刻，按美西（GMT-8）换算日期；寄样/视频日期入库时已是美西日期
-const pstDay = (v) => (v ? new Date(v).toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }) : "");
 const inRange = (d, from, to) => d && d >= from && d <= to;
 
 /** 按 keyFn 分组计数 → [{ ...fields, count }] */

@@ -5,6 +5,7 @@
 //   视频端（新视频数 / 出单率 / VV / 爆单 / 视频端等级）= 视频区间内发布的视频
 //   快照时传入的视频已按「截止次月 5 日」还原，所以快照里的履约 = 截止次月 5 日已发视频
 import { safeDiv } from "../utils.js";
+import { daysBetween } from "../dates.js";
 import { BURST_ORDER_THRESHOLD } from "../../constants/config.js";
 
 export const within = (d, r) => !!d && (!r?.from || d >= r.from) && (!r?.to || d <= r.to);
@@ -51,7 +52,7 @@ export function calcRangeMetrics(p) {
     const cur = firstVid.get(x.collaboration_id);
     if (!cur || x.published_at < cur) firstVid.set(x.collaboration_id, x.published_at);
   }
-  const gaps = sampled.map((col) => firstVid.get(col.id) && Math.round((new Date(firstVid.get(col.id).slice(0, 10)) - new Date(col.ship_date)) / 86400000))
+  const gaps = sampled.map((col) => firstVid.get(col.id) && daysBetween(col.ship_date, firstVid.get(col.id).slice(0, 10)))
     .filter((d) => d != null && d >= 0);
 
   const shipCount = sampled.length, fulfillCount = fulfilledIds.length, videoCount = periodVideos.length;

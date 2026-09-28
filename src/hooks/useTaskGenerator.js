@@ -4,8 +4,8 @@ import { buildAutoTasks } from "../lib/tasks/autoTasks.js";
 import { buildNameIndex } from "../lib/crm/identity.js";
 import { createTasks } from "../lib/supabase/tasks.js";
 import { fsorderEnabled, fetchFSorderCreatorTotals } from "../lib/supabase/fsorder.js";
+import { todayPST } from "../lib/dates.js";
 
-const todayPST = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
 
 export function useTaskGenerator({ storeId, core, products, tasks, onDone }) {
   const [busy, setBusy] = useState(false);

@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { ds } from "./dailyStyles.js";
 import { aggDaily } from "../../lib/daily/dailyAgg.js";
 import SubNav from "../../components/layout/SubNav.jsx";
-import { todayPST } from "../../lib/utils.js";
+import { todayPST, addDays } from "../../lib/dates.js";
 import DailyOverview from "./DailyOverview.jsx";
 import DailyTrend    from "./DailyTrend.jsx";
 
@@ -12,15 +12,11 @@ const TABS = [
   { id: "trend",    label: "趋势分析", desc: "日期范围内每天的寄样和视频发布变化，按产品拆分。日期按美西时间（GMT-8）。" },
 ];
 
-function daysAgo(n) {
-  const d = new Date(todayPST() + "T12:00:00");
-  d.setDate(d.getDate() - n);
-  return d.toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" });
-}
+const daysAgo = (n) => addDays(todayPST(), -n);
 
 function dateList(from, to) {
-  const list = [], cur = new Date(from + "T12:00:00"), end = new Date(to + "T12:00:00");
-  while (cur <= end) { list.push(cur.toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" })); cur.setDate(cur.getDate() + 1); }
+  const list = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) list.push(d);
   return list;
 }
 

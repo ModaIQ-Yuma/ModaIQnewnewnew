@@ -1,5 +1,6 @@
 // modules/review/StaffReview.jsx — 助理复盘：总览（含合计）在上，按产品明细折叠在下
 import { useMemo, useState } from "react";
+import { thisMonthPST } from "../../lib/dates.js";
 import { glassStyle, T } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
 import { RangePicker } from "./ReviewFilters.jsx";
@@ -7,7 +8,6 @@ import { calcStaffOverview } from "../../lib/review/staffCalc.js";
 import { useReviewRange } from "../../hooks/useReviewRange.js";
 import { AreaTitle } from "./ReviewCards.jsx";
 
-const thisMonth = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Los_Angeles" }).slice(0, 7);
 const COLS = [
   ["寄样", "shipCount"], ["履约", "fulfillCount"], ["履约率", "fulfillRate", "pct"], ["出单达人", "withSalesCount"],
   ["达人出单率", "saleRate", "pct"], ["样销比", "sampleSalesRatio", "dec"],
@@ -39,7 +39,7 @@ function StaffTable({ data, nameOf }) {
 }
 
 export default function StaffReview({ collabs, videos, invites, products, staff, burstThreshold }) {
-  const range = useReviewRange(thisMonth());
+  const range = useReviewRange(thisMonthPST());
   const [open, setOpen] = useState(() => new Set());
   const nameOf = useMemo(() => {
     const m = Object.fromEntries((staff || []).map((s) => [s.id, s.name]));

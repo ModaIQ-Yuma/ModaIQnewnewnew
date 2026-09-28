@@ -1,7 +1,6 @@
 // modules/daily/DailyOverview.jsx
 import { useMemo } from "react";
 import { T, glassStyle, FONT } from "../../constants/tokens.js";
-import { ds } from "./dailyStyles.js";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";

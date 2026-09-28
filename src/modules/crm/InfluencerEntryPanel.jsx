@@ -6,7 +6,7 @@ import { CREATOR_FIELDS } from "../../constants/creatorOptions.js";
 import { Inp, Btn } from "../../components/ui/index.jsx";
 import { emptyAttrs, ATTR_KEYS } from "../../lib/crm/attrs.js";
 import { normName } from "../../lib/crm/identity.js";
-import { todayPST } from "../../lib/utils.js";
+import { todayPST } from "../../lib/dates.js";
 import ShipScoreModal from "./ShipScoreModal.jsx";
 import EntryIdentity from "./EntryIdentity.jsx";
 import { Field, SectionBar, ProductSearch, StatusPicker, AttrSection } from "./EntryPanelParts.jsx";

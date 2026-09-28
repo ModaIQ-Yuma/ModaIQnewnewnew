@@ -29,8 +29,6 @@ export default function RoiCalculator({ products = [] }) {
   const pit = f("pitFee");
   const breakEven = netProfit > 0 ? Math.ceil((pit + fixedCost) / netProfit) : null;
 
-  const dollar = (x) => x > 0 ? `$${x.toFixed(2)}` : "—";
-
   return (
     <div>
       <SectionLabel>付费回本计算</SectionLabel>

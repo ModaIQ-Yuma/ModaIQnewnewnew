@@ -1,5 +1,7 @@
 // lib/perf/perfCalc.js — 绩效评估计算纯函数
 import { safeDiv } from "../utils.js";
+import { videoRange } from "../dates.js";
+import { cycleEndOf } from "../cycle.js";
 
 export const WEIGHTS = { a:0.25, b:0.25, c:0.20, d:0.20, e:0.10 };
 
@@ -24,18 +26,6 @@ export function getFinalGrade(x) {
   return "P=绩效金额×30%";
 }
 
-function cycleEndDate(cycleStart) {
-  const [y, m] = cycleStart.split("-").map(Number);
-  return new Date(y, m, 14).toLocaleDateString("sv-SE", { timeZone:"America/Los_Angeles" });
-}
-
-function videoMonthRange(cEnd) {
-  const [y, m] = cEnd.split("-").map(Number);
-  const last = new Date(y, m, 0).getDate();
-  const mm = String(m).padStart(2, "0");
-  return { vFrom:`${y}-${mm}-01`, vTo:`${y}-${mm}-${String(last).padStart(2,"0")}` };
-}
-
 /**
  * 计算绩效指标
  * @param collabs   collaborations[]（含 ship_date, staff_id, product_id, creator_id, id）
@@ -46,8 +36,8 @@ function videoMonthRange(cEnd) {
  * @param staffId   null = 全店
  */
 export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId }) {
-  const cEnd = cycleEndDate(cycleStart);
-  const { vFrom, vTo } = videoMonthRange(cEnd);
+  const cEnd = cycleEndOf(cycleStart);                     // 账期：15 日 ~ 次月 14 日（洛杉矶日期）
+  const { from: vFrom, to: vTo } = videoRange(cEnd.slice(0, 7));   // 视频：账期结束月的自然月
   const inShip  = (d) => d && d >= cycleStart && d <= cEnd;
   const inVideo = (d) => d && d >= vFrom && d <= vTo;
 

@@ -5,14 +5,11 @@
 //   只扫描接入日之后的寄样；截止日 = 本周五（已过周五则今天）
 import { REPOST_THRESHOLD_ORDERS, TASK_SCAN_START, DORMANT_MIN_ORDERS } from "../../constants/config.js";
 import { resolveName } from "../crm/identity.js";
-
-const shiftDays = (d, n) => { const t = new Date(d + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
-const shiftMonths = (d, n) => { const t = new Date(d + "T00:00:00Z"); t.setUTCMonth(t.getUTCMonth() + n); return t.toISOString().slice(0, 10); };
-const weekday = (d) => new Date(d + "T00:00:00Z").getUTCDay();          // 0 = 周日
+import { addDays as shiftDays, addMonthsToDate as shiftMonths, weekdayOf, daysBetween } from "../dates.js";
 
 /** 本周五（已过周五则今天）、本周一 */
 export function weekDates(today) {
-  const wd = weekday(today);
+  const wd = weekdayOf(today);                    // 1=周一 … 7=周日
   const friday = shiftDays(today, (5 - wd + 7) % 7);
   return { due: wd === 6 ? today : friday, monday: shiftDays(today, -((wd + 6) % 7)) };
 }
@@ -38,7 +35,7 @@ export function buildAutoTasks(p) {
   const from30 = shiftDays(today, -30), to14 = shiftDays(today, -14);
   for (const c of scanned.filter((x) => x.ship_date >= from30 && x.ship_date <= to14 && !hasVideo.has(x.id))) {
     if (taskOf("催发", c.id).some((t) => t.status === "open" || (t.created_at || "").slice(0, 10) >= monday)) continue;
-    const days = Math.round((new Date(today) - new Date(c.ship_date)) / 864e5);
+    const days = daysBetween(c.ship_date, today);
     out.push(base("催发", c, `【催发】${label(c)}｜${c.ship_date} 寄样，已 ${days} 天未发视频`));
   }
 

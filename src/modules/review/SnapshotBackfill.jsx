@@ -3,18 +3,18 @@ import { useState } from "react";
 import { glassStyle, T, FONT } from "../../constants/tokens.js";
 import { rs } from "./reviewStyles.js";
 import { Hint } from "../../components/layout/SubNav.jsx";
-import { monthRange } from "../../lib/review/snapshotPlan.js";
 import { describeSave } from "./snapshotUi.js";
+import { thisMonthPST, addMonths, monthsBetween } from "../../lib/dates.js";
 
-const prevYm = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); };
+const prevYm = () => addMonths(thisMonthPST(), -1);
 
 /** 补存历史快照：历史视频按「6 号到下月 5 号」全部导完后，一次按口径存多个月 */
 export default function SnapshotBackfill({ saver }) {
-  const [from, setFrom] = useState(`${new Date().getFullYear() - 1}-01`);
+  const [from, setFrom] = useState(() => `${Number(thisMonthPST().slice(0, 4)) - 1}-01`);
   const [to, setTo]     = useState(prevYm());
   const [msg, setMsg]   = useState("");
   async function run() {
-    const months = monthRange(from, to);
+    const months = monthsBetween(from, to);
     if (!months.length) { setMsg("开始月份不能晚于结束月份"); return; }
     if (!window.confirm(`将按「当月发布的视频，数据截止次月 5 日」重新计算并保存 ${months.length} 个月的快照（已有的同月快照会被覆盖）。视频数据还没导到截止日的月份会自动跳过。继续吗？`)) return;
     setMsg("计算中…");
