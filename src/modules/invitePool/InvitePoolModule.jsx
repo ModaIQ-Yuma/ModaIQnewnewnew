@@ -8,6 +8,8 @@ import { addToPool, removeFromPool } from "../../lib/supabase/unconnectedWrite.j
 import { T, glassStyle } from "../../constants/tokens.js";
 import { s } from "./invitePoolStyles.js";
 import PoolBatchUpload from "./PoolBatchUpload.jsx";
+import { usePaged } from "../../hooks/usePaged.js";
+import Pager from "../../components/ui/Pager.jsx";
 import { buildAdderMap } from "../../lib/invitePool/adder.js";
 import { pstDay } from "../../lib/dates.js";
 
@@ -68,6 +70,8 @@ export default function InvitePoolModule({ ctx }) {
     if (filterAdder   !== "all" && (adderMap.get(r.added_by) || "none") !== filterAdder) return false;
     return true;
   });
+  // 每页 50 条；换筛选条件自动回到第 1 页
+  const { page, setPage, totalPages, pageRows } = usePaged(displayRecords, 50, `${filterProduct}|${filterStatus}|${filterAdder}`);
 
   if (dataLoading) return <div style={s.center}>加载中…</div>;
   if (dataError && !records.length) return <div style={s.center}>错误：{dataError}</div>;
@@ -116,6 +120,7 @@ export default function InvitePoolModule({ ctx }) {
           {(ctx.staff || []).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
         </select>
         <button style={s.btnGhost} onClick={handleExport}>导出达人列表</button>
+        <span style={{ fontSize: 12, color: T.hint, marginLeft: "auto" }}>共 {displayRecords.length} 条</span>
       </div>
 
       <div style={{ ...glassStyle(14), overflow: "hidden" }}>
@@ -130,8 +135,8 @@ export default function InvitePoolModule({ ctx }) {
           <tbody>
             {displayRecords.length === 0 ? (
               <tr><td colSpan={8} style={s.empty}>暂无记录</td></tr>
-            ) : displayRecords.map((r, i) => (
-              <tr key={r.id} style={{ borderBottom: i < displayRecords.length - 1 ? `1px solid ${T.glassStroke}` : "none" }}>
+            ) : pageRows.map((r, i) => (
+              <tr key={r.id} style={{ borderBottom: i < pageRows.length - 1 ? `1px solid ${T.glassStroke}` : "none" }}>
                 <td style={s.td}><span style={s.handle}>{r.creator_id}</span></td>
                 <td style={s.td}><span style={s.productTag}>{r.products?.internal_name ?? "-"}</span></td>
                 <td style={{ ...s.td, color: T.muted }}>{adderName(r.added_by)}</td>
@@ -153,6 +158,7 @@ export default function InvitePoolModule({ ctx }) {
           </tbody>
         </table>
       </div>
+      <Pager page={page} totalPages={totalPages} onChange={setPage} />
       {showBatch && <PoolBatchUpload ctx={ctx} nameIndex={nameIndex} staffName={staffName} onClose={() => setShowBatch(false)} />}
     </div>
   );

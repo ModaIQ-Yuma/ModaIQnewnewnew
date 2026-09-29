@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { T, glassStyle, FONT } from '../../constants/tokens.js';
 import { todayPST } from '../../lib/dates.js';
+import { canSeeTask } from '../../lib/tasks/taskVisibility.js';
 import { createTask, updateTask, deleteTask } from '../../lib/supabase/tasks.js';
 
 const FILTERS = [['all','全部'],['open','待办'],['done','已完成'],['催发','📣 催发'],['复投','🔁 复投'],['激活','⚡ 激活']];
@@ -23,7 +24,7 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
   }
 
   const visible = useMemo(() => merged.filter(t => {
-    if (!canEdit && t.staff_id && t.staff_id !== currentStaffId) return false;
+    if (!canSeeTask(t, { canPlan: canEdit, myStaffId: currentStaffId })) return false;   // 成员只看自己的
     if (filter === 'open' && t.status !== 'open') return false;
     if (filter === 'done' && t.status !== 'done') return false;
     if (['催发','复投','激活'].includes(filter) && t.kind !== filter) return false;
@@ -71,6 +72,10 @@ export default function ActionList({ storeId, tasks=[], products=[], staff=[], c
         <div style={{ flex:1 }} />
         {canEdit && <button onClick={openNew} style={{ padding:'7px 16px', borderRadius:10, border:'none', cursor:'pointer', background:T.grad, color:'#fff', fontWeight:700, fontSize:FONT.lg2, fontFamily:'inherit' }}>+ 新建任务</button>}
       </div>
+
+      {!canEdit && !currentStaffId && (
+        <div style={{ fontSize:FONT.lg2, color:T.warning, marginBottom:16 }}>你的账号还没绑定名册里的名字，暂时看不到任务，请联系管理员在「人员管理 → 名册」里绑定。</div>
+      )}
 
       {todo.length > 0 && (
         <div style={{ marginBottom:24 }}>
