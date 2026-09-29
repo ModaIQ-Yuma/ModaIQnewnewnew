@@ -19,6 +19,32 @@ export const todayPST = (now = new Date()) => now.toLocaleDateString("sv-SE", { 
 /** 洛杉矶时间的本月 YYYY-MM */
 export const thisMonthPST = (now = new Date()) => todayPST(now).slice(0, 7);
 
+// ── 任意时区（美东、中国等）：夏令时由浏览器的时区库自动处理 ──
+
+/** 某个时刻在某时区的日期 YYYY-MM-DD */
+export const dateIn = (tz, instant) => instant.toLocaleDateString("sv-SE", { timeZone: tz });
+
+/** 某个时刻在某时区的钟点 HH:mm（24 小时制） */
+export const clockIn = (tz, instant) =>
+  instant.toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+/** 该时区此刻比 UTC 快多少分钟（美东夏令时 = -240） */
+function offsetMin(tz, instant) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    .formatToParts(instant).map((x) => [x.type, Number(x.value)]));
+  return (Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - Math.floor(instant.getTime() / 60000) * 60000) / 60000;
+}
+
+/** 某时区的「某天某点整」→ 对应的时刻（如美东 2026-11-02 09:00 → 14:00 UTC） */
+export function wallTimeToInstant(ymd, hour, tz) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const guess = Date.UTC(y, m - 1, d, hour);
+  const off1 = offsetMin(tz, new Date(guess));
+  const off2 = offsetMin(tz, new Date(guess - off1 * 60000));   // 夏令时切换日再校正一次
+  return new Date(guess - off2 * 60000);
+}
+
 /** 时间戳（ISO 字符串或 Date）→ 洛杉矶日期 YYYY-MM-DD；空值返回 "" */
 export const pstDay = (v) => (v ? new Date(v).toLocaleDateString("sv-SE", { timeZone: TZ }) : "");
 

@@ -5,6 +5,7 @@ import { T, FONT } from "../../constants/tokens.js";
 import { byProductOrder } from "../../lib/products/productOrder.js";
 import { pstDay, todayPST } from "../../lib/dates.js";
 import { buildInviteSheets } from "../../lib/invitePool/inviteExport.js";
+import InviteClock from "./InviteClock.jsx";
 
 const WEEK_LABEL = { 1:"周一", 2:"周二", 3:"周三", 4:"周四", 5:"周五", 6:"周六", 7:"周日" };
 const smallBtn = (primary) => ({ fontSize:FONT.note, padding:"4px 12px", borderRadius:8, cursor:"pointer", fontFamily:"inherit",
@@ -38,6 +39,7 @@ export default function TodayInviteList({ todayWd, todayProductIds, pendingInvit
         <div style={{ flex:1 }} />
         {groups.length > 0 && <button style={smallBtn(true)} onClick={() => downloadSheets(byProduct, "全部")}>一键导出全部</button>}
       </div>
+      <InviteClock />
 
       {todayProductIds.length === 0 && (
         <div style={{ fontSize:FONT.lg2, color:T.hint }}>今日日程暂无排产品</div>

@@ -44,3 +44,7 @@ export const PICKER_MAX_RESULTS      = 20;
 // ─── AI token 上限 ──────────────────────────────────────────────────────────
 export const AI_MAX_TOKENS_REVIEW = 1000;
 export const AI_MAX_TOKENS_VIRAL  = 2000;
+
+// 今日邀约建议发送时段：以美东时间定义（达人那边的时间固定），界面自动换算成洛杉矶 / 中国时间
+// 美东 17–21 点 = 北京时间 5–9 点（美国夏令时）/ 6–10 点（美国冬令时）
+export const SEND_WINDOW = { tz: "America/New_York", start: 17, end: 21 };
