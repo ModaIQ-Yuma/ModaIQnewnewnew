@@ -1,5 +1,5 @@
 import { test, expect, afterEach } from "vitest";
-import { sendWindowStatus, hourLabel } from "../tasks/sendWindow.js";
+import { sendWindowStatus, hourLabel, fmtDuration } from "../tasks/sendWindow.js";
 import { SEND_WINDOW } from "../../constants/config.js";
 import { wallTimeToInstant, clockIn, dateIn } from "../dates.js";
 
@@ -21,18 +21,22 @@ test("时区换算：美东某天 9 点 → 时刻，夏令时切换当天也对
 
 test("夏令时期间：美东 9–11 点 = 中国 21:00–23:00；三种状态", () => {
   eachZone(() => {
-    expect(at("2026-09-29T14:32:00Z")).toEqual({ la: "07:32", et: "10:32", cnStart: "21:00", cnEnd: "23:00", cnDay: "今天", state: "during", minutesLeft: 28 });
-    expect(at("2026-09-29T12:00:00Z")).toMatchObject({ la: "05:00", et: "08:00", cnDay: "今天", state: "before", minutesLeft: 60 });
+    expect(at("2026-09-29T14:32:00Z")).toEqual({
+      now: { pt: "07:32", et: "10:32", cn: "22:32" },
+      window: { pt: ["06:00", "08:00"], et: ["09:00", "11:00"], cn: ["21:00", "23:00"] },
+      abbr: { pt: "PDT", et: "EDT" },
+      cnStart: "21:00", cnDay: "今天", state: "during", minutesLeft: 28 });
+    expect(at("2026-09-29T12:00:00Z")).toMatchObject({ now: { pt: "05:00", et: "08:00" }, cnDay: "今天", state: "before", minutesLeft: 60 });
     // 美东中午，今天的已过 → 显示下一次（中国这时已是 9/30 凌晨，所以是「今天」21:00）
     expect(at("2026-09-29T16:00:00Z")).toMatchObject({ cnStart: "21:00", cnDay: "今天", state: "next", minutesLeft: 1260 });
     // 洛杉矶晚上 8 点（中国次日上午 11 点）
-    expect(at("2026-09-29T03:00:00Z")).toMatchObject({ la: "20:00", et: "23:00", cnStart: "21:00", cnDay: "今天", state: "next", minutesLeft: 600 });
+    expect(at("2026-09-29T03:00:00Z")).toMatchObject({ now: { pt: "20:00", et: "23:00" }, cnStart: "21:00", cnDay: "今天", state: "next", minutesLeft: 600 });
   });
 });
 
 test("冬令时：美东 9–11 点 = 中国 22:00–00:00，自动推后 1 小时", () => {
   eachZone(() => {
-    expect(at("2026-11-02T12:00:00Z")).toMatchObject({ et: "07:00", cnStart: "22:00", cnEnd: "00:00", cnDay: "今天", state: "before", minutesLeft: 120 });
+    expect(at("2026-11-02T12:00:00Z")).toMatchObject({ now: { et: "07:00" }, window: { cn: ["22:00", "00:00"] }, abbr: { pt: "PST", et: "EST" }, cnDay: "今天", state: "before", minutesLeft: 120 });
   });
 });
 
@@ -44,10 +48,14 @@ test("默认配置：美东 17–21 点 = 北京 5–9 点（夏令时）/ 6–1
   expect(SEND_WINDOW).toEqual({ tz: "America/New_York", start: 17, end: 21 });
   eachZone(() => {
     // 北京 9/29 22:00（美东 10:00）→ 下一次是北京「明天」05:00
-    expect(sendWindowStatus(new Date("2026-09-29T14:00:00Z"))).toMatchObject({ cnStart: "05:00", cnEnd: "09:00", cnDay: "明天", state: "before", minutesLeft: 420 });
+    expect(sendWindowStatus(new Date("2026-09-29T14:00:00Z"))).toMatchObject({ cnStart: "05:00", window: { cn: ["05:00", "09:00"], et: ["17:00", "21:00"], pt: ["14:00", "18:00"] }, cnDay: "明天", state: "before", minutesLeft: 420 });
     // 北京 9/30 06:00（美东 9/29 18:00）→ 正在时段内，还剩 3 小时
     expect(sendWindowStatus(new Date("2026-09-29T22:00:00Z"))).toMatchObject({ cnStart: "05:00", cnDay: "今天", state: "during", minutesLeft: 180 });
     // 美国冬令时：北京 6–10 点
-    expect(sendWindowStatus(new Date("2026-11-02T14:00:00Z"))).toMatchObject({ cnStart: "06:00", cnEnd: "10:00", cnDay: "明天", state: "before" });
+    expect(sendWindowStatus(new Date("2026-11-02T14:00:00Z"))).toMatchObject({ cnStart: "06:00", window: { cn: ["06:00", "10:00"], et: ["17:00", "21:00"], pt: ["14:00", "18:00"] }, cnDay: "明天", state: "before" });
   });
+});
+
+test("剩余时间文案", () => {
+  expect([fmtDuration(28), fmtDuration(60), fmtDuration(125), fmtDuration(1260)]).toEqual(["28 分钟", "1 小时", "2 小时 5 分", "21 小时"]);
 });

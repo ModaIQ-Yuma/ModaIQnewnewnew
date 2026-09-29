@@ -28,6 +28,11 @@ export const dateIn = (tz, instant) => instant.toLocaleDateString("sv-SE", { tim
 export const clockIn = (tz, instant) =>
   instant.toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
+/** 时区缩写：夏令时 PDT / EDT，冬令时 PST / EST */
+export const tzAbbr = (tz, instant) =>
+  new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" }).formatToParts(instant)
+    .find((x) => x.type === "timeZoneName")?.value || "";
+
 /** 该时区此刻比 UTC 快多少分钟（美东夏令时 = -240） */
 function offsetMin(tz, instant) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
