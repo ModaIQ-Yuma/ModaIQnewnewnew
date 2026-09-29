@@ -4,8 +4,9 @@ import { T, glassStyle, FONT } from "../../constants/tokens.js";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
+import { inviteRanking } from "../../lib/daily/dailyAgg.js";
 
-export default function DailyOverview({ date, shipments, videos, invites, products }) {
+export default function DailyOverview({ date, shipments, videos, invites, staff = [], products }) {
   const chartData = useMemo(() => {
     const shipMap = {}, vidMap = {};
     for (const r of shipments) {
@@ -60,9 +61,9 @@ export default function DailyOverview({ date, shipments, videos, invites, produc
         <div style={{ fontSize: FONT.lg2, fontWeight: 700, color: T.text, marginBottom: 10 }}>助理拉新排行</div>
         {totalInvite === 0
           ? <div style={{ fontSize: 13, color: T.hint }}>暂无拉新数据</div>
-          : invites.filter((r) => r.date === date).sort((a, b) => b.count - a.count).map((r) => (
-              <div key={r.staff_id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0", borderBottom: `1px solid ${T.glassStroke}` }}>
-                <span style={{ color: T.text }}>{r.staff_name || r.staff_id}</span>
+          : inviteRanking(invites, date, staff).map((r) => (
+              <div key={r.staffId} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0", borderBottom: `1px solid ${T.glassStroke}` }}>
+                <span style={{ color: T.text }}>{r.name}</span>
                 <b style={{ color: T.accent }}>{r.count}</b>
               </div>
             ))

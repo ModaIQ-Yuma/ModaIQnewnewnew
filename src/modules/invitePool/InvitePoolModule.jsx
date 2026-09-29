@@ -7,6 +7,9 @@ import { buildNameIndex } from "../../lib/crm/identity.js";
 import { addToPool, removeFromPool } from "../../lib/supabase/unconnectedWrite.js";
 import { T, glassStyle } from "../../constants/tokens.js";
 import { s } from "./invitePoolStyles.js";
+import PoolBatchUpload from "./PoolBatchUpload.jsx";
+import { buildAdderMap } from "../../lib/invitePool/adder.js";
+import { pstDay } from "../../lib/dates.js";
 
 export default function InvitePoolModule({ ctx }) {
   const { storeId, userId, products, core, dataLoading, dataError } = ctx;
@@ -14,9 +17,13 @@ export default function InvitePoolModule({ ctx }) {
   const canEdit = ctx.can("pool.edit");
   const nameIndex = useMemo(() => buildNameIndex(core.creators, core.aliases), [core.creators, core.aliases]);
   const staffName = (id) => (ctx.staff || []).find((s) => s.id === id)?.name || "未指定";
+  const adderMap = useMemo(() => buildAdderMap(ctx.staff), [ctx.staff]);
+  const adderName = (addedBy) => (adderMap.has(addedBy) ? staffName(adderMap.get(addedBy)) : "—");
 
   const [filterProduct, setFilterProduct] = useState("all");
   const [filterStatus,  setFilterStatus]  = useState("pending");
+  const [filterAdder,   setFilterAdder]   = useState("all");
+  const [showBatch,     setShowBatch]     = useState(false);
   const [creatorHandle,    setCreatorHandle]    = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [adding,           setAdding]           = useState(false);
@@ -58,6 +65,7 @@ export default function InvitePoolModule({ ctx }) {
   const displayRecords = records.filter((r) => {
     if (filterProduct !== "all" && r.product_id !== filterProduct) return false;
     if (filterStatus  !== "all" && r.status     !== filterStatus)  return false;
+    if (filterAdder   !== "all" && (adderMap.get(r.added_by) || "none") !== filterAdder) return false;
     return true;
   });
 
@@ -88,6 +96,7 @@ export default function InvitePoolModule({ ctx }) {
           <button style={s.btn} onClick={handleAdd} disabled={adding}>
             {adding ? "录入中…" : "+ 录入"}
           </button>
+          <button style={s.btnGhost} onClick={() => setShowBatch(true)}>批量上传</button>
         </div>
         {formError && <div style={s.err}>{formError}</div>}
       </div>}
@@ -102,6 +111,10 @@ export default function InvitePoolModule({ ctx }) {
           <option value="converted">已转化</option>
           <option value="all">全部</option>
         </select>
+        <select style={s.sel} value={filterAdder} onChange={(e) => setFilterAdder(e.target.value)}>
+          <option value="all">全部录入人</option>
+          {(ctx.staff || []).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
         <button style={s.btnGhost} onClick={handleExport}>导出达人列表</button>
       </div>
 
@@ -109,21 +122,22 @@ export default function InvitePoolModule({ ctx }) {
         <table style={s.table}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${T.glassStroke}` }}>
-              {["达人 username","产品","录入时间","归属人","归属时间","状态","操作"].map((h) => (
+              {["达人 username","产品","录入人","录入时间","归属人","归属时间","状态","操作"].map((h) => (
                 <th key={h} style={s.th}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {displayRecords.length === 0 ? (
-              <tr><td colSpan={7} style={s.empty}>暂无记录</td></tr>
+              <tr><td colSpan={8} style={s.empty}>暂无记录</td></tr>
             ) : displayRecords.map((r, i) => (
               <tr key={r.id} style={{ borderBottom: i < displayRecords.length - 1 ? `1px solid ${T.glassStroke}` : "none" }}>
                 <td style={s.td}><span style={s.handle}>{r.creator_id}</span></td>
                 <td style={s.td}><span style={s.productTag}>{r.products?.internal_name ?? "-"}</span></td>
-                <td style={{ ...s.td, color: T.muted }}>{r.added_at?.slice(0, 10)}</td>
+                <td style={{ ...s.td, color: T.muted }}>{adderName(r.added_by)}</td>
+                <td style={{ ...s.td, color: T.muted }}>{pstDay(r.added_at)}</td>
                 <td style={{ ...s.td, color: T.muted }}>{r.owner_id ? staffName(r.owner_id) : "-"}</td>
-                <td style={{ ...s.td, color: T.muted }}>{r.owned_at?.slice(0, 10) ?? "-"}</td>
+                <td style={{ ...s.td, color: T.muted }}>{pstDay(r.owned_at) || "-"}</td>
                 <td style={s.td}>
                   <span style={r.status === "converted" ? s.tagDone : s.tagPending}>
                     {r.status === "converted" ? "已转化" : "未转化"}
@@ -139,6 +153,7 @@ export default function InvitePoolModule({ ctx }) {
           </tbody>
         </table>
       </div>
+      {showBatch && <PoolBatchUpload ctx={ctx} nameIndex={nameIndex} staffName={staffName} onClose={() => setShowBatch(false)} />}
     </div>
   );
 }

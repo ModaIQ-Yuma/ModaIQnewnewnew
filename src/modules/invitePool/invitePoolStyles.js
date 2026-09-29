@@ -21,4 +21,15 @@ export const s = {
   tagPending: { background: "rgba(92,112,144,0.12)", color: T.muted, padding: "3px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600 },
   tagDone:    { background: "rgba(14,158,112,0.12)", color: T.s, padding: "3px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600 },
   center:     { textAlign: "center", padding: 48, color: T.hint },
+  // 批量上传弹窗
+  overlay:    { position: "fixed", inset: 0, zIndex: 1500, background: "rgba(10,22,40,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" },
+  modal:      { width: "min(760px, 100%)", padding: "20px 24px" },
+  modalHead:  { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, fontSize: 16, fontWeight: 700, color: T.text },
+  label:      { fontSize: 12, fontWeight: 600, color: T.hint, margin: "14px 0 6px" },
+  textarea:   { width: "100%", minHeight: 140, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.6)", color: T.text, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" },
+  note:       { fontSize: 12, color: T.hint, marginTop: 6 },
+  footer:     { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 },
+  stat:       { padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.5)", border: `1px solid ${T.glassStroke}`, fontSize: 13, color: T.muted },
+  statNum:    { display: "block", fontSize: 22, fontWeight: 700, color: T.text },
+  skipBox:    { maxHeight: 260, overflowY: "auto", marginTop: 10, borderRadius: 10, border: `1px solid ${T.glassStroke}` },
 };

@@ -15,7 +15,8 @@ const MATRIX = {
   "crm.edit":        ["admin", "staff"],            // 录入、编辑、改状态、归入 CRM
   "crm.delete":      ["admin"],                     // 删除、批量删除
   "crm.import":      ["admin"],                     // 批量导入
-  "pool.edit":       ["admin", "staff"],            // 邀约库录入、删除
+  "pool.edit":       ["admin", "staff"],            // 邀约库录入、删除、批量上传
+  "pool.pickAdder":  ["admin"],                     // 批量上传时指定录入人（成员只能录自己）
   "video.import":    ["admin", "staff"],
   "video.revert":    ["admin"],
   "snapshot.write":  ["admin"],                     // 保存 / 删除 / 补存快照

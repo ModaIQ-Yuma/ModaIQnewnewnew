@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { T, FONT, glassStyle } from "../../constants/tokens.js";
 import { createStaff, updateStaff, deleteStaff } from "../../lib/supabase/staff.js";
+import { pstDay } from "../../lib/dates.js";
 
 const lk = (c) => ({ border: "none", background: "transparent", color: c, cursor: "pointer", fontSize: FONT.sm2, padding: 0, fontFamily: "inherit" });
 const inp = { padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${T.border}`, background: "rgba(255,255,255,0.6)", color: T.text, fontSize: FONT.lg2, fontFamily: "inherit", outline: "none" };
@@ -73,7 +74,7 @@ export default function StaffRoster({ storeId, core }) {
               ) : (
                 <>
                   <span style={{ fontSize: FONT.xl2, fontWeight: 700, color: T.text, flex: 1 }}>{s.name}</span>
-                  <span style={{ fontSize: FONT.sm, color: T.hint }}>{s.created_at?.slice(0, 10)}</span>
+                  <span style={{ fontSize: FONT.sm, color: T.hint }}>{pstDay(s.created_at)}</span>
                   {s.auth_user_id
                     ? <span style={{ fontSize: FONT.xs, color: T.success, background: `${T.success}15`, borderRadius: 8, padding: "2px 8px", border: `1px solid ${T.success}33` }}>已绑定账号</span>
                     : <span style={{ fontSize: FONT.xs, color: T.hint, background: `${T.hint}15`, borderRadius: 8, padding: "2px 8px" }}>未绑定</span>

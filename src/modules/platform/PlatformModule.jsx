@@ -5,6 +5,7 @@ import { SectionIntro } from "../../components/layout/SubNav.jsx";
 import { fetchAllStores, createStore, renameStore, fetchSuperAdmins, addSuperAdmin, removeSuperAdmin } from "../../lib/supabase/platform.js";
 import { createInviteCode } from "../../lib/supabase/members.js";
 import { smallBtn, inp, shortId } from "../staff/staffUi.js";
+import { pstDay } from "../../lib/dates.js";
 
 const card = { ...glassStyle(16, true), padding: "18px 20px", marginBottom: 18 };
 const h = { fontSize: FONT.h2, fontWeight: 800, color: T.text, marginBottom: 12 };
@@ -49,7 +50,7 @@ export default function PlatformModule({ ctx }) {
           <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: `1px solid ${T.glassStroke}`, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontSize: FONT.body, fontWeight: 700, color: T.text }}>{s.name}{s.id === ctx.storeId && <span style={{ fontSize: FONT.tiny, color: T.accent, marginLeft: 6 }}>（当前）</span>}</div>
-              <div style={{ fontSize: FONT.note, color: T.hint }}>{s.members} 个成员（管理员 {s.admins}）· 创建于 {s.created_at?.slice(0, 10)}</div>
+              <div style={{ fontSize: FONT.note, color: T.hint }}>{s.members} 个成员（管理员 {s.admins}）· 创建于 {pstDay(s.created_at)}</div>
             </div>
             <button style={smallBtn(T.muted)} onClick={() => { const n = window.prompt("新的店铺名称", s.name); if (n?.trim()) run(() => renameStore(s.id, n.trim()), "✅ 已重命名"); }}>重命名</button>
             <button style={smallBtn(T.accent)} onClick={() => adminInvite(s.id)}>生成管理员邀请码</button>

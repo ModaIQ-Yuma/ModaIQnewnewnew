@@ -14,6 +14,7 @@ import { buildNameIndex } from "../../lib/crm/identity.js";
 import { checkNewWindow } from "../../lib/video/cutoff.js";
 import { ORDER_WINDOW_TAIL_DAYS } from "../../constants/config.js";
 import { revertBatch } from "../../lib/supabase/videosRevert.js";
+import { pstDay } from "../../lib/dates.js";
 
 const TABS = [
   { id: "imported", label: "导入视频",  desc: "上传 TK 后台导出的视频 xlsx，系统按达人名称匹配 CRM 寄样记录（优先同一商品 ID），这里列出已匹配上的视频。同一视频再次导入会把数据累加上去，所以同一时段不要重复导入；导错了可在「导入批次」里撤销。" },
@@ -118,7 +119,7 @@ export default function VideosModule({ ctx }) {
               {batchOpen && batches.slice(0, allBatches ? undefined : 10).map((b) => (
                 <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, fontSize: 13 }}>
                   <span style={{ color: T.muted, flex: 1 }}>{b.file_name}</span>
-                  <span style={{ color: T.hint }}>{b.created_at?.slice(0, 10)}</span>
+                  <span style={{ color: T.hint }}>{pstDay(b.created_at)}</span>
                   <span style={{ color: T.muted }}>{b.row_count} 条</span>
                   {canRevert && <button style={vs.btnDanger} disabled={!!reverting} onClick={() => handleRevert(b.id, b.file_name)}>{reverting === b.id ? "撤销中…" : "撤销"}</button>}
                 </div>

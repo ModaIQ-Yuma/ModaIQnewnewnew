@@ -64,7 +64,7 @@ export default function DailyModule({ ctx }) {
       </div>
 
       {tab === "overview"
-        ? <DailyOverview date={date} shipments={shipments ?? []} videos={videos ?? []} invites={invites ?? []} products={products ?? []} />
+        ? <DailyOverview date={date} shipments={shipments ?? []} videos={videos ?? []} invites={invites ?? []} staff={ctx.staff ?? []} products={products ?? []} />
         : <DailyTrend    dates={dates} shipments={shipments ?? []} videos={videos ?? []} products={products ?? []} />
       }
     </div>

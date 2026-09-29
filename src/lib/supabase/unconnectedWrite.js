@@ -14,6 +14,24 @@ export async function addToPool(storeId, creatorHandle, productIds, addedBy) {
   unwrap(await sb.from("unconnected_creators").insert(rows), "unconnected_creators");
 }
 
+/**
+ * 批量上传：rows = [{ creator_id, product_id }]（已查重）；每 500 行一批写入。
+ * 同一达人 + 产品若刚被别人录入，数据库唯一约束会自动跳过，不报错。
+ * @returns 实际写入条数
+ */
+export async function addPoolRows(storeId, rows, addedBy) {
+  const T = "unconnected_creators";
+  let written = 0;
+  for (let i = 0; i < rows.length; i += 500) {
+    const chunk = rows.slice(i, i + 500).map((r) => ({ store_id: storeId, creator_id: normName(r.creator_id),
+      product_id: r.product_id, added_by: addedBy, status: "pending" }));
+    const res = unwrap(await sb.from(T).upsert(chunk, { onConflict: "store_id,creator_id,product_id", ignoreDuplicates: true })
+      .select("id"), T);
+    written += (res || []).length;
+  }
+  return written;
+}
+
 /** 删除单条记录 */
 export async function removeFromPool(id) {
   unwrap(await sb.from("unconnected_creators").delete().eq("id", id), "unconnected_creators");

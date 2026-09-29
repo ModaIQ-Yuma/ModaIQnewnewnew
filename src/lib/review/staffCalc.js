@@ -1,5 +1,7 @@
 // ─── 助理复盘（纯函数）：每个助理的寄样 / 履约 / 出单 / 视频 / 邀约，附合计行 ───
 import { safeDiv } from "../utils.js";
+import { pstDay } from "../dates.js";
+import { buildAdderMap } from "../invitePool/adder.js";
 import { BURST_ORDER_THRESHOLD } from "../../constants/config.js";
 import { within, ordersByCollab } from "./rangeCalc.js";
 
@@ -25,7 +27,7 @@ export function calcStaffOverview(p) {
   const videos = allVideos.filter((x) => within(x.published_at?.slice(0, 10), p.video));
   const cum = ordersByCollab(allVideos);
   const staffOfCollab = new Map(collabs.map((c) => [c.id, c.staff_id || "unknown"]));
-  const staffOfUser = new Map((p.staff || []).flatMap((s) => [[s.id, s.id], ...(s.auth_user_id ? [[s.auth_user_id, s.id]] : [])]));
+  const staffOfUser = buildAdderMap(p.staff);
   const map = {};
   const row = (id) => (map[id] ||= { staffId: id, ...blank() });
 
@@ -41,7 +43,7 @@ export function calcStaffOverview(p) {
     if (cum.has(c.id)) { r.fulfillCount++; r.shipOrders += cum.get(c.id); if (cum.get(c.id) >= 1) r.withSalesCount++; }
   }
   for (const inv of pick(p.invites || [])) {
-    if (!within(inv.added_at?.slice(0, 10), p.video)) continue;
+    if (!within(pstDay(inv.added_at), p.video)) continue;
     row(staffOfUser.get(inv.added_by) || "unknown").inviteCount++;
   }
 
