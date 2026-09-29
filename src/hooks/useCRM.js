@@ -2,7 +2,9 @@
 import { useCallback, useMemo } from "react";
 import { buildInfluencers, latestByCreator } from "../lib/crm/buildInfluencers.js";
 import { ownerMap } from "../lib/crm/ownership.js";
-import { buildNameIndex, checkIdentity, normName, resolveName, searchCreators } from "../lib/crm/identity.js";
+import { buildNameIndex, checkIdentity, normName, resolveName, searchCreators, namesOf } from "../lib/crm/identity.js";
+import { poolFollowerOf } from "../lib/invitePool/poolFollower.js";
+import { buildAdderMap } from "../lib/invitePool/adder.js";
 import { buildShipmentPayload } from "../lib/crm/shipmentPayload.js";
 import { withComputedStatus } from "../lib/crm/crmFlow.js";
 import { saveShipment } from "../lib/supabase/crmSave.js";
@@ -25,6 +27,11 @@ export function useCRM(storeId, core, products) {
   );
   const latest = useMemo(() => latestByCreator(influencers), [influencers]);
   const owners = useMemo(() => ownerMap(collabs), [collabs]);   // 达人归属：录入时自动填跟进人
+  const adderMap = useMemo(() => buildAdderMap(staff), [staff]);
+  // 没有归属人时，从邀约库推断跟进人（录入人）；creatorId 为 null 表示新达人，用输入的名字和别名
+  const poolFollower = useCallback((creatorId, typedNames, productId) => poolFollowerOf({
+    names: creatorId ? namesOf(creatorId, creators, aliases) : typedNames, productId, invites: core.invites || [], adderMap,
+  }), [creators, aliases, core.invites, adderMap]);
   const shipCount = useMemo(() => {
     const m = new Map();
     for (const c of collabs) m.set(c.creator_id, (m.get(c.creator_id) || 0) + 1);
@@ -86,5 +93,5 @@ export function useCRM(storeId, core, products) {
   }, [removeRows, refresh]);
   const remove = useCallback((id) => bulkRemove([id]), [bulkRemove]);
 
-  return { influencers, latest, staff, loading, error, reload: refresh, resolve, search, check, save, handleOf, owners, updateStatus, remove, bulkRemove };
+  return { influencers, latest, staff, loading, error, reload: refresh, resolve, search, check, save, handleOf, owners, poolFollower, updateStatus, remove, bulkRemove };
 }

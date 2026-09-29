@@ -12,6 +12,7 @@ import { usePaged } from "../../hooks/usePaged.js";
 import Pager from "../../components/ui/Pager.jsx";
 import { buildAdderMap } from "../../lib/invitePool/adder.js";
 import { pstDay } from "../../lib/dates.js";
+import { buildPoolSearch, matchesPoolSearch } from "../../lib/invitePool/poolSearch.js";
 
 export default function InvitePoolModule({ ctx }) {
   const { storeId, userId, products, core, dataLoading, dataError } = ctx;
@@ -26,6 +27,7 @@ export default function InvitePoolModule({ ctx }) {
   const [filterStatus,  setFilterStatus]  = useState("pending");
   const [filterAdder,   setFilterAdder]   = useState("all");
   const [showBatch,     setShowBatch]     = useState(false);
+  const [query,         setQuery]         = useState("");
   const [creatorHandle,    setCreatorHandle]    = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [adding,           setAdding]           = useState(false);
@@ -64,14 +66,17 @@ export default function InvitePoolModule({ ctx }) {
     XLSX.writeFile(wb, `邀约库_${Date.now()}.xlsx`);
   }
 
+  const search = useMemo(() => buildPoolSearch(query, { nameIndex, creators: core.creators, aliases: core.aliases }),
+    [query, nameIndex, core.creators, core.aliases]);
   const displayRecords = records.filter((r) => {
+    if (!matchesPoolSearch(r, search)) return false;
     if (filterProduct !== "all" && r.product_id !== filterProduct) return false;
     if (filterStatus  !== "all" && r.status     !== filterStatus)  return false;
     if (filterAdder   !== "all" && (adderMap.get(r.added_by) || "none") !== filterAdder) return false;
     return true;
   });
   // 每页 50 条；换筛选条件自动回到第 1 页
-  const { page, setPage, totalPages, pageRows } = usePaged(displayRecords, 50, `${filterProduct}|${filterStatus}|${filterAdder}`);
+  const { page, setPage, totalPages, pageRows } = usePaged(displayRecords, 50, `${query}|${filterProduct}|${filterStatus}|${filterAdder}`);
 
   if (dataLoading) return <div style={s.center}>加载中…</div>;
   if (dataError && !records.length) return <div style={s.center}>错误：{dataError}</div>;
@@ -106,6 +111,7 @@ export default function InvitePoolModule({ ctx }) {
       </div>}
 
       <div style={s.filters}>
+        <input style={{ ...s.input, width: 200 }} placeholder="🔍 搜索达人（现名或别名）" value={query} onChange={(e) => setQuery(e.target.value)} />
         <select style={s.sel} value={filterProduct} onChange={(e) => setFilterProduct(e.target.value)}>
           <option value="all">全部产品</option>
           {(products ?? []).map((p) => <option key={p.id} value={p.id}>{p.internal_name}</option>)}

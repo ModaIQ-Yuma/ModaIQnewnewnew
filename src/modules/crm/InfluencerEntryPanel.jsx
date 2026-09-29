@@ -37,6 +37,18 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
     .sort((a, b) => b.shipDate.localeCompare(a.shipDate)), [crm.influencers, resolvedId, initial?.id]);
   const repeat = history.find((h) => h.product === f.product);
   const ownerId = resolvedId ? crm.owners.get(resolvedId) : null;
+  const productId = products.find((p) => p.internal_name === f.product)?.id || null;
+  const poolHit = useMemo(() => (initial || ownerId ? null
+    : crm.poolFollower(resolvedId, [f.influencerId, ...(f.aliases || [])], productId)),
+    [initial, ownerId, crm.poolFollower, resolvedId, f.influencerId, f.aliases, productId]);
+  const [autoStaff, setAutoStaff] = useState("");                     // 由邀约库自动填的跟进人；手动改过就不再覆盖
+
+  // 没有归属人、但在邀约库里 → 自动填邀约库录入人
+  useEffect(() => {
+    if (!poolHit || (f.staffId && f.staffId !== autoStaff)) return;
+    const id = String(poolHit.staffId);
+    if (f.staffId !== id) { setF((p) => ({ ...p, staffId: id })); setAutoStaff(id); }
+  }, [poolHit, f.staffId, autoStaff]);
 
   // 新录入时认出已有达人 → 带出她最近一次寄样的属性、别名、达人备注
   useEffect(() => {
@@ -102,6 +114,9 @@ export default function InfluencerEntryPanel({ initial, products = [], staff = [
             </div>
             {ownerId && <div style={{ fontSize: FONT.note, marginTop: 5, color: String(ownerId) === f.staffId ? T.hint : T.warning }}>
               {String(ownerId) === f.staffId ? `归属人：${staffName(ownerId)}（已自动填写）` : `⚠ 她的归属人是 ${staffName(ownerId)}，选别人会产生归属冲突`}
+            </div>}
+            {poolHit && <div style={{ fontSize: FONT.note, marginTop: 5, color: String(poolHit.staffId) === f.staffId ? T.hint : T.warning }}>
+              {String(poolHit.staffId) === f.staffId ? `来自邀约库：录入人 ${staffName(poolHit.staffId)}（已自动填写）` : `⚠ 她在邀约库的录入人是 ${staffName(poolHit.staffId)}`}
             </div>}
           </Field>
         </div>
