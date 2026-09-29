@@ -8,6 +8,7 @@ import { addToPool, removeFromPool } from "../../lib/supabase/unconnectedWrite.j
 import { T, glassStyle } from "../../constants/tokens.js";
 import { s } from "./invitePoolStyles.js";
 import PoolBatchUpload from "./PoolBatchUpload.jsx";
+import { OwnerCell, StatusCell } from "./PoolRowCells.jsx";
 import { usePaged } from "../../hooks/usePaged.js";
 import Pager from "../../components/ui/Pager.jsx";
 import { buildAdderMap } from "../../lib/invitePool/adder.js";
@@ -147,13 +148,9 @@ export default function InvitePoolModule({ ctx }) {
                 <td style={s.td}><span style={s.productTag}>{r.products?.internal_name ?? "-"}</span></td>
                 <td style={{ ...s.td, color: T.muted }}>{adderName(r.added_by)}</td>
                 <td style={{ ...s.td, color: T.muted }}>{pstDay(r.added_at)}</td>
-                <td style={{ ...s.td, color: T.muted }}>{r.owner_id ? staffName(r.owner_id) : "-"}</td>
+                <OwnerCell row={r} core={core} staff={ctx.staff || []} staffName={staffName} canSet={ctx.can("pool.setOwner")} />
                 <td style={{ ...s.td, color: T.muted }}>{pstDay(r.owned_at) || "-"}</td>
-                <td style={s.td}>
-                  <span style={r.status === "converted" ? s.tagDone : s.tagPending}>
-                    {r.status === "converted" ? "已转化" : "未转化"}
-                  </span>
-                </td>
+                <StatusCell row={r} core={core} canEdit={canEdit} />
                 <td style={s.td}>
                   {canEdit && r.status === "pending" && (
                     <button style={s.btnDanger} onClick={() => handleRemove(r.id)}>删除</button>

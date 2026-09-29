@@ -32,6 +32,12 @@ export async function addPoolRows(storeId, rows, addedBy) {
   return written;
 }
 
+/** 更新单条记录的字段（字段由 lib/invitePool/poolEdit.js 生成） */
+export async function updatePoolRow(id, patch) {
+  const T = "unconnected_creators";
+  unwrap(await sb.from(T).update(patch).eq("id", id), T);
+}
+
 /** 删除单条记录 */
 export async function removeFromPool(id) {
   unwrap(await sb.from("unconnected_creators").delete().eq("id", id), "unconnected_creators");

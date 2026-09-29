@@ -37,3 +37,16 @@ test("邀约库搜索：包含匹配；输入现名能搜到存成旧名的记�
   expect(hit("fit")).toEqual(["bella.fit"]);
   expect(hit("zzz")).toEqual([]);
 });
+
+import { revertPatch, ownerPatch } from "../invitePool/poolEdit.js";
+import { pendingInvitesFor } from "../invitePool/todayInvites.js";
+test("邀约库手动更改：回退只改状态、归属保留；变更 / 清空归属人；回退后重新进入今日邀约名单", () => {
+  expect(revertPatch()).toEqual({ status: "pending" });
+  expect(ownerPatch("S2", "2026-09-29T10:00:00Z")).toEqual({ owner_id: "S2", owned_at: "2026-09-29T10:00:00Z" });
+  expect(ownerPatch(null, "2026-09-29T10:00:00Z")).toEqual({ owner_id: null, owned_at: null });
+  const row = { id: 1, product_id: "P1", status: "converted", owner_id: "S1", added_at: "2026-09-01" };
+  expect(pendingInvitesFor([row], ["P1"])).toHaveLength(0);
+  const reverted = { ...row, ...revertPatch() };
+  expect(reverted.owner_id).toBe("S1");
+  expect(pendingInvitesFor([reverted], ["P1"])).toHaveLength(1);
+});

@@ -17,6 +17,7 @@ const MATRIX = {
   "crm.import":      ["admin"],                     // 批量导入
   "pool.edit":       ["admin", "staff"],            // 邀约库录入、删除、批量上传
   "pool.pickAdder":  ["admin"],                     // 批量上传时指定录入人（成员只能录自己）
+  "pool.setOwner":   ["admin"],                     // 邀约库变更归属人
   "video.import":    ["admin", "staff"],
   "video.revert":    ["admin"],
   "snapshot.write":  ["admin"],                     // 保存 / 删除 / 补存快照
