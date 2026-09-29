@@ -53,7 +53,7 @@ export default function TasksModule({ ctx }) {
 
       {sub==='gantt'  && <GanttStrategy     storeId={storeId} products={products} ganttStrategies={gantt} shippingGoals={goals} changeLogs={[]} collabs={collabs} canEdit={canPlan} onReload={reload} />}
       {sub==='goals'  && <CycleGoals        storeId={storeId} products={products} shippingGoals={goals} ganttStrategies={gantt} collabs={collabs} staff={staff} canEdit={canPlan} onReload={reload} />}
-      {sub==='menu'   && <WeeklyMenu        storeId={storeId} menus={menus} products={products} canEdit={canPlan} onReload={reload} />}
+      {sub==='menu'   && <WeeklyMenu        storeId={storeId} menus={menus} products={products} invites={ctx.invites ?? []} canEdit={canPlan} onReload={reload} />}
       {sub==='action' && <ActionList        storeId={storeId} tasks={tasks} products={products} staff={staff} currentStaffId={myStaffId} canEdit={canPlan} canToggle={ctx.can('task.do')} onReload={reload} />}
       {sub==='perf'   && <PerformanceModule ctx={ctx} showIntro={false} />}
     </div>

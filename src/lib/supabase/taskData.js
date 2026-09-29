@@ -89,17 +89,3 @@ export async function setMenuSlot(menuId, weekday, slotIdx, productId) {
 export async function deleteWeeklyMenu(id) {
   unwrap(await sb.from("weekly_menus").delete().eq("id", id), "weekly_menus");
 }
-
-/** 查某些产品下未转化的邀约库达人（今日邀约名单用） */
-export async function fetchPendingInvites(storeId, productIds) {
-  if (!productIds?.length) return [];
-  return unwrap(
-    await sb.from("unconnected_creators")
-      .select("id,creator_id,product_id,added_at,products(internal_name)")
-      .eq("store_id", storeId)
-      .eq("status", "pending")
-      .in("product_id", productIds)
-      .order("added_at", { ascending: true }),
-    "unconnected_creators"
-  );
-}

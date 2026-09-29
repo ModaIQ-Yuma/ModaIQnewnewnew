@@ -1,7 +1,8 @@
 // modules/tasks/WeeklyMenu.jsx
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { T, FONT, glassStyle } from "../../constants/tokens.js";
-import { upsertWeeklyMenu, setMenuSlot, deleteWeeklyMenu, fetchPendingInvites } from "../../lib/supabase/taskData.js";
+import { upsertWeeklyMenu, setMenuSlot, deleteWeeklyMenu } from "../../lib/supabase/taskData.js";
+import { pendingInvitesFor } from "../../lib/invitePool/todayInvites.js";
 import TodayInviteList from "./TodayInviteList.jsx";
 import { todayPST, addDays, mondayOf, weekdayOf, fmtMDShort } from "../../lib/dates.js";
 
@@ -15,10 +16,9 @@ const weekDates = (monday) => WEEKDAYS.map((_, i) => fmtMDShort(addDays(monday, 
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:"7px 14px", borderRadius:12, border:`1.5px solid ${T.border}`, background:"rgba(255,255,255,0.4)", color:T.muted, cursor:"pointer", fontFamily:"inherit" };
 const thCell = { padding:"10px 8px", textAlign:"center", fontSize:FONT.sm2, fontWeight:700, color:T.muted, background:"rgba(235,242,255,0.7)" };
 
-export default function WeeklyMenu({ storeId, menus=[], products=[], canEdit, onReload }) {
+export default function WeeklyMenu({ storeId, menus=[], products=[], invites=[], canEdit, onReload }) {
   const [weekStart,      setWeekStart]      = useState(() => mondayOf(todayPST()));
   const [saving,         setSaving]         = useState(false);
-  const [pendingInvites, setPendingInvites] = useState([]);
   // 已改但还没等到刷新的格子：{ "周一日期|星期|格": productId|null }，改完立刻显示，保存在后台进行
   const [local, setLocal] = useState({});
   const todayWd = weekdayOf(todayPST());
@@ -44,13 +44,8 @@ export default function WeeklyMenu({ storeId, menus=[], products=[], canEdit, on
     return [...ids];
   }, [slotMap, todayWd]);
 
-  const loadInvites = useCallback(async () => {
-    if (!todayProductIds.length) { setPendingInvites([]); return; }
-    const rows = await fetchPendingInvites(storeId, todayProductIds);
-    setPendingInvites(rows ?? []);
-  }, [storeId, todayProductIds.join(",")]);
-
-  useEffect(() => { loadInvites(); }, [loadInvites]);
+  // 今日名单直接从内存里的整个邀约库筛（已翻页加载，不受 1000 条限制；批量上传后自动更新）
+  const pendingInvites = useMemo(() => pendingInvitesFor(invites, todayProductIds), [invites, todayProductIds]);
 
   /** 改一格：先在界面上改好，再后台保存；失败则恢复并提示。只有这周第一次建日程单时才刷新 */
   async function handleSlotChange(weekday, slotIdx, productId) {
