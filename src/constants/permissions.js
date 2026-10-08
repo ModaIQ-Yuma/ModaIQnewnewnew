@@ -10,6 +10,7 @@ const MATRIX = {
   "staff.manage":    ["admin"],                     // 人员管理、达人归属
   "perf.viewAll":    ["admin"],                     // 绩效：看全店和任意助理
   "perf.viewSelf":   ["admin", "staff"],            // 绩效：看自己
+  "bonus.manage":    ["admin"],                     // 月度提报：视频明细导出、爆单提报 / 撤销、手填奖金、导入历史
   "product.edit":    ["admin", "staff"],
   "product.delete":  ["admin"],
   "crm.edit":        ["admin", "staff"],            // 录入、编辑、改状态、归入 CRM

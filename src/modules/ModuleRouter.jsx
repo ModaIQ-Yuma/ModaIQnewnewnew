@@ -21,7 +21,7 @@ import AttributionModule from "./attribution/AttributionModule.jsx";
 import TasksModule       from "./tasks/TasksModule.jsx";
 import BDToolsModule     from "./bdtools/BDToolsModule.jsx";
 import StaffModule       from "./staff/StaffModule.jsx";
-import PerformanceModule from "./tasks/PerformanceModule.jsx";
+import PerformanceHub    from "./performance/PerformanceHub.jsx";
 import PlatformModule    from "./platform/PlatformModule.jsx";
 
 const MODULES = {
@@ -34,7 +34,7 @@ const MODULES = {
   attribution: AttributionModule,
   tasks:       TasksModule,
   bdtools:     BDToolsModule,
-  performance: PerformanceModule,
+  performance: PerformanceHub,
   staff:       StaffModule,
   platform:    PlatformModule,
 };

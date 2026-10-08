@@ -1,21 +1,14 @@
 // modules/tasks/PerfTable.jsx
 import { T, FONT } from "../../constants/tokens.js";
-import { WEIGHTS, getScore, getFinalGrade } from "../../lib/perf/perfCalc.js";
+import { getFinalGrade, perfRows } from "../../lib/perf/perfCalc.js";
 
 const pct = (v) => v == null ? "—" : (v * 100).toFixed(1) + "%";
-const LABELS = { a:"视频产出达成率", b:"老品红人转化率", c:"视频转化率", d:"新品寄样达成率", e:"Lv1达人占比" };
 
 export default function PerfTable({ metrics }) {
-  const { a, b, c, d, e } = metrics;
-  const vals = { a, b, c, d, e };
   const thS = { fontSize:FONT.sm, fontWeight:700, color:T.muted, padding:"10px 14px", textAlign:"left", borderBottom:`2px solid ${T.border}`, whiteSpace:"nowrap" };
   const tdS = { fontSize:FONT.lg2, padding:"10px 14px", borderBottom:`1px solid ${T.border}`, color:T.text };
 
-  const rows = Object.entries(LABELS).map(([key, label]) => {
-    const val = vals[key]; const score = getScore(key, val);
-    return { key, label, val, score, weighted: score != null ? score * WEIGHTS[key] : null };
-  });
-  const total = rows.every(r=>r.weighted!=null) ? rows.reduce((s,r)=>s+r.weighted,0) : null;
+  const { rows, total } = perfRows(metrics);
   const tc = total==null ? T.hint : total>=0.9 ? T.success : total>=0.6 ? T.accent : T.danger;
 
   return (
@@ -24,12 +17,12 @@ export default function PerfTable({ metrics }) {
         <table style={{ width:"100%", borderCollapse:"collapse", minWidth:520 }}>
           <thead><tr>{["考核项","实际完成","得分比例","权重","加权得分"].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
           <tbody>
-            {rows.map(({ key, label, val, score, weighted }) => (
+            {rows.map(({ key, label, val, score, weight, weighted }) => (
               <tr key={key}>
                 <td style={{ ...tdS, fontWeight:600 }}>{label}</td>
                 <td style={tdS}>{pct(val)}</td>
                 <td style={{ ...tdS, fontWeight:700, color:score==null?T.hint:score>=0.9?T.success:score>=0.6?T.accent:T.danger }}>{score==null?"—":(score*100).toFixed(0)+"%"}</td>
-                <td style={{ ...tdS, color:T.hint }}>{(WEIGHTS[key]*100).toFixed(0)}%</td>
+                <td style={{ ...tdS, color:T.hint }}>{(weight*100).toFixed(0)}%</td>
                 <td style={{ ...tdS, fontWeight:600 }}>{weighted==null?"—":(weighted*100).toFixed(1)+"%"}</td>
               </tr>
             ))}

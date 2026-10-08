@@ -4,6 +4,7 @@ import { videoRange } from "../dates.js";
 import { cycleEndOf } from "../cycle.js";
 
 export const WEIGHTS = { a:0.25, b:0.25, c:0.20, d:0.20, e:0.10 };
+export const PERF_LABELS = { a:"视频产出达成率", b:"老品红人转化率", c:"视频转化率", d:"新品寄样达成率", e:"Lv1达人占比" };
 
 const SCORE_TABLES = {
   a: [{min:0.90,score:1.00},{min:0.85,score:0.90},{min:0.80,score:0.80},{min:0.70,score:0.60},{min:0,score:0.30}],
@@ -17,6 +18,38 @@ export function getScore(key, v) {
   if (v == null) return null;
   const row = SCORE_TABLES[key].find(r => v >= r.min);
   return row?.score ?? null;
+}
+
+/** 考核指标分档（得分从高到低）：[{ text: "85%≤a<90%", score: 0.9 }, …] */
+export function tierRows(key) {
+  const p = (x) => `${Math.round(x * 100)}%`;
+  const rows = [...SCORE_TABLES[key]].sort((x, y) => y.min - x.min);
+  return rows.map((r, i) => {
+    const upper = rows[i - 1]?.min;
+    const text = r.min === 0 ? `${key}<${p(upper)}` : upper == null ? `${key}≥${p(r.min)}` : `${p(r.min)}≤${key}<${p(upper)}`;
+    return { text, score: r.score };
+  }).sort((x, y) => y.score - x.score);
+}
+
+/** 每项得分 + 合计（任一项算不出则合计为 null） */
+export function perfRows(metrics) {
+  const rows = Object.entries(PERF_LABELS).map(([key, label]) => {
+    const val = metrics[key], score = getScore(key, val);
+    return { key, label, val, score, weight: WEIGHTS[key], weighted: score != null ? score * WEIGHTS[key] : null };
+  });
+  const total = rows.every((r) => r.weighted != null) ? rows.reduce((s, r) => s + r.weighted, 0) : null;
+  return { rows, total };
+}
+
+/** 视频发布日（洛杉矶日期，导入时已按洛杉矶零点存） */
+export const pubDay = (v) => v.published_at?.slice(0, 10) || "";
+
+/** 助理的视频 = 和她合作过的达人（她名下有寄样）发的所有视频；staffId 为空 = 全部 */
+export function videosOfStaff(collabs, videos, staffId) {
+  if (!staffId) return videos;
+  const creatorOf = new Map(collabs.map((c) => [c.id, c.creator_id]));
+  const mine = new Set(collabs.filter((c) => c.staff_id === staffId).map((c) => c.creator_id));
+  return videos.filter((v) => mine.has(creatorOf.get(v.collaboration_id)));
 }
 
 export function getFinalGrade(x) {
@@ -56,10 +89,7 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
     : (Number(g.estimated_videos) || 0)), 0);
   // 实际视频（自然月发布）：全店 = 全部视频（含非CRM）；助理 = 按达人算，
   // 和她合作过的达人（她名下有寄样），这些达人当月发布的所有视频都算她的
-  const periodVids = videos.filter(v => inVideo(v.published_at?.slice(0, 10)));
-  const creatorOf = new Map(collabs.map(c => [c.id, c.creator_id]));
-  const myCreators = new Set(scoped.map(c => c.creator_id));
-  const staffVids = staffId ? periodVids.filter(v => myCreators.has(creatorOf.get(v.collaboration_id))) : periodVids;
+  const staffVids = videosOfStaff(collabs, videos.filter(v => inVideo(pubDay(v))), staffId);
   const actualVideos = staffVids.length;
   const a = estimatedVideos > 0 ? actualVideos / estimatedVideos : null;
 

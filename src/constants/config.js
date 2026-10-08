@@ -48,3 +48,16 @@ export const AI_MAX_TOKENS_VIRAL  = 2000;
 // 今日邀约建议发送时段：以美东时间定义（达人那边的时间固定），界面自动换算成洛杉矶 / 中国时间
 // 美东 17–21 点 = 北京时间 5–9 点（美国夏令时）/ 6–10 点（美国冬令时）
 export const SEND_WINDOW = { tz: "America/New_York", start: 17, end: 21 };
+
+// ─── 月度提报（奖金）──────────────────────────────────────────────────────────
+// 爆单档位：单条视频累计 GMV / 单场直播 GMV（美元）≥ min → 奖金 amount（元/个），从高到低排
+export const BONUS_TIERS = [
+  { min: 10000, amount: 300 },
+  { min: 6000,  amount: 200 },
+  { min: 3000,  amount: 150 },
+  { min: 1000,  amount: 100 },
+];
+// 奖金池（爆单视频 + 直播爆单）分成：每位助理固定 base，绩效 ≥ minScore 再加 extra；BD 拿剩下的
+export const BONUS_SHARE = { base: 0.10, extra: 0.10, minScore: 0.90 };
+// 不出现在月度提报里的名册名字
+export const BONUS_EXCLUDED_STAFF = ["不参与分配"];
