@@ -11,7 +11,7 @@ const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRa
 
 /** 绩效评估（独立导航 + 任务中心子页共用，都传 ctx） */
 export default function PerformanceModule({ ctx, showIntro = true }) {
-  const { collabs, videos, products, staff, myStaffId } = ctx;
+  const { collabs, videos, products, staff, myStaffId, creators } = ctx;
   const shippingGoals = ctx.tasksApi?.goals ?? [];
   const viewAll = ctx.can("perf.viewAll");        // 管理员：看全店 / 任意助理；成员：只看自己
   const [cycleStart,      setCycleStart]      = useState(() => cycleStartOf(todayPST()));
@@ -21,8 +21,8 @@ export default function PerformanceModule({ ctx, showIntro = true }) {
   const viewStaffId = viewAll ? selectedStaffId : myStaffId;
 
   const metrics = useMemo(() =>
-    calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId: viewStaffId }),
-    [collabs, videos, shippingGoals, products, cycleStart, viewStaffId]
+    calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId: viewStaffId, creators }),
+    [collabs, videos, shippingGoals, products, cycleStart, viewStaffId, creators]
   );
 
   const viewerName = viewStaffId == null
@@ -38,7 +38,7 @@ export default function PerformanceModule({ ctx, showIntro = true }) {
 
   return (
     <div>
-      {showIntro && <SectionIntro style={{ marginBottom:14 }}>按账期（15 日 ~ 次月 14 日）计算绩效：寄样看账期内的寄样记录，视频和出单看账期结束月的自然月。管理员可切换查看全店或单个助理，助理只能看到自己。</SectionIntro>}
+      {showIntro && <SectionIntro style={{ marginBottom:14 }}>按账期（15 日 ~ 次月 14 日）计算绩效：寄样看账期内的寄样记录，视频和出单看账期结束月的自然月；全店的非 CRM 视频 / 达人只算出过单的。管理员可切换查看全店或单个助理，助理只能看到自己。</SectionIntro>}
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:22, flexWrap:'wrap' }}>
         <button onClick={() => setCycleStart(prevCycleStart(cycleStart))} style={navBtn}>‹ 上周期</button>
         <div style={{ ...glassStyle(12), padding:'8px 18px', fontSize:FONT.xl2, fontWeight:700, color:T.text }}>

@@ -59,5 +59,7 @@ export const BONUS_TIERS = [
 ];
 // 奖金池（爆单视频 + 直播爆单）分成：每位助理固定 base，绩效 ≥ minScore 再加 extra；BD 拿剩下的
 export const BONUS_SHARE = { base: 0.10, extra: 0.10, minScore: 0.90 };
+// 爆单提报只看这天及以后发布的视频（更早的提报记录已丢失，统一不再提报）
+export const BURST_PUBLISH_FROM = "2026-03-01";
 // 不出现在月度提报里的名册名字
 export const BONUS_EXCLUDED_STAFF = ["不参与分配"];

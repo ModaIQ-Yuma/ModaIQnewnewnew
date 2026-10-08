@@ -16,17 +16,19 @@ export default function MonthlyReport({ ctx }) {
   const { storeId, userId, collabs, videos, products, staff } = ctx;
   const bonus = useBonus(storeId, userId);
   const [ym, setYm] = useState(() => addMonths(thisMonthPST(), -1));   // 每月 6 日交上个月的
-  const roster = useMemo(() => staff.filter((x) => x.is_active !== false && !BONUS_EXCLUDED_STAFF.includes(x.name)), [staff]);
-  const [picked, setPicked] = useState(null);
-  const [exporting, setExporting] = useState(false);                          // null = 默认全部在职助理
+  // 助理名单：在职、不在排除名单里，且不是正在做提报的人自己（做提报的管理员就是 BD，算在「全店」那一行）
+  const roster = useMemo(() => staff.filter((x) => x.is_active !== false && !BONUS_EXCLUDED_STAFF.includes(x.name) && x.id !== ctx.myStaffId),
+    [staff, ctx.myStaffId]);
+  const [picked, setPicked] = useState(null);                          // null = 默认全部在职助理
+  const [exporting, setExporting] = useState(false);
   const people = useMemo(() => roster.filter((x) => (picked ?? roster.map((r) => r.id)).includes(x.id)), [roster, picked]);
 
   const cutoff = cutoffOf(ym, ORDER_WINDOW_TAIL_DAYS);
   const asOf = useMemo(() => (bonus.ledger ? videosAsOf(videos, bonus.ledger, cutoff) : null), [videos, bonus.ledger, cutoff]);
   const report = useMemo(() => (asOf ? buildMonthReport({
     ym, collabs, videos, asOf: asOf.videos, shippingGoals: ctx.tasksApi?.goals ?? [], products,
-    people, submissions: bonus.submissions, extras: bonus.extras,
-  }) : null), [ym, collabs, videos, asOf, ctx.tasksApi?.goals, products, people, bonus.submissions, bonus.extras]);
+    people, submissions: bonus.submissions, extras: bonus.extras, creators: ctx.creators,
+  }) : null), [ym, collabs, videos, asOf, ctx.tasksApi?.goals, products, people, bonus.submissions, bonus.extras, ctx.creators]);
 
   if (ctx.dataLoading || bonus.loading) return <div style={s.empty}>加载中…</div>;
   if (bonus.error) return <div style={s.err}>加载失败：{bonus.error}</div>;

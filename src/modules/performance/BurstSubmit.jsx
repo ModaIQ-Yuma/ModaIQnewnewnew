@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { T, glassStyle, tabStyle } from "../../constants/tokens.js";
 import { pendingBursts, submissionRows, tierLabels, videoUrl, BURST_MIN_GMV } from "../../lib/bonus/bonusCalc.js";
+import { BURST_PUBLISH_FROM } from "../../constants/config.js";
 import { pubDay } from "../../lib/perf/perfCalc.js";
 import { usePaged } from "../../hooks/usePaged.js";
 import Pager from "../../components/ui/Pager.jsx";
@@ -35,7 +36,7 @@ export default function BurstSubmit({ ym, videos, bonus, report }) {
     <div style={{ ...glassStyle(16), ...s.section }}>
       <div style={{ ...s.row, marginBottom: 8 }}>
         <span style={s.h2}>爆单视频</span>
-        <span style={s.note}>累计 GMV ≥ ${BURST_MIN_GMV} 算爆单，一条视频只提报一次 · {tierLabels().join(" · ")}</span>
+        <span style={s.note}>{BURST_PUBLISH_FROM} 及以后发布、累计 GMV ≥ ${BURST_MIN_GMV} 算爆单；点「提报」直接进已提报，一条视频只提报一次 · {tierLabels().join(" · ")}</span>
       </div>
       <div style={{ ...s.row, marginBottom: 12 }}>
         <button style={tabStyle(view === "pending")} onClick={() => setView("pending")}>待提报 {pending.length}</button>

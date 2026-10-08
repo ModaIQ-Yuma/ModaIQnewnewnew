@@ -44,9 +44,16 @@ export function perfRows(metrics) {
 /** 视频发布日（洛杉矶日期，导入时已按洛杉矶零点存） */
 export const pubDay = (v) => v.published_at?.slice(0, 10) || "";
 
-/** 助理的视频 = 和她合作过的达人（她名下有寄样）发的所有视频；staffId 为空 = 全部 */
+/** 非 CRM 视频（对不上任何寄样记录） */
+export const isNonCrm = (v) => !v.collaboration_id;
+
+/**
+ * 计入绩效的视频
+ *   全店（staffId 为空）= CRM 视频全部 + 非 CRM 视频里出过单的（0 单的非 CRM 不算）
+ *   助理 = 和她合作过的达人（她名下有寄样）发的所有视频
+ */
 export function videosOfStaff(collabs, videos, staffId) {
-  if (!staffId) return videos;
+  if (!staffId) return videos.filter((v) => !isNonCrm(v) || (v.orders || 0) > 0);
   const creatorOf = new Map(collabs.map((c) => [c.id, c.creator_id]));
   const mine = new Set(collabs.filter((c) => c.staff_id === staffId).map((c) => c.creator_id));
   return videos.filter((v) => mine.has(creatorOf.get(v.collaboration_id)));
@@ -67,8 +74,9 @@ export function getFinalGrade(x) {
  * @param products  products[]（含 id, is_new）
  * @param cycleStart "YYYY-MM-DD"
  * @param staffId   null = 全店
+ * @param creators  creators[]（id, handle）：全店老品转化率里，非 CRM 出单达人与已寄样达人去重用
  */
-export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId }) {
+export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId, creators = [] }) {
   const cEnd = cycleEndOf(cycleStart);                     // 账期：15 日 ~ 次月 14 日（洛杉矶日期）
   const { from: vFrom, to: vTo } = videoRange(cEnd.slice(0, 7));   // 视频：账期结束月的自然月
   const inShip  = (d) => d && d >= cycleStart && d <= cEnd;
@@ -87,9 +95,9 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
   const estimatedVideos = goalsInCycle.reduce((s, g) => s + (staffId
     ? Math.round((Number(g.estimated_videos) || 0) / (Number(g.target_qty) || 1) * allocOf(g))
     : (Number(g.estimated_videos) || 0)), 0);
-  // 实际视频（自然月发布）：全店 = 全部视频（含非CRM）；助理 = 按达人算，
-  // 和她合作过的达人（她名下有寄样），这些达人当月发布的所有视频都算她的
-  const staffVids = videosOfStaff(collabs, videos.filter(v => inVideo(pubDay(v))), staffId);
+  // 实际视频（自然月发布）：口径见 videosOfStaff（全店的非 CRM 只算出过单的）
+  const periodVids = videos.filter(v => inVideo(pubDay(v)));
+  const staffVids = videosOfStaff(collabs, periodVids, staffId);
   const actualVideos = staffVids.length;
   const a = estimatedVideos > 0 ? actualVideos / estimatedVideos : null;
 
@@ -103,12 +111,18 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
       .map(v => oldCreatorOf.get(v.collaboration_id))
       .filter(Boolean)
   );
-  const b = safeDiv(oldWithSales.size, oldCreatorIds.size);
+  // 全店另加：当月老品上出过单的非 CRM 达人（分子分母都加；0 单的不算；已在寄样名单里的不重复算）
+  const idOfHandle = new Map(creators.map(c => [String(c.handle || "").toLowerCase(), c.id]));
+  const nonCrmOldSellers = staffId ? new Set() : new Set(
+    periodVids.filter(v => isNonCrm(v) && oldPids.has(v.product_id) && (v.orders || 0) > 0)
+      .map(v => String(v.creator_handle || "").toLowerCase())
+      .filter(h => h && !oldCreatorIds.has(idOfHandle.get(h)))
+  );
+  const b = safeDiv(oldWithSales.size + nonCrmOldSellers.size, oldCreatorIds.size + nonCrmOldSellers.size);
 
   // ── c：视频出单率 ──────────────────────────────────────────────────────────
-  const scopedVids = staffVids;
-  const saleVids   = scopedVids.filter(v => (v.orders || 0) > 0).length;
-  const c = safeDiv(saleVids, scopedVids.length);
+  const saleVids = staffVids.filter(v => (v.orders || 0) > 0).length;
+  const c = safeDiv(saleVids, staffVids.length);
 
   // ── d：新品寄样达成率 ─────────────────────────────────────────────────────
   const newGoals  = goalsInCycle.filter(g => newPids.has(g.product_id));
@@ -126,9 +140,10 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
     estimatedVideos,
     actualVideos,
     newTarget, newActual,
-    oldInfluencerTotal: oldCreatorIds.size,
-    oldWithSalesTotal:  oldWithSales.size,
-    saleVids, totalVids: scopedVids.length,
+    oldInfluencerTotal: oldCreatorIds.size + nonCrmOldSellers.size,
+    oldWithSalesTotal:  oldWithSales.size + nonCrmOldSellers.size,
+    nonCrmOldSellers:   nonCrmOldSellers.size,
+    saleVids, totalVids: staffVids.length,
     shipTotal, lv1Count,
     cycleStart, cEnd, vFrom, vTo,
   };

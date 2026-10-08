@@ -30,13 +30,14 @@ export function monthVideos(videos, ym) {
  * @param videos    当前视频（绩效用，与绩效评估页一致）
  * @param asOf      截止 M+1 月 5 日的视频（明细用，videosAsOf 还原）
  * @param people    参与提报的助理 [{ id, name }]
+ * @param creators  达人档案（全店老品转化率去重用）
  * @returns { ym, cycleStart, store, staff: [...], pool, bd, bursts }
  */
-export function buildMonthReport({ ym, collabs, videos, asOf, shippingGoals, products, people, submissions, extras }) {
+export function buildMonthReport({ ym, collabs, videos, asOf, shippingGoals, products, people, submissions, extras, creators = [] }) {
   const cycleStart = shipRange(ym).from;
   const monthAsOf = monthVideos(asOf, ym);
   const person = (staffId) => {
-    const metrics = calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId });
+    const metrics = calcPerfMetrics({ collabs, videos, shippingGoals, products, cycleStart, staffId, creators });
     return { metrics, perf: perfRows(metrics), detail: videoDetail(videosOfStaff(collabs, monthAsOf, staffId)) };
   };
   const staffRows = people.map((p) => ({ ...p, ...person(p.id) }));

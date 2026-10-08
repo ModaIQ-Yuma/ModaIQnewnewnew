@@ -1,7 +1,8 @@
 // ─── 月度提报：爆单档位、待提报清单、奖金池分成（纯函数）──────────────────
 // 一条视频只提报一次（不升档补差）；奖金池 = 本月提报的爆单视频 + 直播爆单，
 // 每位助理固定 base、绩效达标再加 extra，BD 拿剩下的；新开发付费达人单独结算给对应助理。
-import { BONUS_TIERS, BONUS_SHARE } from "../../constants/config.js";
+import { BONUS_TIERS, BONUS_SHARE, BURST_PUBLISH_FROM } from "../../constants/config.js";
+import { pubDay } from "../perf/perfCalc.js";
 
 const round = (n) => Math.round(n);
 
@@ -29,11 +30,11 @@ export function parseVideoLink(text) {
 /** 视频链接：库里没存链接时按达人名 + 视频 ID 拼出来 */
 export const videoUrl = (v) => v.url || (v.video_id && v.creator_handle ? `https://www.tiktok.com/@${v.creator_handle}/video/${v.video_id}` : "");
 
-/** 待提报：累计 GMV 达到最低档、还没提报过的视频，按 GMV 从高到低 */
+/** 待提报：BURST_PUBLISH_FROM 及以后发布、累计 GMV 达到最低档、还没提报过的视频，按 GMV 从高到低 */
 export function pendingBursts(videos, submissions) {
   const done = new Set(submissions.map((s) => s.video_id));
   return videos
-    .filter((v) => (Number(v.gmv) || 0) >= BURST_MIN_GMV && !done.has(v.video_id))
+    .filter((v) => pubDay(v) >= BURST_PUBLISH_FROM && (Number(v.gmv) || 0) >= BURST_MIN_GMV && !done.has(v.video_id))
     .map((v) => ({ ...v, amount: tierAmount(v.gmv) }))
     .sort((a, b) => (Number(b.gmv) || 0) - (Number(a.gmv) || 0));
 }

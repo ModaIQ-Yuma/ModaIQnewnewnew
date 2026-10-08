@@ -22,17 +22,20 @@ test("链接识别：视频链接、带参数链接、纯视频 ID；主页链�
   expect(parseVideoLink("视频链接")).toBeNull();
 });
 
-test("待提报：只要 GMV ≥ $1000 且没提报过的，GMV 从高到低；一条视频只提报一次", () => {
+test("待提报：3/1 及以后发布、GMV ≥ $1000、没提报过的，GMV 从高到低；一条视频只提报一次", () => {
+  const p = at("2026-08-01");
   const videos = [
-    { video_id: "1", creator_handle: "a", gmv: 1500 },
-    { video_id: "2", creator_handle: "b", gmv: 6500 },
-    { video_id: "3", creator_handle: "c", gmv: 999 },
-    { video_id: "4", creator_handle: "d", gmv: 12000 },
+    { video_id: "1", creator_handle: "a", gmv: 1500, published_at: p },
+    { video_id: "2", creator_handle: "b", gmv: 6500, published_at: at("2026-03-01") },
+    { video_id: "3", creator_handle: "c", gmv: 999, published_at: p },
+    { video_id: "4", creator_handle: "d", gmv: 12000, published_at: p },
+    { video_id: "5", creator_handle: "e", gmv: 9000, published_at: at("2026-02-28") },
+    { video_id: "6", creator_handle: "f", gmv: 9000, published_at: null },
   ];
   const list = pendingBursts(videos, [{ video_id: "4" }]);
   expect(list.map((v) => v.video_id)).toEqual(["2", "1"]);
   expect(list.map((v) => v.amount)).toEqual([200, 100]);
-  expect(submissionRows([videos[1]], "2026-08")[0]).toEqual({ video_id: "2", creator_handle: "b", gmv: 6500, amount: 200, period: "2026-08", source: "系统提报" });
+  expect(submissionRows([{ video_id: "2", creator_handle: "b", gmv: 6500 }], "2026-08")[0]).toEqual({ video_id: "2", creator_handle: "b", gmv: 6500, amount: 200, period: "2026-08", source: "系统提报" });
   expect(videoUrl({ video_id: "2", creator_handle: "b" })).toBe("https://www.tiktok.com/@b/video/2");
 });
 
@@ -90,10 +93,12 @@ test("助理的视频 = 她合作过的达人发的所有视频（与绩效同�
     { id: "c1", creator_id: "A", staff_id: "S1" }, { id: "c2", creator_id: "B", staff_id: "S2" },
     { id: "c3", creator_id: "A", staff_id: "S2" },
   ];
-  const videos = [{ id: "v1", collaboration_id: "c1" }, { id: "v2", collaboration_id: "c2" }, { id: "v3", collaboration_id: null }];
+  const videos = [{ id: "v1", collaboration_id: "c1" }, { id: "v2", collaboration_id: "c2", orders: 0 },
+    { id: "v3", collaboration_id: null, orders: 0 }, { id: "v4", collaboration_id: null, orders: 2 }];
   expect(videosOfStaff(collabs, videos, "S1").map((v) => v.id)).toEqual(["v1"]);
   expect(videosOfStaff(collabs, videos, "S2").map((v) => v.id)).toEqual(["v1", "v2"]);
-  expect(videosOfStaff(collabs, videos, null)).toHaveLength(3);
+  // 全店：CRM 全算（含 0 单），非 CRM 只算出过单的
+  expect(videosOfStaff(collabs, videos, null).map((v) => v.id)).toEqual(["v1", "v2", "v4"]);
 });
 
 test("绩效合计 + 考核指标文字", () => {
@@ -130,4 +135,29 @@ test("手填奖金：直播按档位算钱，付费达人要选助理填金额",
   expect(extraRow({ kind: "直播爆单", period: "2026-08", gmv: "5000" }).error).toMatch("日期");
   expect(extraRow({ kind: "新开发付费达人", period: "2026-08", staffId: "", amount: "50" }).error).toMatch("助理");
   expect(extraRow({ kind: "新开发付费达人", period: "2026-08", staffId: "S1", amount: "200" }).row).toMatchObject({ staff_id: "S1", amount: 200 });
+});
+
+test("全店老品转化率：加上老品出过单的非 CRM 达人（分子分母都加），0 单的不算，已寄样的达人不重复算；助理不受影响", async () => {
+  const { calcPerfMetrics } = await import("../perf/perfCalc.js");
+  const products = [{ id: "OLD", is_new: false }, { id: "NEW", is_new: true }];
+  const collabs = [
+    { id: "c1", creator_id: "A", staff_id: "S1", product_id: "OLD", ship_date: "2026-07-20" },
+    { id: "c2", creator_id: "B", staff_id: "S1", product_id: "OLD", ship_date: "2026-07-20" },
+  ];
+  const creators = [{ id: "A", handle: "amy" }, { id: "B", handle: "bo" }];
+  const v = (id, extra) => ({ id, published_at: at("2026-08-10"), orders: 0, ...extra });
+  const videos = [
+    v("v1", { collaboration_id: "c1", orders: 3, product_id: "OLD" }),                  // A 出单
+    v("v2", { collaboration_id: null, creator_handle: "x1", product_id: "OLD", orders: 5 }), // 非CRM 老品出单 → 算
+    v("v3", { collaboration_id: null, creator_handle: "x1", product_id: "OLD", orders: 1 }), // 同一人不重复
+    v("v4", { collaboration_id: null, creator_handle: "x2", product_id: "OLD", orders: 0 }), // 0 单 → 不算
+    v("v5", { collaboration_id: null, creator_handle: "x3", product_id: "NEW", orders: 9 }), // 新品 → 不算进 b
+    v("v6", { collaboration_id: null, creator_handle: "bo", product_id: "OLD", orders: 2 }), // 已寄样的 B → 不重复
+  ];
+  const store = calcPerfMetrics({ collabs, videos, shippingGoals: [], products, cycleStart: "2026-07-15", staffId: null, creators });
+  expect([store.oldWithSalesTotal, store.oldInfluencerTotal, store.nonCrmOldSellers]).toEqual([2, 3, 1]);
+  expect(store.b).toBeCloseTo(2 / 3);
+  expect(store.actualVideos).toBe(5);                    // v4（非CRM 0 单）不算
+  const s1 = calcPerfMetrics({ collabs, videos, shippingGoals: [], products, cycleStart: "2026-07-15", staffId: "S1", creators });
+  expect([s1.oldWithSalesTotal, s1.oldInfluencerTotal]).toEqual([1, 2]);
 });
