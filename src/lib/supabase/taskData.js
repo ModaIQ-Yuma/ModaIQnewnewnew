@@ -50,6 +50,17 @@ export async function deleteGanttStrategy(id) {
   unwrap(await sb.from("gantt_strategies").delete().eq("id", id), "gantt_strategies");
 }
 
+// ─── strategy_change_logs（行由 lib/tasks/changeLog.js 生成）──────────────────
+const LOG_COLS = "id,product_id,half_key,old_value,new_value,reason,changed_by,created_at";
+export async function fetchChangeLogs(storeId) {
+  return fetchAll((from, to) => sb.from("strategy_change_logs").select(LOG_COLS).eq("store_id", storeId)
+    .order("created_at", { ascending: false }).order("id").range(from, to), "strategy_change_logs");
+}
+export async function insertChangeLogs(storeId, rows) {
+  if (!rows.length) return;
+  unwrap(await sb.from("strategy_change_logs").insert(rows.map((r) => ({ ...r, store_id: storeId }))), "strategy_change_logs");
+}
+
 // ─── weekly_menus ─────────────────────────────────────────────────────────────
 export async function fetchWeeklyMenus(storeId) {
   const menus = unwrap(

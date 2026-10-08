@@ -45,7 +45,7 @@ export default function PerfTable({ metrics }) {
         {[
           ["预估 / 实际视频数", `${metrics.estimatedVideos} / ${metrics.actualVideos}`],
           ["新品实际寄样", metrics.newActual],
-          ["老品达人（出单/总）", `${metrics.oldWithSalesTotal}/${metrics.oldInfluencerTotal}${metrics.nonCrmOldSellers ? `（含非CRM出单 ${metrics.nonCrmOldSellers}）` : ""}`],
+          ["老品达人（出单/总）", `${metrics.oldWithSalesTotal}/${metrics.oldInfluencerTotal}`],
           ["出单视频/总视频", `${metrics.saleVids}/${metrics.totalVids}`],
           ["总寄样数", metrics.shipTotal],
         ].map(([label,value])=>(

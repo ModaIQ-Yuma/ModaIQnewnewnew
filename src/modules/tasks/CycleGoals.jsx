@@ -12,7 +12,7 @@ import { byProductOrder } from '../../lib/products/productOrder.js';
 const PRIORITY_EMOJI = { 测款最优:'🟣', 一级:'🔴', 二级:'🟠', 三级:'🔵', 不动:'⛔' };
 const navBtn = { fontSize:FONT.lg2, fontWeight:600, padding:'7px 14px', borderRadius:12, border:`1.5px solid ${T.border}`, background:'rgba(255,255,255,0.4)', color:T.muted, cursor:'pointer', fontFamily:'inherit' };
 
-export default function CycleGoals({ storeId, products=[], shippingGoals=[], ganttStrategies=[], collabs=[], staff=[], canEdit, onReload }) {
+export default function CycleGoals({ storeId, products=[], shippingGoals=[], collabs=[], staff=[], canEdit, onReload }) {
   const [cycleStart, setCycleStart] = useState(() => cycleStartOf(todayPST()));
   const [editing, setEditing] = useState(null);       // null | 'new' | goal
   const [allocating, setAllocating] = useState(null); // goal

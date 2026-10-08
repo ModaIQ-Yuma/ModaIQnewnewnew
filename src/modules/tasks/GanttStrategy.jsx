@@ -13,13 +13,14 @@ import ChangeLogModal from './ChangeLogModal.jsx';
 import { StrategySelector } from './GanttModals.jsx';
 import { GanttRowCells } from './GanttCell.jsx';
 import { GanttHeaderRow, GanttCategoryTitle, GanttLegend } from './GanttParts.jsx';
-import { upsertGanttStrategy, deleteGanttStrategy, upsertShippingGoal } from '../../lib/supabase/taskData.js';
+import { upsertGanttStrategy, deleteGanttStrategy, upsertShippingGoal, insertChangeLogs } from '../../lib/supabase/taskData.js';
+import { changeLogRow, changeLogView } from '../../lib/tasks/changeLog.js';
 
 const CAT_ORDER = PRODUCT_STATUSES;   // 分组顺序与全站产品排序口径同源
 const toolbarBtn = (active) => ({ ...glassStyle(12), border:`1px solid ${active ? T.accent : T.glassStroke}`, padding:'8px 16px', fontSize:FONT.lg2, fontWeight:600, color:active ? T.accent : T.muted, cursor:'pointer', fontFamily:'inherit', background:active ? 'rgba(61,127,239,0.10)' : undefined });
 const arrowBtn = { border:'none', background:'transparent', cursor:'pointer', fontSize:20, color:T.muted, padding:'6px 14px', fontFamily:'inherit', lineHeight:1 };
 
-export default function GanttStrategy({ storeId, products=[], ganttStrategies=[], shippingGoals=[], changeLogs=[], influencers=[], canEdit, onReload }) {
+export default function GanttStrategy({ storeId, products=[], ganttStrategies=[], shippingGoals=[], changeLogs=[], staff=[], userId, canEdit, onReload }) {
   const today = todayPST();
   const [viewStart, setViewStart] = useState(() => today.slice(0, 7));
   const [showLogs,  setShowLogs]  = useState(false);
@@ -98,6 +99,8 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
       const existGoal = shippingGoals.find(g => g.product_id === product.id && g.cycle_start === tcs);
       await upsertShippingGoal(storeId, { id: existGoal?.id, product_id: product.id, cycle_start: tcs, target_qty: newGoal, strategy: toStrategy });
     }
+    await insertChangeLogs(storeId, [changeLogRow({ productId: product.id, halfKey: col.key, from: existing?.strategy, to: toStrategy,
+      reason, userId, goal: syncGoal ? newGoal : undefined })]);
     setPending(null);
     onReload?.();
   }
@@ -111,6 +114,8 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
       if (toStrategy === null) return existing?.id ? deleteGanttStrategy(existing.id) : Promise.resolve();
       return upsertGanttStrategy(storeId, { id: existing?.id, product_id: productId, half_key: colKey, strategy: toStrategy });
     }));
+    await insertChangeLogs(storeId, entries.map(({ productId, colKey }) => changeLogRow({ productId, halfKey: colKey,
+      from: ganttMap[cellKey(productId, colKey)]?.strategy, to: toStrategy, reason: '批量编辑', userId })));
     setBatchSelected(new Set()); setBatchMode(false);
     onReload?.();
   }
@@ -185,7 +190,7 @@ export default function GanttStrategy({ storeId, products=[], ganttStrategies=[]
           onConfirm={applyChange} onCancel={() => setPending(null)}
         />
       )}
-      {showLogs && <ChangeLogModal logs={changeLogs.map(l => ({ ...l, productInternalName:l.products?.internal_name, fromStrategy:l.from_strategy, toStrategy:l.to_strategy, goalAdjusted:l.goal_adjusted, changedBy:l.changed_by, changedAt:l.changed_at }))} onClose={() => setShowLogs(false)} onDelete={null} />}
+      {showLogs && <ChangeLogModal logs={changeLogView(changeLogs, products, staff)} onClose={() => setShowLogs(false)} />}
     </div>
   );
 }

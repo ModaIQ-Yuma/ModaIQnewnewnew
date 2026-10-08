@@ -20,7 +20,7 @@ const SUBTABS = [
 
 export default function TasksModule({ ctx }) {
   const { storeId, products, collabs, staff, tasksApi, myStaffId } = ctx;
-  const { goals, gantt, menus, tasks, loading, error, reload } = tasksApi;
+  const { goals, gantt, menus, tasks, changeLogs, loading, error, reload } = tasksApi;
   const canPlan = ctx.can('task.plan');   // 甘特图 / 目标 / 分配 / 日程单 / 新建任务
   const [sub,    setSub]    = useState(canPlan ? 'goals' : 'action');
   const [genMsg, setGenMsg] = useState('');
@@ -51,8 +51,8 @@ export default function TasksModule({ ctx }) {
         {genMsg && <span style={{ fontSize:FONT.sm2, color: genMsg.startsWith('❌') ? T.danger : T.success }}>{genMsg}</span>}
       </>} />
 
-      {sub==='gantt'  && <GanttStrategy     storeId={storeId} products={products} ganttStrategies={gantt} shippingGoals={goals} changeLogs={[]} collabs={collabs} canEdit={canPlan} onReload={reload} />}
-      {sub==='goals'  && <CycleGoals        storeId={storeId} products={products} shippingGoals={goals} ganttStrategies={gantt} collabs={collabs} staff={staff} canEdit={canPlan} onReload={reload} />}
+      {sub==='gantt'  && <GanttStrategy     storeId={storeId} products={products} ganttStrategies={gantt} shippingGoals={goals} changeLogs={changeLogs} staff={staff} userId={ctx.userId} canEdit={canPlan} onReload={reload} />}
+      {sub==='goals'  && <CycleGoals        storeId={storeId} products={products} shippingGoals={goals} collabs={collabs} staff={staff} canEdit={canPlan} onReload={reload} />}
       {sub==='menu'   && <WeeklyMenu        storeId={storeId} menus={menus} products={products} invites={ctx.invites ?? []} canEdit={canPlan} onReload={reload} />}
       {sub==='action' && <ActionList        storeId={storeId} tasks={tasks} products={products} staff={staff} currentStaffId={myStaffId} canEdit={canPlan} canToggle={ctx.can('task.do')} onReload={reload} />}
       {sub==='perf'   && <PerformanceModule ctx={ctx} showIntro={false} />}

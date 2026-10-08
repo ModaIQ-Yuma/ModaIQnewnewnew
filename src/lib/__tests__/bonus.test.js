@@ -155,7 +155,7 @@ test("全店老品转化率：加上老品出过单的非 CRM 达人（分子分
     v("v6", { collaboration_id: null, creator_handle: "bo", product_id: "OLD", orders: 2 }), // 已寄样的 B → 不重复
   ];
   const store = calcPerfMetrics({ collabs, videos, shippingGoals: [], products, cycleStart: "2026-07-15", staffId: null, creators });
-  expect([store.oldWithSalesTotal, store.oldInfluencerTotal, store.nonCrmOldSellers]).toEqual([2, 3, 1]);
+  expect([store.oldWithSalesTotal, store.oldInfluencerTotal]).toEqual([2, 3]);
   expect(store.b).toBeCloseTo(2 / 3);
   expect(store.actualVideos).toBe(5);                    // v4（非CRM 0 单）不算
   const s1 = calcPerfMetrics({ collabs, videos, shippingGoals: [], products, cycleStart: "2026-07-15", staffId: "S1", creators });

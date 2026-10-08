@@ -3,8 +3,8 @@ import { safeDiv } from "../utils.js";
 import { videoRange } from "../dates.js";
 import { cycleEndOf } from "../cycle.js";
 
-export const WEIGHTS = { a:0.25, b:0.25, c:0.20, d:0.20, e:0.10 };
-export const PERF_LABELS = { a:"视频产出达成率", b:"老品红人转化率", c:"视频转化率", d:"新品寄样达成率", e:"Lv1达人占比" };
+const WEIGHTS = { a:0.25, b:0.25, c:0.20, d:0.20, e:0.10 };
+const PERF_LABELS = { a:"视频产出达成率", b:"老品红人转化率", c:"视频转化率", d:"新品寄样达成率", e:"Lv1达人占比" };
 
 const SCORE_TABLES = {
   a: [{min:0.90,score:1.00},{min:0.85,score:0.90},{min:0.80,score:0.80},{min:0.70,score:0.60},{min:0,score:0.30}],
@@ -14,7 +14,7 @@ const SCORE_TABLES = {
   e: [{min:0.15,score:0.30},{min:0.12,score:0.60},{min:0.10,score:0.90},{min:0,score:1.00}],
 };
 
-export function getScore(key, v) {
+function getScore(key, v) {
   if (v == null) return null;
   const row = SCORE_TABLES[key].find(r => v >= r.min);
   return row?.score ?? null;
@@ -45,7 +45,7 @@ export function perfRows(metrics) {
 export const pubDay = (v) => v.published_at?.slice(0, 10) || "";
 
 /** 非 CRM 视频（对不上任何寄样记录） */
-export const isNonCrm = (v) => !v.collaboration_id;
+const isNonCrm = (v) => !v.collaboration_id;
 
 /**
  * 计入绩效的视频
@@ -142,7 +142,6 @@ export function calcPerfMetrics({ collabs, videos, shippingGoals, products, cycl
     newTarget, newActual,
     oldInfluencerTotal: oldCreatorIds.size + nonCrmOldSellers.size,
     oldWithSalesTotal:  oldWithSales.size + nonCrmOldSellers.size,
-    nonCrmOldSellers:   nonCrmOldSellers.size,
     saleVids, totalVids: staffVids.length,
     shipTotal, lv1Count,
     cycleStart, cEnd, vFrom, vTo,

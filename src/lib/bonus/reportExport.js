@@ -4,7 +4,7 @@ import { writeStoreSheet, writeStaffSheet } from "./reportSheets.js";
 import { writeVideoSheet, writeBurstSheet } from "./reportDetail.js";
 
 /** 生成工作簿（浏览器和测试共用） */
-export async function buildReportWorkbook(report) {
+async function buildReportWorkbook(report) {
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
   writeStoreSheet(wb.addWorksheet("全店"), report);
@@ -14,7 +14,7 @@ export async function buildReportWorkbook(report) {
   return wb;
 }
 
-export const reportFileName = (ym) => `${ym.replace("-", "年")}月 绩效与奖金提报.xlsx`;
+const reportFileName = (ym) => `${ym.replace("-", "年")}月 绩效与奖金提报.xlsx`;
 
 /** 生成并下载 */
 export async function exportMonthReport(report) {

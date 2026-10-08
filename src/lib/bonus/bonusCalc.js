@@ -58,7 +58,7 @@ export function bonusPool(submissions, extras, period) {
 }
 
 /** 助理份额：固定 base，绩效 ≥ minScore 再加 extra */
-export const staffShare = (score) => BONUS_SHARE.base + (score != null && score >= BONUS_SHARE.minScore ? BONUS_SHARE.extra : 0);
+const staffShare = (score) => BONUS_SHARE.base + (score != null && score >= BONUS_SHARE.minScore ? BONUS_SHARE.extra : 0);
 
 /**
  * 奖金分成

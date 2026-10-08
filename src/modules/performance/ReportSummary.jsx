@@ -23,7 +23,7 @@ export default function ReportSummary({ report }) {
   return (
     <div style={{ ...glassStyle(16), ...s.section }}>
       <div style={s.h2}>本月汇总</div>
-      <div style={{ ...s.note, marginBottom: 12 }}>绩效与「绩效评估」页一致（寄样账期 {cycleStart} 起）；视频明细只算当月发布的视频；全店 = CRM 视频 + 出过单的非 CRM 视频，助理 = 她合作过的达人发的视频。</div>
+      <div style={{ ...s.note, marginBottom: 12 }}>绩效与「绩效评估」页一致（寄样账期 {cycleStart} 起）；视频明细只算当月发布的视频，助理的视频 = 她合作过的达人发的视频。</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8, marginBottom: 14 }}>
         <Card label="奖金池" value={yuan(pool.total)} sub={`爆单视频 ${yuan(pool.videoSum)} + 直播 ${yuan(pool.liveSum)}`} />
         <Card label="全店视频" value={store.detail.total} sub={`出单 ${store.detail.sale} 条 · ${pct(store.detail.rate)}`} />

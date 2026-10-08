@@ -1,7 +1,7 @@
 import { T, glassStyle } from '../../constants/tokens.js';
 import { STRATEGY_COLORS } from './constants.js';
 
-export default function ChangeLogModal({ logs = [], onClose, onDelete }) {
+export default function ChangeLogModal({ logs = [], onClose }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(10,22,40,0.55)', zIndex: 2000,
@@ -24,13 +24,6 @@ export default function ChangeLogModal({ logs = [], onClose, onDelete }) {
                   <span style={{ fontWeight: 700, color: T.text, fontSize: 13 }}>{log.productInternalName}</span>
                   <span style={{ fontSize: 12, color: T.hint }}>{log.month}</span>
                   <StratBadge s={log.fromStrategy} /> → <StratBadge s={log.toStrategy} />
-                  {log.goalAdjusted && <span style={{ fontSize: 11, background: `${T.info}22`, color: T.info, borderRadius: 8, padding: '2px 8px' }}>目标已同步</span>}
-                  {onDelete && (
-                    <button onClick={() => onDelete(log.id)} style={{
-                      marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer',
-                      color: T.danger, fontSize: 12, padding: '0 2px',
-                    }}>删除</button>
-                  )}
                 </div>
                 {log.reason && <div style={{ fontSize: 12, color: T.muted }}>{log.reason}</div>}
                 <div style={{ fontSize: 11, color: T.hint }}>{log.changedBy} · {log.changedAt?.slice(0, 16)?.replace('T', ' ')}</div>

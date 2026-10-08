@@ -11,7 +11,7 @@ import { confirmIncomplete, describeSave } from "./snapshotUi.js";
 
 const defFrom = () => addMonths(thisMonthPST(), -5);
 
-export default function GradeReview({ collabs, videos, products, burstThreshold, onSnapshotSaved, saver, canSnapshot }) {
+export default function GradeReview({ collabs, videos, burstThreshold, onSnapshotSaved, saver, canSnapshot }) {
   const [view,      setView]      = useState("single");
   const [ym,        setYm]        = useState(() => thisMonthPST());
   const [fromYm,    setFromYm]    = useState(defFrom);

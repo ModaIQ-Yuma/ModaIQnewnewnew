@@ -34,7 +34,7 @@ export function merge(ws, range, value, o = {}) {
 }
 
 /** 列号 ↔ 列名（1 → A） */
-export const colName = (n) => (n <= 26 ? String.fromCharCode(64 + n) : colName(Math.floor((n - 1) / 26)) + colName(((n - 1) % 26) + 1));
+const colName = (n) => (n <= 26 ? String.fromCharCode(64 + n) : colName(Math.floor((n - 1) / 26)) + colName(((n - 1) % 26) + 1));
 function split(addr) {
   const m = addr.match(/^([A-Z]+)(\d+)$/);
   const col = [...m[1]].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);

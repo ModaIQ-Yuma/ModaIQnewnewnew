@@ -38,7 +38,7 @@ export default function PerformanceModule({ ctx, showIntro = true }) {
 
   return (
     <div>
-      {showIntro && <SectionIntro style={{ marginBottom:14 }}>按账期（15 日 ~ 次月 14 日）计算绩效：寄样看账期内的寄样记录，视频和出单看账期结束月的自然月；全店的非 CRM 视频 / 达人只算出过单的。管理员可切换查看全店或单个助理，助理只能看到自己。</SectionIntro>}
+      {showIntro && <SectionIntro style={{ marginBottom:14 }}>按账期（15 日 ~ 次月 14 日）计算绩效：寄样看账期内的寄样记录，视频和出单看账期结束月的自然月。管理员可切换查看全店或单个助理，助理只能看到自己。</SectionIntro>}
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:22, flexWrap:'wrap' }}>
         <button onClick={() => setCycleStart(prevCycleStart(cycleStart))} style={navBtn}>‹ 上周期</button>
         <div style={{ ...glassStyle(12), padding:'8px 18px', fontSize:FONT.xl2, fontWeight:700, color:T.text }}>
