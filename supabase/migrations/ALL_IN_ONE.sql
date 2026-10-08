@@ -353,7 +353,7 @@ CREATE TABLE viral_videos (
 CREATE INDEX idx_viral_store_product ON viral_videos (store_id, product_id);
 
 -- ─── 08 月度提报（奖金）──────────────────────────────────────────────
--- 已提报的爆单视频：一条视频一行，同一条视频只能提报一次（不升档补差）
+-- 已提报 / 标为不提报的爆单视频：一条视频一行，同一条视频只能提报一次（不升档补差）
 CREATE TABLE bonus_submissions (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id       uuid NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
@@ -362,7 +362,7 @@ CREATE TABLE bonus_submissions (
   gmv            numeric(12,2),                      -- 提报时的累计 GMV（历史导入可空）
   amount         int,                                -- 提报金额 ¥（历史导入可空）
   period         text NOT NULL,                      -- 算在哪个月的提报里，如 2026-08
-  source         text NOT NULL DEFAULT '系统提报' CHECK (source IN ('系统提报','历史导入')),
+  source         text NOT NULL DEFAULT '系统提报' CHECK (source IN ('系统提报','历史导入','不提报')),  -- 不提报：period 也记「不提报」，金额 0
   created_by     uuid,
   created_at     timestamptz NOT NULL DEFAULT now(),
   UNIQUE (store_id, video_id)

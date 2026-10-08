@@ -1,7 +1,8 @@
-// modules/performance/BurstSubmit.jsx — 爆单视频：待提报（累计 GMV ≥ 门槛、没提报过）/ 本月已提报（可撤销）
+// modules/performance/BurstSubmit.jsx — 爆单视频：待提报（可提报 / 不提报）/ 本月已提报（可撤销）/ 不提报（可恢复）
 import { useMemo, useState } from "react";
 import { T, glassStyle, tabStyle } from "../../constants/tokens.js";
-import { pendingBursts, submissionRows, tierLabels, videoUrl, BURST_MIN_GMV } from "../../lib/bonus/bonusCalc.js";
+import { pendingBursts, submissionRows, skipRows, tierLabels, videoUrl, BURST_MIN_GMV, SKIP } from "../../lib/bonus/bonusCalc.js";
+import { burstsOfMonth } from "../../lib/bonus/monthReport.js";
 import { BURST_PUBLISH_FROM } from "../../constants/config.js";
 import { pubDay } from "../../lib/perf/perfCalc.js";
 import { usePaged } from "../../hooks/usePaged.js";
@@ -17,7 +18,8 @@ export default function BurstSubmit({ ym, videos, bonus, report }) {
   const [showImport, setShowImport] = useState(false);
 
   const pending = useMemo(() => pendingBursts(videos, bonus.submissions), [videos, bonus.submissions]);
-  const base = view === "pending" ? pending : report.bursts;
+  const skipped = useMemo(() => burstsOfMonth(bonus.submissions, videos, SKIP), [bonus.submissions, videos]);
+  const base = { pending, done: report.bursts, skipped }[view];
   const needle = q.trim().toLowerCase();
   const list = useMemo(() => (needle ? base.filter((v) => (v.creator_handle || "").includes(needle)) : base), [base, needle]);
   const { page, setPage, totalPages, pageRows } = usePaged(list, 30, `${view}|${needle}|${ym}`);
@@ -28,8 +30,10 @@ export default function BurstSubmit({ ym, videos, bonus, report }) {
     setBusy(false);
   }
   const submit = (rows) => run(() => bonus.submit(submissionRows(rows, ym)), (n) => `✅ 已提报 ${n} 条到 ${ym}`);
+  const skip = (v) => run(() => bonus.submit(skipRows([v])), () => `已把「${v.creator_handle}」标为不提报，可在「不提报」里恢复`);
   const undo = (row) => confirm(`撤销「${row.creator_handle}」这条提报？撤销后它会回到待提报。`)
     && run(() => bonus.undo([row.id]), () => "已撤销");
+  const restore = (row) => run(() => bonus.undo([row.id]), () => `「${row.creator_handle}」已恢复到待提报`);
   const pendingSum = list.reduce((n, v) => n + (v.amount || 0), 0);
 
   return (
@@ -41,6 +45,7 @@ export default function BurstSubmit({ ym, videos, bonus, report }) {
       <div style={{ ...s.row, marginBottom: 12 }}>
         <button style={tabStyle(view === "pending")} onClick={() => setView("pending")}>待提报 {pending.length}</button>
         <button style={tabStyle(view === "done")} onClick={() => setView("done")}>{ym} 已提报 {report.bursts.length}</button>
+        <button style={tabStyle(view === "skipped")} onClick={() => setView("skipped")}>不提报 {skipped.length}</button>
         <input style={s.input} placeholder="搜索达人名…" value={q} onChange={(e) => setQ(e.target.value)} />
         <div style={{ flex: 1 }} />
         {view === "pending" && list.length > 0 && (
@@ -52,7 +57,7 @@ export default function BurstSubmit({ ym, videos, bonus, report }) {
       </div>
       {msg && <div style={{ ...s.note, color: msg.startsWith("❌") ? T.danger : T.success, marginBottom: 8 }}>{msg}</div>}
 
-      {list.length === 0 ? <div style={s.empty}>{view === "pending" ? "没有待提报的爆单视频" : "这个月还没有提报"}</div> : (
+      {list.length === 0 ? <div style={s.empty}>{{ pending: "没有待提报的爆单视频", done: "这个月还没有提报", skipped: "没有标为不提报的视频" }[view]}</div> : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ ...s.table, minWidth: 620 }}>
             <thead><tr>{["达人", "发布日期", "成交件数", "累计 GMV", "奖金档位", "视频", ""].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
@@ -63,11 +68,16 @@ export default function BurstSubmit({ ym, videos, bonus, report }) {
                   <td style={s.td}>{view === "pending" ? pubDay(v) : v.published}</td>
                   <td style={{ ...s.td, ...s.num }}>{v.orders ?? "—"}</td>
                   <td style={{ ...s.td, ...s.num }}>{money(v.gmv)}</td>
-                  <td style={s.td}><span style={s.tier}>{yuan(v.amount)}</span></td>
+                  <td style={s.td}><span style={s.tier}>{view === "skipped" ? "—" : yuan(v.amount)}</span></td>
                   <td style={s.td}>{(v.url || videoUrl(v)) && <a style={s.link} href={v.url || videoUrl(v)} target="_blank" rel="noreferrer">↗ 打开</a>}</td>
-                  <td style={s.td}>{view === "pending"
-                    ? <button style={s.btnSmall} disabled={busy} onClick={() => submit([v])}>提报</button>
-                    : <button style={s.btnDanger} disabled={busy} onClick={() => undo(v)}>撤销</button>}</td>
+                  <td style={{ ...s.td, whiteSpace: "nowrap" }}>
+                    {view === "pending" && <>
+                      <button style={s.btnSmall} disabled={busy} onClick={() => submit([v])}>提报</button>
+                      <button style={{ ...s.btnDanger, marginLeft: 6 }} disabled={busy} onClick={() => skip(v)}>不提报</button>
+                    </>}
+                    {view === "done" && <button style={s.btnDanger} disabled={busy} onClick={() => undo(v)}>撤销</button>}
+                    {view === "skipped" && <button style={s.btnGhost} disabled={busy} onClick={() => restore(v)}>恢复</button>}
+                  </td>
                 </tr>
               ))}
             </tbody>

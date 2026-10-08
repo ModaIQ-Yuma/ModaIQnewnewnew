@@ -161,3 +161,15 @@ test("全店老品转化率：加上老品出过单的非 CRM 达人（分子分
   const s1 = calcPerfMetrics({ collabs, videos, shippingGoals: [], products, cycleStart: "2026-07-15", staffId: "S1", creators });
   expect([s1.oldWithSalesTotal, s1.oldInfluencerTotal]).toEqual([1, 2]);
 });
+
+test("不提报：从待提报消失、不进任何月份的奖金池和已提报清单；删掉那行即恢复", async () => {
+  const { skipRows, SKIP } = await import("../bonus/bonusCalc.js");
+  const v1 = { id: "v1", video_id: "9001", creator_handle: "luna", gmv: 17582.86, orders: 1059, published_at: at("2026-03-06") };
+  const rows = skipRows([v1]).map((r) => ({ ...r, id: "k1" }));
+  expect(rows[0]).toMatchObject({ video_id: "9001", amount: 0, period: SKIP, source: SKIP });
+  expect(pendingBursts([v1], rows)).toHaveLength(0);
+  expect(bonusPool(rows, [], "2026-03").total).toBe(0);
+  expect(burstsOfMonth(rows, [v1], "2026-03")).toHaveLength(0);
+  expect(burstsOfMonth(rows, [v1], SKIP).map((x) => [x.creator_handle, x.orders])).toEqual([["luna", 1059]]);
+  expect(pendingBursts([v1], [])).toHaveLength(1);       // 恢复 = 删掉那行
+});

@@ -44,6 +44,12 @@ export const submissionRows = (videos, period) => videos.map((v) => ({
   video_id: v.video_id, creator_handle: v.creator_handle, gmv: Number(v.gmv) || 0, amount: tierAmount(v.gmv), period, source: "系统提报",
 }));
 
+/** 标成「不提报」的行：period 记成「不提报」，不属于任何月份，不进奖金池和导出；删掉这行即恢复到待提报 */
+export const SKIP = "不提报";
+export const skipRows = (videos) => videos.map((v) => ({
+  video_id: v.video_id, creator_handle: v.creator_handle, gmv: Number(v.gmv) || 0, amount: 0, period: SKIP, source: SKIP,
+}));
+
 /** 某月奖金池 */
 export function bonusPool(submissions, extras, period) {
   const videoSum = submissions.filter((s) => s.period === period).reduce((n, s) => n + (s.amount || 0), 0);
