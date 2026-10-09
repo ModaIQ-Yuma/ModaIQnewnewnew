@@ -5,7 +5,7 @@ import { sb, unwrap, fetchAll } from "./client.js";
 export async function fetchGradeSnapshots(storeId) {
   // 每个产品每月一行，会超过 Supabase 单次 1000 条 → 自动翻页（排序加 id 保证翻页稳定）
   return fetchAll((from, to) => sb.from("grade_snapshots")
-    .select("id, product_id, month, ship_count, video_count, burst_count, orders, vv, clicks, gmv, cooperate_count, fulfill_count, video_with_sales, total_orders, organic_orders, note, created_at, products(internal_name)")
+    .select("id, product_id, month, ship_count, video_count, burst_count, orders, vv, clicks, gmv, cooperate_count, fulfill_count, video_with_sales, sale_creator_count, ship_orders, total_orders, organic_orders, note, created_at, products(internal_name)")
     .eq("store_id", storeId)
     .order("month", { ascending: false }).order("id")
     .range(from, to), "grade_snapshots");

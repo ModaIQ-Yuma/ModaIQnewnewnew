@@ -1,16 +1,12 @@
 // lib/supabase/reviewWrite.js
 import { sb, unwrap } from "./client.js";
+import { snapshotFields } from "../review/snapshotRates.js";
 
 /** 批量保存产品快照：rows = [{ productId, metrics }]，一次请求写完（同月同产品覆盖） */
 export async function saveProductSnapshots(storeId, ym, rows, userId) {
   if (!rows.length) return;
-  unwrap(await sb.from("grade_snapshots").upsert(rows.map(({ productId, metrics: m }) => ({
-    store_id: storeId, product_id: productId, month: `${ym}-01`,
-    ship_count: m.shipCount || 0, video_count: m.videoCount || 0, burst_count: m.burstCount || 0,
-    orders: m.videoOrders || 0, vv: m.totalVV || 0, clicks: m.totalClicks || 0, gmv: 0,
-    cooperate_count: m.shipCount || 0, fulfill_count: m.fulfillCount || 0, video_with_sales: m.videoWithSales || 0,
-    total_orders: m.totalOrders ?? null, organic_orders: m.organicOrders ?? null,
-    created_by: userId,
+  unwrap(await sb.from("grade_snapshots").upsert(rows.map(({ productId, metrics }) => ({
+    store_id: storeId, product_id: productId, month: `${ym}-01`, ...snapshotFields(metrics), created_by: userId,
   })), { onConflict: "store_id,product_id,month" }), "grade_snapshots");
 }
 
